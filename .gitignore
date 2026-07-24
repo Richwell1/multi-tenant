@@ -1,7 +1,9 @@
 node_modules/
 dist/
+coverage/
 .env
 .env.local
+.env.*.local
 *.log
 .DS_Store
 
@@ -9,4 +11,5 @@ dist/
 *.tsbuildinfo
 
 # Local editor / agent state
+.vscode/*.local.json
 .claude/settings.local.json

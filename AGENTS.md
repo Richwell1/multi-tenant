@@ -1,4 +1,4 @@
-# Muttitenants HR Agent Instructions
+# Multi-Tenants HR Agent Instructions
 
 Read these files before making changes:
 
@@ -6,7 +6,7 @@ Read these files before making changes:
 - docs/ARCHITECTURE.md
 - docs/OVERVIEW.md
 
-Use the Google Stitch MCP project named Muttiteneats HR as the visual source of truth.
+Use the Google Stitch project as the visual source of truth for Multi-Tenants HR.
 
 ## Product scope
 

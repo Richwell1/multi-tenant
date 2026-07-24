@@ -2,47 +2,29 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
+  lazyRouteComponent,
   redirect,
   Outlet,
 } from '@tanstack/react-router';
 import { AdminShell } from '@/components/admin-shell';
 import { WorkspaceShell } from '@/components/workspace-shell';
+import { PageLoadingState, ErrorState } from '@/components/states';
+// Public/auth pages are eager so sign-in is instant. The admin and company
+// workspace page groups are code-split (lazy) so they load only when entered.
 import {
   AccessDeniedPage,
   CompanySuspendedPage,
   LoginPage,
   RegisterPage,
 } from '@/pages/public';
-import {
-  AdminDashboard,
-  AuditPage,
-  CompaniesList,
-  CompanyDetails,
-  CreatePackage,
-  CreateRequest,
-  DiagnosticReportPage,
-  HealthPage,
-  InstallationsPage,
-  PackageDetails,
-  PackagesList,
-  RequestDetails,
-  RequestsList,
-  UsagePage,
-} from '@/pages/admin';
-import {
-  AddEmployee,
-  AttendancePage,
-  DepartmentsPage,
-  EmployeeProfile,
-  EmployeesList,
-  InstalledPackagesPage,
-  LeavePage,
-  PositionsPage,
-  SettingsPage,
-  UpdatesPage,
-  UsersPage,
-  WorkspaceDashboard,
-} from '@/pages/workspace';
+
+// Lazy loaders — each unique import specifier becomes its own Vite chunk, so
+// every admin route shares one "admin" chunk and every workspace route shares
+// one "workspace" chunk, both separate from the initial auth bundle.
+const adminPage = (name: keyof typeof import('@/pages/admin')) =>
+  lazyRouteComponent(() => import('@/pages/admin'), name);
+const workspacePage = (name: keyof typeof import('@/pages/workspace')) =>
+  lazyRouteComponent(() => import('@/pages/workspace'), name);
 
 const rootRoute = createRootRoute({ component: () => <Outlet /> });
 
@@ -85,7 +67,7 @@ const companySuspendedRoute = createRoute({
   component: CompanySuspendedPage,
 });
 
-// --- Platform Super Admin -----------------------------------------------------
+// --- Platform Super Admin (lazy page group) ----------------------------------
 const adminLayout = createRoute({
   getParentRoute: () => rootRoute,
   path: '/admin',
@@ -95,42 +77,42 @@ const adminLayout = createRoute({
     </AdminShell>
   ),
 });
-const adminIndex = createRoute({ getParentRoute: () => adminLayout, path: '/', component: AdminDashboard });
-const adminCompanies = createRoute({ getParentRoute: () => adminLayout, path: 'companies', component: CompaniesList });
+const adminIndex = createRoute({ getParentRoute: () => adminLayout, path: '/', component: adminPage('AdminDashboard') });
+const adminCompanies = createRoute({ getParentRoute: () => adminLayout, path: 'companies', component: adminPage('CompaniesList') });
 const adminCompanyDetail = createRoute({
   getParentRoute: () => adminLayout,
   path: 'companies/$companyId',
-  component: CompanyDetails,
+  component: adminPage('CompanyDetails'),
 });
-const adminRequests = createRoute({ getParentRoute: () => adminLayout, path: 'requests', component: RequestsList });
-const adminRequestNew = createRoute({ getParentRoute: () => adminLayout, path: 'requests/new', component: CreateRequest });
+const adminRequests = createRoute({ getParentRoute: () => adminLayout, path: 'requests', component: adminPage('RequestsList') });
+const adminRequestNew = createRoute({ getParentRoute: () => adminLayout, path: 'requests/new', component: adminPage('CreateRequest') });
 const adminRequestDetail = createRoute({
   getParentRoute: () => adminLayout,
   path: 'requests/$requestId',
-  component: RequestDetails,
+  component: adminPage('RequestDetails'),
 });
-const adminPackages = createRoute({ getParentRoute: () => adminLayout, path: 'packages', component: PackagesList });
-const adminPackageNew = createRoute({ getParentRoute: () => adminLayout, path: 'packages/new', component: CreatePackage });
+const adminPackages = createRoute({ getParentRoute: () => adminLayout, path: 'packages', component: adminPage('PackagesList') });
+const adminPackageNew = createRoute({ getParentRoute: () => adminLayout, path: 'packages/new', component: adminPage('CreatePackage') });
 const adminPackageDetail = createRoute({
   getParentRoute: () => adminLayout,
   path: 'packages/$packageId',
-  component: PackageDetails,
+  component: adminPage('PackageDetails'),
 });
 const adminDiagnostic = createRoute({
   getParentRoute: () => adminLayout,
   path: 'diagnostics/$diagnosticId',
-  component: DiagnosticReportPage,
+  component: adminPage('DiagnosticReportPage'),
 });
 const adminInstallations = createRoute({
   getParentRoute: () => adminLayout,
   path: 'installations',
-  component: InstallationsPage,
+  component: adminPage('InstallationsPage'),
 });
-const adminUsage = createRoute({ getParentRoute: () => adminLayout, path: 'usage', component: UsagePage });
-const adminHealth = createRoute({ getParentRoute: () => adminLayout, path: 'health', component: HealthPage });
-const adminAudit = createRoute({ getParentRoute: () => adminLayout, path: 'audit', component: AuditPage });
+const adminUsage = createRoute({ getParentRoute: () => adminLayout, path: 'usage', component: adminPage('UsagePage') });
+const adminHealth = createRoute({ getParentRoute: () => adminLayout, path: 'health', component: adminPage('HealthPage') });
+const adminAudit = createRoute({ getParentRoute: () => adminLayout, path: 'audit', component: adminPage('AuditPage') });
 
-// --- Company Workspace (pathless layout) --------------------------------------
+// --- Company Workspace (pathless layout, lazy page group) --------------------
 const workspaceLayout = createRoute({
   getParentRoute: () => rootRoute,
   id: 'workspace',
@@ -140,22 +122,22 @@ const workspaceLayout = createRoute({
     </WorkspaceShell>
   ),
 });
-const wsDashboard = createRoute({ getParentRoute: () => workspaceLayout, path: '/dashboard', component: WorkspaceDashboard });
-const wsEmployees = createRoute({ getParentRoute: () => workspaceLayout, path: '/employees', component: EmployeesList });
-const wsEmployeeNew = createRoute({ getParentRoute: () => workspaceLayout, path: '/employees/new', component: AddEmployee });
+const wsDashboard = createRoute({ getParentRoute: () => workspaceLayout, path: '/dashboard', component: workspacePage('WorkspaceDashboard') });
+const wsEmployees = createRoute({ getParentRoute: () => workspaceLayout, path: '/employees', component: workspacePage('EmployeesList') });
+const wsEmployeeNew = createRoute({ getParentRoute: () => workspaceLayout, path: '/employees/new', component: workspacePage('AddEmployee') });
 const wsEmployeeDetail = createRoute({
   getParentRoute: () => workspaceLayout,
   path: '/employees/$employeeId',
-  component: EmployeeProfile,
+  component: workspacePage('EmployeeProfile'),
 });
-const wsDepartments = createRoute({ getParentRoute: () => workspaceLayout, path: '/departments', component: DepartmentsPage });
-const wsPositions = createRoute({ getParentRoute: () => workspaceLayout, path: '/positions', component: PositionsPage });
-const wsUpdates = createRoute({ getParentRoute: () => workspaceLayout, path: '/updates', component: UpdatesPage });
-const wsPackages = createRoute({ getParentRoute: () => workspaceLayout, path: '/packages', component: InstalledPackagesPage });
-const wsUsers = createRoute({ getParentRoute: () => workspaceLayout, path: '/users', component: UsersPage });
-const wsSettings = createRoute({ getParentRoute: () => workspaceLayout, path: '/settings', component: SettingsPage });
-const wsLeave = createRoute({ getParentRoute: () => workspaceLayout, path: '/leave', component: LeavePage });
-const wsAttendance = createRoute({ getParentRoute: () => workspaceLayout, path: '/attendance', component: AttendancePage });
+const wsDepartments = createRoute({ getParentRoute: () => workspaceLayout, path: '/departments', component: workspacePage('DepartmentsPage') });
+const wsPositions = createRoute({ getParentRoute: () => workspaceLayout, path: '/positions', component: workspacePage('PositionsPage') });
+const wsUpdates = createRoute({ getParentRoute: () => workspaceLayout, path: '/updates', component: workspacePage('UpdatesPage') });
+const wsPackages = createRoute({ getParentRoute: () => workspaceLayout, path: '/packages', component: workspacePage('InstalledPackagesPage') });
+const wsUsers = createRoute({ getParentRoute: () => workspaceLayout, path: '/users', component: workspacePage('UsersPage') });
+const wsSettings = createRoute({ getParentRoute: () => workspaceLayout, path: '/settings', component: workspacePage('SettingsPage') });
+const wsLeave = createRoute({ getParentRoute: () => workspaceLayout, path: '/leave', component: workspacePage('LeavePage') });
+const wsAttendance = createRoute({ getParentRoute: () => workspaceLayout, path: '/attendance', component: workspacePage('AttendancePage') });
 
 export const routeTree = rootRoute.addChildren([
   indexRoute,
@@ -195,7 +177,13 @@ export const routeTree = rootRoute.addChildren([
   ]),
 ]);
 
-export const router = createRouter({ routeTree });
+export const router = createRouter({
+  routeTree,
+  // Shared route-level fallbacks — reuse the existing state components rather
+  // than duplicating loading/error UI per lazy route.
+  defaultPendingComponent: () => <PageLoadingState />,
+  defaultErrorComponent: ({ reset }) => <ErrorState onRetry={reset} />,
+});
 
 declare module '@tanstack/react-router' {
   interface Register {

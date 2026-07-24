@@ -1,0 +1,75 @@
+// ---------------------------------------------------------------------------
+// Scoped cache-invalidation rules — the single source of truth for "which
+// queries does this mutation affect?". Pure functions so they can be unit
+// tested, and so mutation hooks never hand-roll invalidation inline.
+//
+// Keys are query-key PREFIXES; TanStack Query invalidates by prefix match, so
+// e.g. invalidating ['employees', 'alpha'] refreshes that company's list AND
+// detail queries — but never Beta's, whose keys start ['employees', 'beta'].
+// ---------------------------------------------------------------------------
+
+import type { QueryKey } from '@tanstack/react-query';
+import { queryKeys as k } from '@/lib/query-keys';
+
+export const invalidationTargets = {
+  createEmployee: (companyId: string): QueryKey[] => [
+    k.employees.all(companyId), // list + detail for this company (dashboard reads the list)
+    k.usage.all,
+    k.audit.all,
+  ],
+
+  updateEmployee: (companyId: string, employeeId: string): QueryKey[] => [
+    k.employees.detail(companyId, employeeId),
+    k.employees.list(companyId),
+    k.audit.all,
+  ],
+
+  disableDepartment: (companyId: string): QueryKey[] => [
+    k.departments.all(companyId),
+    k.employees.all(companyId), // department labels are embedded on employees
+    k.audit.all,
+  ],
+
+  createRequest: (): QueryKey[] => [k.requests.all, k.audit.all],
+
+  changeRequestStatus: (requestId: string): QueryKey[] => [
+    k.requests.detail(requestId),
+    k.requests.all,
+  ],
+
+  /** Publishing a release ripples into installs, analytics, audit, diagnostics. */
+  createPackage: (): QueryKey[] => [
+    k.packages.all,
+    k.installations.all,
+    k.usage.all,
+    k.audit.all,
+    ['diagnostics'],
+  ],
+
+  /** Private customization assigned to ONE company — must not touch others. */
+  assignPackageToCompany: (companyId: string): QueryKey[] => [
+    k.packages.company(companyId),
+    k.companies.detail(companyId),
+    k.installations.all,
+    k.packages.all,
+    k.audit.all,
+    ['diagnostics'],
+  ],
+
+  /** Standard update released to all companies. */
+  releaseStandardPackage: (): QueryKey[] => [
+    k.packages.all,
+    k.installations.all,
+    k.usage.all,
+    k.audit.all,
+    ['diagnostics'],
+  ],
+
+  installPackage: (companyId: string): QueryKey[] => [
+    k.installations.all,
+    k.installations.company(companyId),
+    k.packages.company(companyId),
+  ],
+
+  saveSettings: (companyId: string): QueryKey[] => [k.companies.detail(companyId)],
+};

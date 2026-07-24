@@ -1,0 +1,36 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --portal: 211 82% 47%;
+  }
+
+  html {
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  }
+
+  body {
+    @apply bg-background text-content antialiased;
+  }
+
+  * {
+    @apply border-border;
+  }
+}
+
+@layer components {
+  /* Portal-aware primary color: set via .portal-admin / .portal-company wrappers */
+  .portal-admin {
+    --portal-color: #3525cd;
+    --portal-color-hover: #4f46e5;
+    --portal-accent: #312e81;
+  }
+
+  .portal-company {
+    --portal-color: #005338;
+    --portal-color-hover: #006e4b;
+    --portal-accent: #005338;
+  }
+}

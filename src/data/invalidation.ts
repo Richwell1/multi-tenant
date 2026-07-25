@@ -75,6 +75,7 @@ export const invalidationTargets = {
   changeRequestStatus: (requestId: string): QueryKey[] => [
     k.requests.detail(requestId),
     k.requests.all,
+    k.audit.all,
   ],
 
   /** Publishing a release ripples into installs, analytics, audit, diagnostics. */

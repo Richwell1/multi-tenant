@@ -10,7 +10,6 @@ import type { NetworkError } from '@/data/api';
 import { queryKeys } from '@/lib/query-keys';
 import { invalidationTargets } from '@/data/invalidation';
 import { notify } from '@/lib/notify';
-import { companyTargetKeyPart, type CompanyTargetValue } from '@/lib/company-target';
 import type { PackageKey } from '@/data/types';
 
 /** Invalidate a scoped set of query-key prefixes. */
@@ -55,11 +54,8 @@ export const useTenantInstallations = (companyId: string) =>
     queryFn: () => repository.getInstallationsForTenant(companyId),
   });
 
-// Usage analytics is served by the dedicated '@/hooks/usage' hook (audit-derived).
-export const useHealth = () => useQuery({ queryKey: queryKeys.health.all, queryFn: repository.getHealth });
-/** Audit logs — selection participates in the cache key. */
-export const useAudit = (target: CompanyTargetValue) =>
-  useQuery({ queryKey: queryKeys.audit.list(companyTargetKeyPart(target)), queryFn: repository.getAudit });
+// Usage analytics, platform audit log, and system health are served by the
+// dedicated '@/hooks/usage', '@/hooks/audit', and '@/hooks/health' hooks.
 
 // Leave and Attendance are persisted via dedicated hooks in '@/hooks/leave'
 // and '@/hooks/attendance'.

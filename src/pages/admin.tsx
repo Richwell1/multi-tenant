@@ -17,13 +17,10 @@ import { PageLoadingState, ErrorState, EmptyState, ConfirmDialog } from '@/compo
 import { CompanyTargetSelector } from '@/components/company-target';
 import { formatDate } from '@/lib/utils';
 import { notify } from '@/lib/notify';
-import {
-  useAudit,
-  useCompanies,
-  useCompany,
-  useHealth,
-} from '@/hooks/queries';
+import { useCompanies, useCompany } from '@/hooks/queries';
 import { useUsage } from '@/hooks/usage';
+import { useAudit } from '@/hooks/audit';
+import { useHealth } from '@/hooks/health';
 import { useDiagnostic } from '@/hooks/diagnostics';
 import { DIAGNOSTIC_DIMENSIONS, type DiagnosticCheck } from '@/data/diagnostics';
 import {

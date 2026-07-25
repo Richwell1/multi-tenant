@@ -11,6 +11,8 @@ const buttonVariants = cva(
           'text-white shadow-sm bg-[var(--portal-color,#3525cd)] hover:bg-[var(--portal-color-hover,#4f46e5)] focus-visible:ring-[var(--portal-color,#3525cd)]',
         secondary:
           'border border-border bg-surface text-content hover:bg-surface-subtle focus-visible:ring-border',
+        outline:
+          'border border-[var(--portal-color,#3525cd)] bg-transparent text-[var(--portal-color,#3525cd)] hover:bg-[var(--portal-color,#3525cd)]/5 focus-visible:ring-[var(--portal-color,#3525cd)]',
         ghost: 'text-content hover:bg-surface-subtle',
         danger: 'bg-danger text-white hover:bg-danger/90 focus-visible:ring-danger',
       },
@@ -18,6 +20,7 @@ const buttonVariants = cva(
         sm: 'h-8 px-3',
         md: 'h-10 px-4',
         lg: 'h-11 px-6',
+        icon: 'size-10 p-0',
       },
     },
     defaultVariants: { variant: 'primary', size: 'md' },

@@ -28,8 +28,20 @@ type LoginForm = z.infer<typeof loginSchema>;
 
 function AuthLayout({ children, portalClass }: { children: React.ReactNode; portalClass: string }) {
   return (
-    <div className={cn('flex min-h-screen items-center justify-center bg-background p-4', portalClass)}>
-      <div className="w-full max-w-md">{children}</div>
+    <div className={cn('flex min-h-screen items-center justify-center bg-background px-4 py-8 sm:px-6', portalClass)}>
+      <div className="w-full max-w-md">
+        <div className="mb-6 flex items-center justify-center gap-3">
+          <div className="flex size-10 items-center justify-center rounded-xl bg-[var(--portal-color)] text-lg font-bold text-white shadow-sm">
+            M
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-content">Multi-Tenants HR</p>
+            <p className="text-xs text-content-variant">Secure workspace operations</p>
+          </div>
+        </div>
+        {children}
+        <p className="mt-5 text-center text-xs text-content-variant">One shared platform. Clear tenant boundaries.</p>
+      </div>
     </div>
   );
 }
@@ -63,19 +75,22 @@ export function LoginPage() {
 
   return (
     <AuthLayout portalClass={isAdmin ? 'portal-admin' : 'portal-company'}>
-      <Card className="p-8">
+      <Card className="p-5 sm:p-8">
         <div className="mb-6 text-center">
           <Badge tone={isAdmin ? 'platform' : 'company'}>
             {isAdmin ? ctx.name : ctx.companyName}
           </Badge>
-          <h1 className="mt-3 text-2xl font-bold text-content">Multi-Tenants HR</h1>
-          <p className="mt-1 text-sm text-content-variant">Sign in with your email and password</p>
+          <h1 className="mt-4 text-2xl font-bold tracking-tight text-content">
+            {isAdmin ? 'Sign in to Admin Console' : 'Sign in to Company Workspace'}
+          </h1>
+          <p className="mt-1 text-sm leading-6 text-content-variant">Sign in with your email and password</p>
         </div>
 
         {authError && (
           <div
             role="alert"
-            className="mb-4 flex items-center gap-2 rounded-md border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger"
+            aria-live="polite"
+            className="mb-5 flex items-start gap-2 rounded-md border border-danger/30 bg-danger/5 px-3 py-3 text-sm leading-5 text-danger"
           >
             <AlertCircle className="size-4 shrink-0" />
             {authError}
@@ -109,7 +124,7 @@ export function LoginPage() {
                 onClick={() => setShowPassword((s) => !s)}
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
                 aria-pressed={showPassword}
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-content-variant hover:text-content"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-content-variant hover:bg-surface-subtle hover:text-content"
               >
                 {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
               </button>
@@ -123,7 +138,7 @@ export function LoginPage() {
         {ctx.showRegistration && (
           <p className="mt-6 text-center text-sm text-content-variant">
             New company?{' '}
-            <Link to="/register" className="font-medium text-[var(--portal-color)]">
+            <Link to="/register" className="font-medium text-[var(--portal-color)] underline-offset-4 hover:underline">
               Register Company
             </Link>
           </p>
@@ -188,23 +203,28 @@ export function RegisterPage() {
 
   return (
     <AuthLayout portalClass="portal-company">
-      <Card className="p-8">
+      <Card className="p-5 sm:p-8">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-content">Register your company</h1>
-          <p className="mt-1 text-sm text-content-variant">
+          <Badge tone="company">Company onboarding</Badge>
+          <h1 className="mt-4 text-2xl font-bold tracking-tight text-content">Register your company</h1>
+          <p className="mt-1 text-sm leading-6 text-content-variant">
             Company self-registration. HR Core is assigned automatically.
           </p>
         </div>
         {registerError && (
           <div
             role="alert"
-            className="mb-4 flex items-center gap-2 rounded-md border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger"
+            aria-live="polite"
+            className="mb-5 flex items-start gap-2 rounded-md border border-danger/30 bg-danger/5 px-3 py-3 text-sm leading-5 text-danger"
           >
             <AlertCircle className="size-4 shrink-0" />
             {registerError}
           </div>
         )}
         <form onSubmit={handleSubmit(onValid, () => notify.validationFailure())} className="space-y-4" noValidate>
+          <div className="border-b border-border pb-2 text-xs font-semibold uppercase tracking-[0.12em] text-content-variant">
+            Company details
+          </div>
           <Field label="Company name" htmlFor="companyName" error={errors.companyName?.message}>
             <Input id="companyName" aria-invalid={!!errors.companyName} {...register('companyName')} />
           </Field>
@@ -216,19 +236,34 @@ export function RegisterPage() {
           >
             <Input id="slug" aria-invalid={!!errors.slug} placeholder="acme-corp" {...register('slug')} />
           </Field>
+          <div className="border-b border-border pb-2 pt-2 text-xs font-semibold uppercase tracking-[0.12em] text-content-variant">
+            Company administrator
+          </div>
           <Field label="Admin full name" htmlFor="adminName" error={errors.adminName?.message}>
             <Input id="adminName" aria-invalid={!!errors.adminName} {...register('adminName')} />
           </Field>
           <Field label="Admin email" htmlFor="adminEmail" error={errors.adminEmail?.message}>
             <Input id="adminEmail" type="email" aria-invalid={!!errors.adminEmail} {...register('adminEmail')} />
           </Field>
-          <Field label="Password" htmlFor="password" error={errors.password?.message}>
-            <Input id="password" type="password" aria-invalid={!!errors.password} {...register('password')} />
+          <Field
+            label="Password"
+            htmlFor="password"
+            error={errors.password?.message}
+            hint="Use at least 8 characters."
+          >
+            <Input
+              id="password"
+              type="password"
+              autoComplete="new-password"
+              aria-invalid={!!errors.password}
+              {...register('password')}
+            />
           </Field>
           <Field label="Confirm password" htmlFor="confirmPassword" error={errors.confirmPassword?.message}>
             <Input
               id="confirmPassword"
               type="password"
+              autoComplete="new-password"
               aria-invalid={!!errors.confirmPassword}
               {...register('confirmPassword')}
             />

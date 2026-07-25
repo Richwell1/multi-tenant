@@ -1,11 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { useState } from 'react';
 import {
   EmptyState,
   NoResultsState,
   ErrorState,
   PackageUnavailableState,
   InstallationFailure,
+  ConfirmDialog,
 } from './index';
 
 describe('UI-state components', () => {
@@ -38,5 +40,41 @@ describe('UI-state components', () => {
     render(<InstallationFailure packageName="Attendance" onRetry={onRetry} />);
     fireEvent.click(screen.getByRole('button', { name: /retry installation/i }));
     expect(onRetry).toHaveBeenCalledOnce();
+  });
+
+  it('ConfirmDialog traps focus and returns focus to the trigger', () => {
+    function Harness() {
+      const [open, setOpen] = useState(false);
+      return (
+        <>
+          <button type="button" onClick={() => setOpen(true)}>
+            Open dialog
+          </button>
+          <ConfirmDialog
+            open={open}
+            title="Confirm action"
+            description="This action cannot be undone."
+            onCancel={() => setOpen(false)}
+            onConfirm={vi.fn()}
+          />
+        </>
+      );
+    }
+
+    render(<Harness />);
+    const trigger = screen.getByRole('button', { name: 'Open dialog' });
+    trigger.focus();
+    fireEvent.click(trigger);
+
+    expect(screen.getByRole('dialog')).toHaveAttribute('aria-describedby', 'confirm-description');
+    expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus();
+    const confirm = screen.getByRole('button', { name: 'Confirm' });
+    confirm.focus();
+    fireEvent.keyDown(confirm, { key: 'Tab' });
+    expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus();
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Cancel' }), { key: 'Tab', shiftKey: true });
+    expect(confirm).toHaveFocus();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(trigger).toHaveFocus();
   });
 });

@@ -18,6 +18,31 @@
   * {
     @apply border-border;
   }
+
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--portal-color,#3525cd)] focus-visible:ring-offset-2;
+  }
+
+  select,
+  textarea {
+    @apply rounded-md border border-border bg-surface text-sm text-content shadow-sm transition-colors;
+  }
+
+  select {
+    @apply h-10 px-3;
+  }
+
+  textarea {
+    @apply min-h-24 px-3 py-2;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--portal-color, #3525cd) 18%, white);
+  }
 }
 
 @layer components {
@@ -32,5 +57,20 @@
     --portal-color: #005338;
     --portal-color-hover: #006e4b;
     --portal-accent: #005338;
+  }
+
+  .safe-area-bottom {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

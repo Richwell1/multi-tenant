@@ -11,7 +11,7 @@ import { queryKeys } from '@/lib/query-keys';
 import { invalidationTargets } from '@/data/invalidation';
 import { notify } from '@/lib/notify';
 import { companyTargetKeyPart, type CompanyTargetValue } from '@/lib/company-target';
-import type { PackageKey, RequestRecord, RequestStatus } from '@/data/types';
+import type { PackageKey } from '@/data/types';
 
 /** Invalidate a scoped set of query-key prefixes. */
 function invalidate(qc: QueryClient, keys: readonly QueryKey[]) {
@@ -43,10 +43,7 @@ export const useCompany = (id: string) =>
 export const useCompanyUsers = (companyId: string) =>
   useQuery({ queryKey: queryKeys.users.all(companyId), queryFn: () => repository.getCompanyUsers(companyId) });
 
-export const useRequests = () =>
-  useQuery({ queryKey: queryKeys.requests.all, queryFn: repository.getRequests });
-export const useRequest = (id: string) =>
-  useQuery({ queryKey: queryKeys.requests.detail(id), queryFn: () => repository.getRequest(id) });
+// Request Records are persisted via dedicated hooks in '@/hooks/requests'.
 
 // Package catalog, versions, releases, installations, and assignments are
 // served by the dedicated '@/hooks/packages' layer (package repositories + RPC).
@@ -74,38 +71,6 @@ export const useDiagnostics = (target: CompanyTargetValue) =>
 // and '@/hooks/attendance'.
 
 // --- Mutations (scoped invalidation + toasts) --------------------------------
-
-export function useCreateRequest() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: repository.createRequest,
-    onSuccess: () => {
-      notify.recordCreated('Request record');
-      invalidate(qc, invalidationTargets.createRequest());
-    },
-    onError: (e: NetworkError) => notify.networkFailure(e.message),
-  });
-}
-
-/** Optimistic: status flips immediately, rolls back on failure. */
-export function useChangeRequestStatus(id: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (status: RequestStatus) => repository.changeRequestStatus(id, status),
-    onMutate: async (status) => {
-      await qc.cancelQueries({ queryKey: queryKeys.requests.detail(id) });
-      const previous = qc.getQueryData<RequestRecord>(queryKeys.requests.detail(id));
-      if (previous) qc.setQueryData(queryKeys.requests.detail(id), { ...previous, status });
-      return { previous };
-    },
-    onError: (e: NetworkError, _status, ctx) => {
-      if (ctx?.previous) qc.setQueryData(queryKeys.requests.detail(id), ctx.previous);
-      notify.networkFailure(e.message);
-    },
-    onSuccess: (res) => notify.requestStatusChanged(res.status.replace(/_/g, ' ')),
-    onSettled: () => invalidate(qc, invalidationTargets.changeRequestStatus(id)),
-  });
-}
 
 export function useSaveSettings(companyId: string) {
   const qc = useQueryClient();

@@ -8,18 +8,21 @@
 | | |
 |---|---|
 | Product | Multi-Tenants HR |
-| Current branch | `feat/attendance-management-persistence` (from merged `main`) |
-| Current phase | Phase 4 — Package system (4.2 + 4.3A merged; 4.3B Attendance persistence complete) |
-| Current increment | 4.3B — Attendance Management persistence |
+| Current branch | `feat/attendance-management-persistence` (merges 5.1 for combined verification) |
+| Current phase | Phase 5 — Platform Operations (4.3B + 5.1 integrated; 5.2 next) |
+| Current increment | Attendance (4.3B) + Request Records (5.1) combined, migration re-sequenced |
 | Default data source | `mock` (`VITE_DATA_SOURCE`), Supabase path behind lazy adapters |
 | Local Supabase ports | API/Functions 54331 · DB 54332 · Studio 54333 (project-local +10 offset) |
 | Hosted Supabase | Linked (`uezvaqoqqqgblpcbkujq`); **no migrations pushed** |
-| Test count | 171 |
+| Test count | 182 (combined) |
 
-> 4.2 (package-release) + 4.3A (leave) were merged to `main` via PR #7. 4.3B
-> branches from that merged `main` (9 migrations). RLS suites now live under
-> `supabase/tests/`: `package_release_rls.sql` (10), `leave_rls.sql` (14),
-> `attendance_rls.sql` (18) — 42 scenarios, all green on a single reset.
+> Merge order fix: Request Records (5.1) merged to `main` (PR #8) before Attendance
+> (4.3B). To keep a forward-only migration sequence, the attendance migration was
+> **renumbered `090000 → 110000`** (after requests' `100000`). This branch then
+> merged `main` in, so it now carries both features; it is the combined-verified,
+> clean-mergeable Attendance PR. RLS suites under `supabase/tests/`:
+> `package_release_rls.sql` (10), `leave_rls.sql` (14), `attendance_rls.sql` (18),
+> `request_records_rls.sql` (10) — **52 scenarios**.
 
 ## Phase tracker
 
@@ -32,10 +35,11 @@
 | 3B | Positions | Complete | 2026-07-25 | feat/hr-core-persistence | `f6674b9` | 126 tests + JWT RLS+FK ✅ | mock simulated writes |
 | 3C | Employees | Complete | 2026-07-25 | feat/hr-core-persistence | `b0bb3f6` | 134 tests + JWT RLS (dual FK, uniqueness, terminate audit) ✅ | browser E2E deferred |
 | 4 | Package & extension system | In progress | — | feat/package-release-management | `f4c1888` | 4.1 ✅; 4.2a ✅; 4.2b ✅ (publish RPC + JWT: authz, classification rules, entitlement refresh, tenant-safe installs) | Attendance persistence remains |
-| 4.3A | Leave Management persistence | Complete | 2026-07-25 | feat/leave-management-persistence | `554e9d0` | merged (PR #7); 14 JWT/RLS ✅ | writes scoped to company_admin; self-service + leave_types table deferred |
-| 4.3B | Attendance Management persistence | Complete | 2026-07-25 | feat/attendance-management-persistence | (this branch) | 171 tests + 18 JWT/RLS ✅ | writes scoped to company_admin; self-check-in deferred; single-session/day |
-| UI | UI/UX polish | In progress | 2026-07-25 | feat/ui-ux-polish | see `git log` | audit + shared foundation + dialog test + 137 tests ✅ | browser visual QA; push pending GitHub authentication |
-| 5 | Requests / diagnostics / usage / audit | Not started | — | — | — | — | — |
+| 4.3A | Leave Management persistence | Complete | 2026-07-25 | feat/leave-management-persistence | `554e9d0` | merged (PR #7) + 14 JWT/RLS ✅ | writes scoped to company_admin; self-service + leave_types table deferred |
+| 4.3B | Attendance Management persistence | Complete | 2026-07-25 | feat/attendance-management-persistence | migration `110000` | 182 combined + 18 JWT/RLS ✅ | re-sequenced after 5.1; merges `main` for combined verify |
+| UI | UI/UX polish | In progress | 2026-07-25 | feat/ui-ux-polish | see `git log` | audit + shared foundation + dialog test + 137 tests ✅ | rebase onto updated main before merge |
+| 5.1 | Request Records persistence | Complete | 2026-07-25 | feat/request-records-persistence | merged (PR #8) | 169 tests + 10 JWT/RLS ✅ | platform-admin-only; diagnostic FK deferred to 5.2 |
+| 5.2–5.6 | Diagnostics / installations / usage / audit / CI | Not started | — | — | — | — | diagnostics attach to request/package version |
 | 6 | Deployment / security hardening / subdomains | Not started | — | — | — | — | wildcard DNS, hosted deploy |
 
 ## Milestone checklists
@@ -71,7 +75,15 @@
 - [x] Release schema (package_releases / targets / installations) + atomic `publish_package_release` RPC (Platform-Admin-only, DB-enforced classification→target rules)
 - [x] Package repositories/services (mock + lazy Supabase; publish via RPC) + Admin UI wiring (Create Release, Package Details, Installation Monitoring, Company assignments)
 - [x] Leave persistence (entitlement-gated + RLS + status machine + audit)
-- [x] Attendance persistence (entitlement-gated + RLS + check-in/out machine + audit)
+- [x] Attendance persistence (entitlement-gated + RLS + check-in/out machine + audit; migration `110000`)
+
+### Platform Operations (Phase 5)
+- [x] **5.1 Request Records** — `request_records` table; `request_priority` + `request_status` enums; platform-admin-only RLS (all ops); DB-enforced lifecycle (`request_status_can_transition`) mirrored in `src/data/requests/transitions.ts`; `request.{created,status_changed,updated}` audit; repositories (mock + lazy Supabase) + service + hooks; Admin UI rewired (status dropdown offers only valid next states); 10 JWT/RLS scenarios + unit tests
+- [ ] 5.2 Diagnostics + release gate (attach to request/package version — adds the deferred `request_records.diagnostic_id` FK)
+- [ ] 5.3 Installation monitoring + recovery
+- [ ] 5.4 Usage analytics
+- [ ] 5.5 Audit logs + system health surfaces
+- [ ] 5.6 CI automation for the RLS/security suites
 
 ### Leave Management (4.3A)
 - [x] `leave_requests` table; same-company composite FK `(company_id, employee_id)→employees`
@@ -83,17 +95,6 @@
 - [x] 14 JWT/RLS scenarios (`supabase/tests/leave_rls.sql`) + unit tests
 - [ ] Employee self-service (company_user creates own requests) — deferred (identity linkage)
 - [ ] Per-company `leave_types` table + composite FK — deferred (no leave-type UI; enum used)
-
-### Attendance Management (4.3B)
-- [x] `attendance_records` table; same-company composite FK `(company_id, employee_id)→employees`
-- [x] `unique(company_id, employee_id, attendance_date)` — one row per employee per day
-- [x] Entitlement-backed RLS via `can_use_company_package(company_id, 'attendance-management')` (read: entitled member; write: entitled + `company_admin`); **Platform Admin deliberately excluded** from tenant attendance reads
-- [x] Check-in/check-out state machine (`not_checked_in → checked_in → checked_out`, terminal) enforced in DB trigger **and** service; `check_out_time ≥ check_in_time` CHECK; no re-check-out
-- [x] Server-side `updated_by` stamping from `auth.uid()`; `attendance.{created,checked_in,checked_out,updated}` audit events
-- [x] Repositories (stateful mock + lazy Supabase) + service + hooks; Attendance UI wired (Add + Check-out)
-- [x] 18 JWT/RLS scenarios (`supabase/tests/attendance_rls.sql`) + unit tests
-- [ ] Employee self-check-in (company_user) — deferred (identity linkage)
-- [ ] Multiple sessions per day — not modelled (UI shows one row/day); revisit if the UI adds it
 
 ### Hosted deployment
 - [ ] Push migrations to hosted Supabase
@@ -126,7 +127,8 @@
 | 4.2b Package admin wiring | ✅ | ✅ | ✅ | 149 | ✅ | reuses 4.2a JWT suite | browser E2E deferred; publish via RPC service |
 | 4.3A Leave persistence | ✅ | ✅ | ✅ | 146 | ✅ | ✅ (14 scenarios: entitlement/company-active/role/cross-tenant FK/transition/audit) | leave adapter lazy chunk (1.1 KB); main 475 KB; browser E2E deferred |
 | Integration (4.2 + 4.3A) | ✅ | ✅ | ✅ | 158 | ✅ | ✅ leave 14/14 + package-release 10/10 on merged schema | combined verification; database.types regenerated; both suites saved under `supabase/tests/` |
-| 4.3B Attendance persistence | ✅ | ✅ | ✅ | 171 | ✅ | ✅ 18/18 (+ leave 14 + package 10 = 42 on one reset) | attendance adapter lazy chunk (1.3 KB); main 475 KB; browser E2E deferred |
+| 5.1 Request Records | ✅ | ✅ | ✅ | 169 | ✅ | ✅ 10/10 (+ leave 14 + package 10 = 34) | request adapter lazy chunk (1.4 KB); main 475 KB; platform-plane RLS; browser E2E deferred |
+| Combined (4.3B + 5.1) | ✅ | ✅ | ✅ | 182 | ✅ | ✅ package 10 · leave 14 · attendance 18 · requests 10 = 52 | attendance migration renumbered `090000→110000`; database.types regenerated; clean-mergeable Attendance PR |
 
 ## Current risks
 - Mock is default; Supabase HR-Core path verified at DB/RLS level, **not yet exercised end-to-end in the browser**.
@@ -135,34 +137,34 @@
 - Mock create/update/disable/terminate are simulated (no persistence) — expected pattern.
 - Hosted Supabase migrations not pushed; no deployment yet.
 - **Fixed (4.1):** package gating previously read mock `company.packages`, which is `undefined` for real Supabase tenants (would have hidden Leave for everyone on the Supabase path). Gating now uses `enabledPackageCodes` from the membership context — one source for mock and Supabase, guard + nav aligned.
-- Both optional packages (Leave, Attendance) are now persisted end-to-end behind the shared entitlement gate; no HR module still reads from the mock repository on the Supabase path.
+- Request Records are now persisted (platform-plane). Remaining mock-backed platform surfaces: diagnostics, installations monitor, usage, health — Phase 5.2–5.5.
 
-### Technical debt (explicit, from 4.3A / 4.3B)
+### Technical debt (explicit, from 5.1)
+- **`request_records.diagnostic_id`** is a nullable column with **no FK yet** — the diagnostics table arrives in 5.2, which will add the composite/plain FK and the "attach diagnostic to request/package version" flow. Until then the Request detail's Diagnostic link resolves against mock diagnostics.
+- **Package linking on create is not persisted**: the Create Request form's extension-nature/company-target selector is validated but not written (`linked_package_key`/`linked_package_version` stay null). A dedicated "link package/version to request" action is deferred (no approved UI for it yet).
+- **Platform-plane RLS**: `request_records` is Platform-Admin-only for every operation (internal notes, email refs). Companies do not see their own requests; add a company-facing read policy only if a customer-facing "my requests" view is introduced.
+- **Request history** is captured via `audit_logs` (`request.*` events with from/to), not a dedicated timeline table/UI. A visible history panel is deferred.
+
+### Technical debt (explicit, from 4.3A)
 - **Role model** still `company_admin` / `company_user` only — no `hr_manager`. Leave **writes** (create/approve/reject/cancel) are scoped to `company_admin`; `company_user` has read-only leave. An `hr_manager` role (and finer leave permissions) is deferred, not silently assumed.
 - **Employee self-service** (a `company_user` filing their *own* leave, tied to `employees.user_id`) is deferred: the identity→employee linkage is not yet reliable for the demo tenants. First implementation is admin-managed.
 - **`leave_types` as a per-company table** (with its own same-company composite FK) is deferred. The current UI exposes only the fixed categories `annual|sick|unpaid`, so leave type is a Postgres enum — no speculative type-management surface. Revisit when leave-type CRUD is required.
   - **Upgrade path** (enum → tenant-configurable types, when a management UI + business need exist): add `leave_types(id, company_id, name, is_active, unique(company_id,name), unique(company_id,id))` with entitlement-backed RLS + per-tenant seeding; add nullable `leave_type_id uuid` to `leave_requests` with composite FK `(company_id, leave_type_id) → leave_types(company_id, id)`; backfill from the enum; move reads to the FK; retire the enum last. No data loss — the enum values become the initial seeded rows.
 - **Status machine** intentionally minimal: `approved`/`rejected`/`cancelled` are terminal (no `approved → cancelled`). Central rule in `src/data/leave/transitions.ts` mirrors the DB trigger; widen both together if needed.
 
-### Technical debt (explicit, from 4.3B)
-- **Attendance writes** scoped to `company_admin`; `company_user` is read-only. Employee **self-check-in** deferred until reliable `auth.users → employees` linkage exists. `hr_manager` not introduced.
-- **Platform Admin is deliberately excluded** from tenant attendance reads (unlike Leave/Employees, which allow platform-admin oversight). Attendance is operational HR data; the platform plane manages packages, not attendance. Revisit only if a product requirement for cross-tenant attendance oversight appears.
-- **One attendance row per employee per day** (unique constraint); multiple sessions/day are not modelled because the UI shows a single row/day. Times are **time-of-day** (`time`) under a same-day assumption (`check_out_time ≥ check_in_time`); overnight spans are out of scope.
-
 ## Next actions
-1. **Merge `feat/attendance-management-persistence` to `main`** (branches off the merged main; conflicts limited to additive `query-keys.ts`/`invalidation.ts` and regenerated `database.types.ts`).
-2. **Browser E2E smoke** under `VITE_DATA_SOURCE=supabase` — package publish flow, Leave, **and** Attendance (login Alpha admin → add attendance → check out → confirm audit; Beta blocked by guard + RLS; Alpha `company_user` read-only). Deferred (interactive Supabase auth not scriptable here) — checklists below. Blocks making Supabase the default.
-3. **Phase 5 — Requests / diagnostics / usage / audit** surfaces persisted end-to-end (the last major mock-backed area).
-4. Automate the JWT/RLS suites in CI (`supabase/tests/*.sql` — 42 scenarios; currently run via `docker exec psql`).
+1. **Merge Attendance (4.3B) to `main`**: this branch already merged `main` in, renumbered its migration to `110000`, and is combined-verified (182 tests, 52 suites) — a clean, conflict-free merge. Then rebase/merge `feat/ui-ux-polish` onto updated `main`.
+2. **Phase 5.2 — Diagnostics + release gate**: diagnostics attach to a request and/or package version; adds the deferred `request_records.diagnostic_id` FK; gates release publishing on a passing diagnostic.
+3. **Browser E2E smoke** under `VITE_DATA_SOURCE=supabase` — package publish, Leave, Attendance, **and** Requests (platform admin: create request → advance through the pipeline → confirm audit; illegal transition rejected; non-admin denied). Deferred (interactive Supabase auth not scriptable here). Blocks making Supabase the default.
+4. Automate the JWT/RLS suites in CI (`supabase/tests/*.sql`; currently run via `docker exec psql`).
 5. Plan hosted rollout (push migrations, deploy Edge Functions, Vercel).
 
-### Manual browser smoke checklist — Attendance (run under `VITE_DATA_SOURCE=supabase`)
-- [ ] Alpha `company_admin` login → Attendance lists persisted rows
-- [ ] Add Attendance (employee/date/status/check-in) → row appears; `attendance.checked_in` in audit
-- [ ] Check out a checked-in row → check-out time + total hours; `attendance.checked_out` in audit
-- [ ] Duplicate same-employee/day add → rejected (conflict)
-- [ ] Alpha `company_user` → Attendance visible, Add/Check-out denied (RLS)
-- [ ] Beta user (no Attendance package) → route shows PackageUnavailable; direct read/insert denied by RLS
+### Manual browser smoke checklist — Requests (run under `VITE_DATA_SOURCE=supabase`)
+- [ ] Platform admin login → Request Records lists persisted rows
+- [ ] Create Request → row appears `received`; `request.created` in audit
+- [ ] Advance status (received → under_review → approved …) → dropdown offers only valid next states; `request.status_changed` in audit
+- [ ] Attempt an illegal jump → rejected (guard + DB)
+- [ ] Non-platform user → Requests not readable/writable (platform-plane RLS)
 
 ### Manual browser smoke checklist — Leave (run under `VITE_DATA_SOURCE=supabase`)
 - [ ] Alpha `company_admin` login → Leave page lists persisted requests
@@ -180,7 +182,8 @@
 - One manifest per distinct package; package **assignment** controls availability (not branches).
 - Query-param tenant fallback now; wildcard subdomains later.
 - Mock remains the default data source until the Supabase path is browser-verified.
+- **Platform-plane data** (package releases, request records) is Platform-Admin-only in RLS — distinct from tenant data (HR core, leave, attendance) which is company-scoped. The two planes never share a read policy.
+- Request Records are the pipeline entry point; **diagnostics attach to a request/package version (5.2), so requests are persisted first** (`diagnostic_id` FK deferred to 5.2).
 - Same-company relationships enforced by **composite foreign keys**, not just RLS/UI.
 - The full package-access rule (active user ∧ active membership ∧ active company ∧ enabled+active package ∧ role ∧ matching company_id) is enforced in **both** RLS and the application service. `can_use_company_package()` is the DB-side composition; `PackageGuard` + service validation are the app-side mirror.
-- Optional-package status machines have a single source of truth shared by DB trigger and service (`src/data/leave/transitions.ts`, `src/data/attendance/transitions.ts`); the DB is authoritative, the client fails fast.
-- Attendance times are modelled as **time-of-day** (`time`), not full timestamps, to match the approved UI (`HH:MM`); total hours are derived, never stored. Platform Admin is scoped **out** of tenant attendance reads by design.
+- Optional-package status machines have a single source of truth shared by DB trigger and service (`src/data/leave/transitions.ts`); the DB is authoritative, the client fails fast.

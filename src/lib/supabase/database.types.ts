@@ -750,6 +750,75 @@ export type Database = {
           },
         ]
       }
+      request_records: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          description: string
+          diagnostic_id: string | null
+          id: string
+          internal_note: string
+          linked_package_key: string | null
+          linked_package_version: string | null
+          priority: Database["public"]["Enums"]["request_priority"]
+          request_type: string
+          source_email_reference: string
+          status: Database["public"]["Enums"]["request_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          description: string
+          diagnostic_id?: string | null
+          id?: string
+          internal_note?: string
+          linked_package_key?: string | null
+          linked_package_version?: string | null
+          priority?: Database["public"]["Enums"]["request_priority"]
+          request_type: string
+          source_email_reference: string
+          status?: Database["public"]["Enums"]["request_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          diagnostic_id?: string | null
+          id?: string
+          internal_note?: string
+          linked_package_key?: string | null
+          linked_package_version?: string | null
+          priority?: Database["public"]["Enums"]["request_priority"]
+          request_type?: string
+          source_email_reference?: string
+          status?: Database["public"]["Enums"]["request_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "request_records_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "request_records_linked_package_key_fkey"
+            columns: ["linked_package_key"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -796,6 +865,13 @@ export type Database = {
         }
         Returns: Json
       }
+      request_status_can_transition: {
+        Args: {
+          from_status: Database["public"]["Enums"]["request_status"]
+          to_status: Database["public"]["Enums"]["request_status"]
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       attendance_status: "present" | "late" | "absent"
@@ -827,6 +903,18 @@ export type Database = {
         | "all_companies"
         | "selected_companies"
         | "one_company"
+      request_priority: "low" | "medium" | "high"
+      request_status:
+        | "received"
+        | "under_review"
+        | "approved"
+        | "rejected"
+        | "in_development"
+        | "testing"
+        | "ready_for_release"
+        | "released"
+        | "installed"
+        | "closed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -988,6 +1076,19 @@ export const Constants = {
         "all_companies",
         "selected_companies",
         "one_company",
+      ],
+      request_priority: ["low", "medium", "high"],
+      request_status: [
+        "received",
+        "under_review",
+        "approved",
+        "rejected",
+        "in_development",
+        "testing",
+        "ready_for_release",
+        "released",
+        "installed",
+        "closed",
       ],
     },
   },

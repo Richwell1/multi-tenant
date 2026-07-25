@@ -949,6 +949,17 @@ export type Database = {
         }
         Returns: Json
       }
+      platform_audit_log: {
+        Args: { p_company_ids?: string[]; p_limit?: number }
+        Returns: {
+          action: string
+          actor: string
+          created_at: string
+          entity_type: string
+          id: string
+          target: string
+        }[]
+      }
       publish_package_release: {
         Args: {
           p_automatic_install?: boolean
@@ -976,6 +987,14 @@ export type Database = {
       rollback_package_installation: {
         Args: { p_installation_id: string }
         Returns: Json
+      }
+      system_health: {
+        Args: never
+        Returns: {
+          label: string
+          status: string
+          value: string
+        }[]
       }
       usage_metrics: {
         Args: { p_company_ids?: string[] }

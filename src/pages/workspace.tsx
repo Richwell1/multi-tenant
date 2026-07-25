@@ -31,7 +31,6 @@ import { PACKAGE_CODES } from '@/lib/entitlements';
 import { notify } from '@/lib/notify';
 import { forceNextFailure } from '@/data/api';
 import {
-  useAttendance,
   useCompanyUsers,
   useInstallPackage,
   useSaveSettings,
@@ -42,9 +41,12 @@ import { usePositions, useCreatePosition, useDisablePosition } from '@/hooks/pos
 import { useEmployees, useEmployee, useCreateEmployee, useTerminateEmployee } from '@/hooks/employees';
 import { useLeaveRequests, useCreateLeaveRequest, useDecideLeaveRequest } from '@/hooks/leave';
 import type { LeaveRequest } from '@/data/leave';
+import { useAttendanceRecords, useCreateAttendance, useCheckOutAttendance } from '@/hooks/attendance';
+import { canCheckOut, type AttendanceRecord } from '@/data/attendance';
 import { positionFormSchema, type PositionFormValues } from '@/services/position-service';
 import { employeeFormSchema, type EmployeeFormValues } from '@/services/employee-service';
 import { leaveRequestFormSchema, type LeaveRequestFormValues } from '@/services/leave-service';
+import { attendanceFormSchema, type AttendanceFormValues } from '@/services/attendance-service';
 
 function useTenantId() {
   const { tenantId } = useSession();
@@ -957,21 +959,119 @@ function LeaveContent() {
 }
 
 export function AttendancePage() {
-  const tid = useTenantId();
   return (
     <PackageGuard packageCode={PACKAGE_CODES.attendance} packageName="Attendance Management">
-      <AttendanceContent tenantId={tid} />
+      <AttendanceContent />
     </PackageGuard>
   );
 }
 
-function AttendanceContent({ tenantId }: { tenantId: string }) {
-  const query = useAttendance(tenantId);
+const attendanceTone = (s: AttendanceRecord['status']) =>
+  s === 'present' ? 'healthy' : s === 'late' ? 'degraded' : 'offline';
+
+function AttendanceContent() {
+  const query = useAttendanceRecords();
+  const employeesQuery = useEmployees();
+  const createMutation = useCreateAttendance();
+  const checkOutMutation = useCheckOutAttendance();
+  const [showAdd, setShowAdd] = useState(false);
   const filtered = query.data ?? [];
+  const assignableEmployees = (employeesQuery.data ?? []).filter((e) => e.status !== 'terminated');
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    watch,
+    formState: { errors },
+  } = useForm<AttendanceFormValues>({
+    resolver: zodResolver(attendanceFormSchema),
+    defaultValues: {
+      status: 'present',
+      date: new Date().toISOString().slice(0, 10),
+      checkIn: new Date().toTimeString().slice(0, 5),
+    },
+  });
+  const status = watch('status');
+
+  const onCreate = (values: AttendanceFormValues) =>
+    createMutation.mutate(values, {
+      onSuccess: () => {
+        reset();
+        setShowAdd(false);
+      },
+    });
+
   return (
     <>
-      <PageHeader title="Attendance Management" actions={<Button>Add Attendance</Button>} />
-      <TableBoundary query={query} filtered={filtered} cols={6} emptyTitle="No attendance records">
+      <PageHeader
+        title="Attendance Management"
+        actions={<Button onClick={() => setShowAdd((s) => !s)}>Add Attendance</Button>}
+      />
+      {showAdd && (
+        <Card className="mb-6 max-w-3xl">
+          <CardContent className="pt-6">
+            <form
+              onSubmit={handleSubmit(onCreate, () => notify.validationFailure())}
+              className="grid gap-4 sm:grid-cols-2"
+              noValidate
+            >
+              <Field label="Employee" htmlFor="att-employee" error={errors.employeeId?.message}>
+                <select
+                  id="att-employee"
+                  className={selectClass}
+                  aria-invalid={!!errors.employeeId}
+                  defaultValue=""
+                  {...register('employeeId')}
+                >
+                  <option value="" disabled>
+                    Select employee…
+                  </option>
+                  {assignableEmployees.map((e) => (
+                    <option key={e.id} value={e.id}>
+                      {e.fullName}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Date" htmlFor="att-date" error={errors.date?.message}>
+                <Input id="att-date" type="date" aria-invalid={!!errors.date} {...register('date')} />
+              </Field>
+              <Field label="Status" htmlFor="att-status" error={errors.status?.message}>
+                <select id="att-status" className={selectClass} {...register('status')}>
+                  <option value="present">Present</option>
+                  <option value="late">Late</option>
+                  <option value="absent">Absent</option>
+                </select>
+              </Field>
+              {status !== 'absent' && (
+                <Field label="Check-in time" htmlFor="att-checkin" error={errors.checkIn?.message}>
+                  <Input id="att-checkin" type="time" aria-invalid={!!errors.checkIn} {...register('checkIn')} />
+                </Field>
+              )}
+              <Field label="Notes (optional)" htmlFor="att-notes" className="sm:col-span-2">
+                <Input id="att-notes" {...register('notes')} />
+              </Field>
+              <div className="col-span-full flex gap-2">
+                <SubmitButton pending={createMutation.isPending} pendingLabel="Saving…">
+                  Save Attendance
+                </SubmitButton>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    reset();
+                    setShowAdd(false);
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+      <TableBoundary query={query} filtered={filtered} cols={7} emptyTitle="No attendance records">
         <DataTable>
           <THead>
             <TH>Employee</TH>
@@ -980,19 +1080,32 @@ function AttendanceContent({ tenantId }: { tenantId: string }) {
             <TH>Check-out</TH>
             <TH>Total Hours</TH>
             <TH>Status</TH>
+            <TH>Action</TH>
           </THead>
           <TBody>
             {filtered.map((a) => (
               <TR key={a.id}>
                 <TD className="font-medium">{a.employee}</TD>
                 <TD>{a.date}</TD>
-                <TD>{a.checkIn}</TD>
-                <TD>{a.checkOut}</TD>
-                <TD>{a.totalHours}</TD>
+                <TD>{a.checkIn || '—'}</TD>
+                <TD>{a.checkOut || '—'}</TD>
+                <TD>{a.totalHours || '—'}</TD>
                 <TD>
-                  <Badge tone={a.status === 'present' ? 'healthy' : a.status === 'late' ? 'degraded' : 'offline'}>
-                    {a.status}
-                  </Badge>
+                  <Badge tone={attendanceTone(a.status)}>{a.status}</Badge>
+                </TD>
+                <TD>
+                  {canCheckOut(a) ? (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={checkOutMutation.isPending}
+                      onClick={() => checkOutMutation.mutate(a)}
+                    >
+                      Check out
+                    </Button>
+                  ) : (
+                    <span className="text-sm text-content-variant">—</span>
+                  )}
                 </TD>
               </TR>
             ))}

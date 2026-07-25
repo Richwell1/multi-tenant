@@ -8,20 +8,21 @@
 | | |
 |---|---|
 | Product | Multi-Tenants HR |
-| Current branch | `feat/request-records-persistence` (from merged `main`) |
-| Current phase | Phase 5 — Platform Operations (5.1 Request Records persistence complete) |
-| Current increment | 5.1 — Request Records persistence |
+| Current branch | `feat/attendance-management-persistence` (merges 5.1 for combined verification) |
+| Current phase | Phase 5 — Platform Operations (4.3B + 5.1 integrated; 5.2 next) |
+| Current increment | Attendance (4.3B) + Request Records (5.1) combined, migration re-sequenced |
 | Default data source | `mock` (`VITE_DATA_SOURCE`), Supabase path behind lazy adapters |
 | Local Supabase ports | API/Functions 54331 · DB 54332 · Studio 54333 (project-local +10 offset) |
 | Hosted Supabase | Linked (`uezvaqoqqqgblpcbkujq`); **no migrations pushed** |
-| Test count | 169 |
+| Test count | 182 (combined) |
 
-> Branch topology: `main` = PR #7 (4.2 + 4.3A). Two feature branches sit off it in
-> parallel and integrate independently — `feat/attendance-management-persistence`
-> (4.3B, migration `090000`) and this one (5.1, migration `100000`). Numbers are
-> disjoint so both merge cleanly. RLS suites under `supabase/tests/`:
-> `package_release_rls.sql` (10), `leave_rls.sql` (14), `request_records_rls.sql`
-> (10) — attendance's suite (18) rides its own branch.
+> Merge order fix: Request Records (5.1) merged to `main` (PR #8) before Attendance
+> (4.3B). To keep a forward-only migration sequence, the attendance migration was
+> **renumbered `090000 → 110000`** (after requests' `100000`). This branch then
+> merged `main` in, so it now carries both features; it is the combined-verified,
+> clean-mergeable Attendance PR. RLS suites under `supabase/tests/`:
+> `package_release_rls.sql` (10), `leave_rls.sql` (14), `attendance_rls.sql` (18),
+> `request_records_rls.sql` (10) — **52 scenarios**.
 
 ## Phase tracker
 
@@ -35,9 +36,9 @@
 | 3C | Employees | Complete | 2026-07-25 | feat/hr-core-persistence | `b0bb3f6` | 134 tests + JWT RLS (dual FK, uniqueness, terminate audit) ✅ | browser E2E deferred |
 | 4 | Package & extension system | In progress | — | feat/package-release-management | `f4c1888` | 4.1 ✅; 4.2a ✅; 4.2b ✅ (publish RPC + JWT: authz, classification rules, entitlement refresh, tenant-safe installs) | Attendance persistence remains |
 | 4.3A | Leave Management persistence | Complete | 2026-07-25 | feat/leave-management-persistence | `554e9d0` | merged (PR #7) + 14 JWT/RLS ✅ | writes scoped to company_admin; self-service + leave_types table deferred |
-| 4.3B | Attendance Management persistence | Complete | 2026-07-25 | feat/attendance-management-persistence | (parallel branch) | 171 tests + 18 JWT/RLS ✅ | not merged; parallel to 5.1 |
-| UI | UI/UX polish | In progress | 2026-07-25 | feat/ui-ux-polish | see `git log` | audit + shared foundation + dialog test + 137 tests ✅ | browser visual QA; push pending GitHub authentication |
-| 5.1 | Request Records persistence | Complete | 2026-07-25 | feat/request-records-persistence | (this branch) | 169 tests + 10 JWT/RLS ✅ | platform-admin-only; diagnostic FK deferred to 5.2 |
+| 4.3B | Attendance Management persistence | Complete | 2026-07-25 | feat/attendance-management-persistence | migration `110000` | 182 combined + 18 JWT/RLS ✅ | re-sequenced after 5.1; merges `main` for combined verify |
+| UI | UI/UX polish | In progress | 2026-07-25 | feat/ui-ux-polish | see `git log` | audit + shared foundation + dialog test + 137 tests ✅ | rebase onto updated main before merge |
+| 5.1 | Request Records persistence | Complete | 2026-07-25 | feat/request-records-persistence | merged (PR #8) | 169 tests + 10 JWT/RLS ✅ | platform-admin-only; diagnostic FK deferred to 5.2 |
 | 5.2–5.6 | Diagnostics / installations / usage / audit / CI | Not started | — | — | — | — | diagnostics attach to request/package version |
 | 6 | Deployment / security hardening / subdomains | Not started | — | — | — | — | wildcard DNS, hosted deploy |
 
@@ -74,7 +75,7 @@
 - [x] Release schema (package_releases / targets / installations) + atomic `publish_package_release` RPC (Platform-Admin-only, DB-enforced classification→target rules)
 - [x] Package repositories/services (mock + lazy Supabase; publish via RPC) + Admin UI wiring (Create Release, Package Details, Installation Monitoring, Company assignments)
 - [x] Leave persistence (entitlement-gated + RLS + status machine + audit)
-- [x] Attendance persistence (parallel branch `feat/attendance-management-persistence`)
+- [x] Attendance persistence (entitlement-gated + RLS + check-in/out machine + audit; migration `110000`)
 
 ### Platform Operations (Phase 5)
 - [x] **5.1 Request Records** — `request_records` table; `request_priority` + `request_status` enums; platform-admin-only RLS (all ops); DB-enforced lifecycle (`request_status_can_transition`) mirrored in `src/data/requests/transitions.ts`; `request.{created,status_changed,updated}` audit; repositories (mock + lazy Supabase) + service + hooks; Admin UI rewired (status dropdown offers only valid next states); 10 JWT/RLS scenarios + unit tests
@@ -127,6 +128,7 @@
 | 4.3A Leave persistence | ✅ | ✅ | ✅ | 146 | ✅ | ✅ (14 scenarios: entitlement/company-active/role/cross-tenant FK/transition/audit) | leave adapter lazy chunk (1.1 KB); main 475 KB; browser E2E deferred |
 | Integration (4.2 + 4.3A) | ✅ | ✅ | ✅ | 158 | ✅ | ✅ leave 14/14 + package-release 10/10 on merged schema | combined verification; database.types regenerated; both suites saved under `supabase/tests/` |
 | 5.1 Request Records | ✅ | ✅ | ✅ | 169 | ✅ | ✅ 10/10 (+ leave 14 + package 10 = 34) | request adapter lazy chunk (1.4 KB); main 475 KB; platform-plane RLS; browser E2E deferred |
+| Combined (4.3B + 5.1) | ✅ | ✅ | ✅ | 182 | ✅ | ✅ package 10 · leave 14 · attendance 18 · requests 10 = 52 | attendance migration renumbered `090000→110000`; database.types regenerated; clean-mergeable Attendance PR |
 
 ## Current risks
 - Mock is default; Supabase HR-Core path verified at DB/RLS level, **not yet exercised end-to-end in the browser**.
@@ -151,7 +153,7 @@
 - **Status machine** intentionally minimal: `approved`/`rejected`/`cancelled` are terminal (no `approved → cancelled`). Central rule in `src/data/leave/transitions.ts` mirrors the DB trigger; widen both together if needed.
 
 ## Next actions
-1. **Merge the outstanding parallel branches to `main`**: `feat/attendance-management-persistence` (4.3B) and `feat/request-records-persistence` (5.1). Disjoint migrations (`090000` / `100000`); conflicts limited to additive `query-keys.ts`/`invalidation.ts` and regenerated `database.types.ts`.
+1. **Merge Attendance (4.3B) to `main`**: this branch already merged `main` in, renumbered its migration to `110000`, and is combined-verified (182 tests, 52 suites) — a clean, conflict-free merge. Then rebase/merge `feat/ui-ux-polish` onto updated `main`.
 2. **Phase 5.2 — Diagnostics + release gate**: diagnostics attach to a request and/or package version; adds the deferred `request_records.diagnostic_id` FK; gates release publishing on a passing diagnostic.
 3. **Browser E2E smoke** under `VITE_DATA_SOURCE=supabase` — package publish, Leave, Attendance, **and** Requests (platform admin: create request → advance through the pipeline → confirm audit; illegal transition rejected; non-admin denied). Deferred (interactive Supabase auth not scriptable here). Blocks making Supabase the default.
 4. Automate the JWT/RLS suites in CI (`supabase/tests/*.sql`; currently run via `docker exec psql`).

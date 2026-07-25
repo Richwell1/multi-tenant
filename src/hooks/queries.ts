@@ -67,9 +67,8 @@ export const useAudit = (target: CompanyTargetValue) =>
 export const useDiagnostics = (target: CompanyTargetValue) =>
   useQuery({ queryKey: queryKeys.diagnostics.list(companyTargetKeyPart(target)), queryFn: repository.getDiagnostics });
 
-// Leave Management is persisted via dedicated hooks in '@/hooks/leave'.
-export const useAttendance = (companyId: string) =>
-  useQuery({ queryKey: queryKeys.attendance.all(companyId), queryFn: () => repository.getAttendance(companyId) });
+// Leave and Attendance are persisted via dedicated hooks in '@/hooks/leave'
+// and '@/hooks/attendance'.
 
 // --- Mutations (scoped invalidation + toasts) --------------------------------
 

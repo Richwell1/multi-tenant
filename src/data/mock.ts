@@ -229,6 +229,6 @@ export const leaveRequests: LeaveRequest[] = [
 ];
 
 export const attendanceRecords: AttendanceRecord[] = [
-  { id: 'at1', tenantId: 'alpha', employee: 'Maria Santos', date: '2026-05-18', checkIn: '09:02', checkOut: '17:30', totalHours: 8.5, status: 'present' },
-  { id: 'at2', tenantId: 'beta', employee: 'Nadia Rahman', date: '2026-05-18', checkIn: '08:15', checkOut: '16:40', totalHours: 8.4, status: 'present' },
+  { id: 'at1', tenantId: 'alpha', employeeId: 'e1', employee: 'Maria Santos', date: '2026-05-18', checkIn: '09:02', checkOut: '17:30', totalHours: 8.5, status: 'present' },
+  { id: 'at2', tenantId: 'beta', employeeId: 'e4', employee: 'Nadia Rahman', date: '2026-05-18', checkIn: '08:15', checkOut: '16:40', totalHours: 8.4, status: 'present' },
 ];

@@ -34,6 +34,66 @@ export type Database = {
   }
   public: {
     Tables: {
+      attendance_records: {
+        Row: {
+          attendance_date: string
+          check_in_time: string | null
+          check_out_time: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          employee_id: string
+          id: string
+          notes: string | null
+          status: Database["public"]["Enums"]["attendance_status"]
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          attendance_date: string
+          check_in_time?: string | null
+          check_out_time?: string | null
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          employee_id: string
+          id?: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["attendance_status"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          attendance_date?: string
+          check_in_time?: string | null
+          check_out_time?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          employee_id?: string
+          id?: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["attendance_status"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_employee_same_company"
+            columns: ["company_id", "employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "attendance_records_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string
@@ -814,6 +874,7 @@ export type Database = {
       }
     }
     Enums: {
+      attendance_status: "present" | "late" | "absent"
       company_package_status: "assigned" | "installing" | "installed" | "failed"
       company_role: "company_admin" | "company_user"
       company_status: "active" | "suspended"
@@ -984,6 +1045,7 @@ export const Constants = {
   },
   public: {
     Enums: {
+      attendance_status: ["present", "late", "absent"],
       company_package_status: ["assigned", "installing", "installed", "failed"],
       company_role: ["company_admin", "company_user"],
       company_status: ["active", "suspended"],

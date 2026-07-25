@@ -89,5 +89,10 @@ export const queryKeys = {
     all: (companyId: string) => ['leave', companyId] as const,
     list: (companyId: string) => ['leave', companyId, 'list'] as const,
   },
-  attendance: { all: (companyId: string) => ['attendance', companyId] as const },
+  attendance: {
+    all: (companyId: string) => ['attendance', companyId] as const,
+    records: (companyId: string) => ['attendance', companyId, 'records'] as const,
+    record: (companyId: string, attendanceId: string) =>
+      ['attendance', companyId, 'record', attendanceId] as const,
+  },
 } as const;

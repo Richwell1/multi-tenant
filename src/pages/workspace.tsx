@@ -34,15 +34,17 @@ import {
   useAttendance,
   useCompanyUsers,
   useInstallPackage,
-  useLeaveRequests,
   useSaveSettings,
   useTenantInstallations,
 } from '@/hooks/queries';
 import { useDepartments, useCreateDepartment, useDisableDepartment } from '@/hooks/departments';
 import { usePositions, useCreatePosition, useDisablePosition } from '@/hooks/positions';
 import { useEmployees, useEmployee, useCreateEmployee, useTerminateEmployee } from '@/hooks/employees';
+import { useLeaveRequests, useCreateLeaveRequest, useDecideLeaveRequest } from '@/hooks/leave';
+import type { LeaveRequest } from '@/data/leave';
 import { positionFormSchema, type PositionFormValues } from '@/services/position-service';
 import { employeeFormSchema, type EmployeeFormValues } from '@/services/employee-service';
+import { leaveRequestFormSchema, type LeaveRequestFormValues } from '@/services/leave-service';
 
 function useTenantId() {
   const { tenantId } = useSession();
@@ -794,23 +796,120 @@ export function SettingsPage() {
 // --- Optional package modules (gated) ----------------------------------------
 
 export function LeavePage() {
-  const tid = useTenantId();
   // Route-level entitlement gate (Beta has no Leave package). RLS still enforces
   // access on the server; this is the UX boundary.
   return (
     <PackageGuard packageCode={PACKAGE_CODES.leave} packageName="Leave Management">
-      <LeaveContent tenantId={tid} />
+      <LeaveContent />
     </PackageGuard>
   );
 }
 
-function LeaveContent({ tenantId }: { tenantId: string }) {
-  const query = useLeaveRequests(tenantId);
+const selectClass =
+  'flex h-10 w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-content shadow-sm ' +
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--portal-color,#3525cd)] focus-visible:ring-offset-1 ' +
+  'aria-[invalid=true]:border-danger';
+
+const leaveTone = (s: LeaveRequest['status']) =>
+  s === 'approved' ? 'healthy' : s === 'rejected' || s === 'cancelled' ? 'offline' : 'degraded';
+
+function LeaveContent() {
+  const query = useLeaveRequests();
+  const employeesQuery = useEmployees();
+  const createMutation = useCreateLeaveRequest();
+  const decideMutation = useDecideLeaveRequest();
+  const [showAdd, setShowAdd] = useState(false);
   const filtered = query.data ?? [];
-  const decide = (verdict: 'approved' | 'rejected') => notify.requestStatusChanged(verdict);
+  const assignableEmployees = (employeesQuery.data ?? []).filter((e) => e.status !== 'terminated');
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<LeaveRequestFormValues>({
+    resolver: zodResolver(leaveRequestFormSchema),
+    defaultValues: { leaveType: 'annual' },
+  });
+
+  const onCreate = (values: LeaveRequestFormValues) =>
+    createMutation.mutate(values, {
+      onSuccess: () => {
+        reset({ leaveType: 'annual' });
+        setShowAdd(false);
+      },
+    });
+
+  const decide = (l: LeaveRequest, status: 'approved' | 'rejected' | 'cancelled') =>
+    decideMutation.mutate({ id: l.id, current: l.status, status });
+
   return (
     <>
-      <PageHeader title="Leave Management" actions={<Button>Add Request</Button>} />
+      <PageHeader
+        title="Leave Management"
+        actions={<Button onClick={() => setShowAdd((s) => !s)}>Add Request</Button>}
+      />
+      {showAdd && (
+        <Card className="mb-6 max-w-3xl">
+          <CardContent className="pt-6">
+            <form
+              onSubmit={handleSubmit(onCreate, () => notify.validationFailure())}
+              className="grid gap-4 sm:grid-cols-2"
+              noValidate
+            >
+              <Field label="Employee" htmlFor="leave-employee" error={errors.employeeId?.message}>
+                <select
+                  id="leave-employee"
+                  className={selectClass}
+                  aria-invalid={!!errors.employeeId}
+                  defaultValue=""
+                  {...register('employeeId')}
+                >
+                  <option value="" disabled>
+                    Select employee…
+                  </option>
+                  {assignableEmployees.map((e) => (
+                    <option key={e.id} value={e.id}>
+                      {e.fullName}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Type" htmlFor="leave-type" error={errors.leaveType?.message}>
+                <select id="leave-type" className={selectClass} {...register('leaveType')}>
+                  <option value="annual">Annual</option>
+                  <option value="sick">Sick</option>
+                  <option value="unpaid">Unpaid</option>
+                </select>
+              </Field>
+              <Field label="Start date" htmlFor="leave-start" error={errors.startDate?.message}>
+                <Input id="leave-start" type="date" aria-invalid={!!errors.startDate} {...register('startDate')} />
+              </Field>
+              <Field label="End date" htmlFor="leave-end" error={errors.endDate?.message}>
+                <Input id="leave-end" type="date" aria-invalid={!!errors.endDate} {...register('endDate')} />
+              </Field>
+              <Field label="Reason (optional)" htmlFor="leave-reason" className="sm:col-span-2">
+                <Input id="leave-reason" {...register('reason')} />
+              </Field>
+              <div className="col-span-full flex gap-2">
+                <SubmitButton pending={createMutation.isPending} pendingLabel="Saving…">
+                  Submit Request
+                </SubmitButton>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    reset({ leaveType: 'annual' });
+                    setShowAdd(false);
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
       <TableBoundary query={query} filtered={filtered} cols={6} emptyTitle="No leave requests">
         <DataTable>
           <THead>
@@ -829,19 +928,24 @@ function LeaveContent({ tenantId }: { tenantId: string }) {
                 <TD>{l.startDate}</TD>
                 <TD>{l.endDate}</TD>
                 <TD>
-                  <Badge tone={l.status === 'approved' ? 'healthy' : l.status === 'rejected' ? 'offline' : 'degraded'}>
-                    {l.status}
-                  </Badge>
+                  <Badge tone={leaveTone(l.status)}>{l.status}</Badge>
                 </TD>
                 <TD>
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="ghost" onClick={() => decide('approved')}>
-                      Approve
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => decide('rejected')}>
-                      Reject
-                    </Button>
-                  </div>
+                  {l.status === 'pending' ? (
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="ghost" disabled={decideMutation.isPending} onClick={() => decide(l, 'approved')}>
+                        Approve
+                      </Button>
+                      <Button size="sm" variant="ghost" disabled={decideMutation.isPending} onClick={() => decide(l, 'rejected')}>
+                        Reject
+                      </Button>
+                      <Button size="sm" variant="ghost" disabled={decideMutation.isPending} onClick={() => decide(l, 'cancelled')}>
+                        Cancel
+                      </Button>
+                    </div>
+                  ) : (
+                    <span className="text-sm text-content-variant">—</span>
+                  )}
                 </TD>
               </TR>
             ))}

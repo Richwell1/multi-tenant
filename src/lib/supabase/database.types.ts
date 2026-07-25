@@ -352,6 +352,72 @@ export type Database = {
           },
         ]
       }
+      leave_requests: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          employee_id: string
+          end_date: string
+          id: string
+          leave_type: Database["public"]["Enums"]["leave_type"]
+          reason: string | null
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          start_date: string
+          status: Database["public"]["Enums"]["leave_request_status"]
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          employee_id: string
+          end_date: string
+          id?: string
+          leave_type: Database["public"]["Enums"]["leave_type"]
+          reason?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          start_date: string
+          status?: Database["public"]["Enums"]["leave_request_status"]
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          employee_id?: string
+          end_date?: string
+          id?: string
+          leave_type?: Database["public"]["Enums"]["leave_type"]
+          reason?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          start_date?: string
+          status?: Database["public"]["Enums"]["leave_request_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leave_requests_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_requests_employee_same_company"
+            columns: ["company_id", "employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["company_id", "id"]
+          },
+        ]
+      }
       package_installations: {
         Row: {
           company_id: string
@@ -629,6 +695,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_use_company_package: {
+        Args: { target_company: string; target_package: string; uid?: string }
+        Returns: boolean
+      }
       company_has_package: {
         Args: { target_company: string; target_package: string }
         Returns: boolean
@@ -681,6 +751,8 @@ export type Database = {
         | "failed"
         | "retrying"
         | "rolled_back"
+      leave_request_status: "pending" | "approved" | "rejected" | "cancelled"
+      leave_type: "annual" | "sick" | "unpaid"
       membership_status: "active" | "inactive" | "suspended"
       package_type:
         | "standard_update"
@@ -838,6 +910,8 @@ export const Constants = {
         "retrying",
         "rolled_back",
       ],
+      leave_request_status: ["pending", "approved", "rejected", "cancelled"],
+      leave_type: ["annual", "sick", "unpaid"],
       membership_status: ["active", "inactive", "suspended"],
       package_type: [
         "standard_update",

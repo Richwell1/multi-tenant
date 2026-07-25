@@ -60,6 +60,16 @@ export const invalidationTargets = {
     k.audit.all,
   ],
 
+  createLeaveRequest: (companyId: string): QueryKey[] => [
+    k.leave.all(companyId), // list for this company
+    k.audit.all,
+  ],
+
+  decideLeaveRequest: (companyId: string): QueryKey[] => [
+    k.leave.all(companyId),
+    k.audit.all,
+  ],
+
   createRequest: (): QueryKey[] => [k.requests.all, k.audit.all],
 
   changeRequestStatus: (requestId: string): QueryKey[] => [

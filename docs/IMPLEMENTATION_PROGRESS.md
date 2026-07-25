@@ -8,9 +8,9 @@
 | | |
 |---|---|
 | Product | Multi-Tenants HR |
-| Current branch | `feat/hr-core-persistence` |
+| Current branch | `feat/package-entitlements` |
 | Current phase | Phase 4 — Package system (4.1 entitlements + route-level guard complete) |
-| Current increment | 3C — Employees (complete) |
+| Current increment | 4.1 — Package entitlements + route-level guard (complete) |
 | Default data source | `mock` (`VITE_DATA_SOURCE`), Supabase path behind lazy adapters |
 | Local Supabase ports | API/Functions 54331 · DB 54332 · Studio 54333 (project-local +10 offset) |
 | Hosted Supabase | Linked (`uezvaqoqqqgblpcbkujq`); **no migrations pushed** |
@@ -26,7 +26,7 @@
 | 3A | Departments | Complete | 2026-07-25 | feat/hr-core-persistence | `59b7276` | 119 tests + JWT RLS ✅ | mock simulated writes |
 | 3B | Positions | Complete | 2026-07-25 | feat/hr-core-persistence | `f6674b9` | 126 tests + JWT RLS+FK ✅ | mock simulated writes |
 | 3C | Employees | Complete | 2026-07-25 | feat/hr-core-persistence | `b0bb3f6` | 134 tests + JWT RLS (dual FK, uniqueness, terminate audit) ✅ | browser E2E deferred |
-| 4 | Package & extension system | In progress | — | feat/package-entitlements | `71241de` | 4.1 ✅ (136 tests + JWT RLS) | defs/versions/assignments UI + Leave/Attendance persistence remain |
+| 4 | Package & extension system | In progress | — | feat/package-entitlements | `69eae2e` | 4.1 ✅ (136 tests + JWT RLS) | defs/versions/assignments UI + Leave/Attendance persistence remain |
 | 5 | Requests / diagnostics / usage / audit | Not started | — | — | — | — | — |
 | 6 | Deployment / security hardening / subdomains | Not started | — | — | — | — | wildcard DNS, hosted deploy |
 

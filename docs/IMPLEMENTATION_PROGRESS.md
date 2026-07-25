@@ -103,8 +103,8 @@
 - [ ] Per-company `leave_types` table + composite FK — deferred (no leave-type UI; enum used)
 
 ### Hosted deployment
-- [ ] Push migrations to hosted Supabase
-- [ ] Deploy Edge Functions
+- [x] Push all 14 migrations to hosted Supabase; remote migration history matches local
+- [x] Deploy `register-company` Edge Function (active, version 1)
 - [ ] Vercel frontend deploy + env
 
 ### Wildcard subdomains
@@ -146,7 +146,9 @@
 - Role model is `company_admin` / `company_user` only — no `hr_manager`; spec HR-Manager rules map to `company_admin`.
 - `feat/hr-core-persistence` is based on `feat/live-route-guards` (unmerged) — rebases when the guard PR lands.
 - Mock create/update/disable/terminate are simulated (no persistence) — expected pattern.
-- Hosted Supabase migrations not pushed; no deployment yet.
+- Hosted Supabase schema is deployed and migration history is aligned; hosted companies, memberships, and platform admins are still empty.
+- Hosted Auth URL configuration, demo users/seed data, and Vercel environment variables remain pending. The stated `multi-tenant-hr.vercel.app` URL returned HTTP 404 during verification; confirm the actual Vercel project URL before adding variables.
+- The deployment checklist names `usage_events` and `system_health_checks`, but this repository intentionally derives usage from `audit_logs` (`usage_metrics()`) and health from `system_health()`; those tables should not be added without a product/schema decision.
 - **Fixed (4.1):** package gating previously read mock `company.packages`, which is `undefined` for real Supabase tenants (would have hidden Leave for everyone on the Supabase path). Gating now uses `enabledPackageCodes` from the membership context — one source for mock and Supabase, guard + nav aligned.
 - Request Records are now persisted (platform-plane). Remaining mock-backed platform surfaces: diagnostics, installations monitor, usage, health — Phase 5.2–5.5.
 
@@ -164,9 +166,9 @@
 - **Status machine** intentionally minimal: `approved`/`rejected`/`cancelled` are terminal (no `approved → cancelled`). Central rule in `src/data/leave/transitions.ts` mirrors the DB trigger; widen both together if needed.
 
 ## Next actions
-1. **6.1 Hosted Supabase deployment** — apply the validated migrations, configure hosted Auth/demo users, deploy required Edge Functions, and prepare production seed data.
-2. **Hosted browser and tenant-isolation smoke** under `VITE_DATA_SOURCE=supabase` using the Vercel-generated URL and query-based tenant resolver.
-3. Deploy Vercel, then complete monitoring hardening and custom-domain/wildcard-subdomain work.
+1. Configure the correct Vercel project with `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, and `VITE_DATA_SOURCE=supabase`; configure hosted Auth redirect URLs.
+2. Create the approved Platform Admin, Alpha, and Beta Auth users and matching database records, then prepare the production seed data.
+3. Run hosted browser and tenant-isolation smoke under `VITE_DATA_SOURCE=supabase`, then complete monitoring hardening and custom-domain/wildcard-subdomain work.
 
 ### Manual browser smoke checklist — Installation recovery (run under `VITE_DATA_SOURCE=supabase`)
 - [ ] Platform admin → Installation Monitoring lists installs; a failed row shows **Retry**, an installed row shows **Roll back**

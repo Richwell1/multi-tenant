@@ -63,6 +63,10 @@ export const queryKeys = {
     company: (companyId: string) => ['installations', 'company', companyId] as const,
     list: (target: CompanyTargetKeyPart) => ['installations', 'list', target] as const,
   },
+  context: {
+    platformAdmin: (userId: string) => ['context', 'platform-admin', userId] as const,
+    company: (userId: string) => ['context', 'company', userId] as const,
+  },
   usage: {
     all: ['usage'] as const,
     summary: (target: CompanyTargetKeyPart) => ['usage', 'summary', target] as const,

@@ -18,6 +18,9 @@ interface SessionState {
   tenantId: string | null;
   company: Company | undefined;
   authenticated: boolean;
+  /** True while the session is being restored on load (guards should wait). */
+  authLoading: boolean;
+  user: AuthSession['user'] | null;
   email: string | null;
   /** Sign in via the auth boundary (mock or Supabase). */
   signIn: (input: SignInInput) => Promise<AuthSession>;
@@ -37,12 +40,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   );
   const queryClient = useQueryClient();
   const [session, setSession] = useState<AuthSession | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
   // Restore any existing session on load and stay in sync with auth changes.
   useEffect(() => {
     let active = true;
     authRepository.getSession().then((s) => {
-      if (active) setSession(s);
+      if (active) {
+        setSession(s);
+        setAuthLoading(false);
+      }
     });
     const unsubscribe = authRepository.onAuthStateChange((s) => setSession(s));
     return () => {
@@ -70,11 +77,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       tenantId: ctx.tenantId,
       company: getCompany(ctx.tenantId),
       authenticated: !!session,
+      authLoading,
+      user: session?.user ?? null,
       email: session?.user.email ?? null,
       signIn,
       logout,
     }),
-    [ctx, session, signIn, logout],
+    [ctx, session, authLoading, signIn, logout],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

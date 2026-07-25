@@ -8,6 +8,7 @@ import {
 } from '@tanstack/react-router';
 import { AdminShell } from '@/components/admin-shell';
 import { WorkspaceShell } from '@/components/workspace-shell';
+import { PlatformGuard, CompanyGuard } from '@/components/guards';
 import { PageLoadingState, ErrorState } from '@/components/states';
 // Public/auth pages are eager so sign-in is instant. The admin and company
 // workspace page groups are code-split (lazy) so they load only when entered.
@@ -72,9 +73,11 @@ const adminLayout = createRoute({
   getParentRoute: () => rootRoute,
   path: '/admin',
   component: () => (
-    <AdminShell>
-      <Outlet />
-    </AdminShell>
+    <PlatformGuard>
+      <AdminShell>
+        <Outlet />
+      </AdminShell>
+    </PlatformGuard>
   ),
 });
 const adminIndex = createRoute({ getParentRoute: () => adminLayout, path: '/', component: adminPage('AdminDashboard') });
@@ -117,9 +120,11 @@ const workspaceLayout = createRoute({
   getParentRoute: () => rootRoute,
   id: 'workspace',
   component: () => (
-    <WorkspaceShell>
-      <Outlet />
-    </WorkspaceShell>
+    <CompanyGuard>
+      <WorkspaceShell>
+        <Outlet />
+      </WorkspaceShell>
+    </CompanyGuard>
   ),
 });
 const wsDashboard = createRoute({ getParentRoute: () => workspaceLayout, path: '/dashboard', component: workspacePage('WorkspaceDashboard') });

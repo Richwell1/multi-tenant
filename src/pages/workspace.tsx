@@ -32,17 +32,16 @@ import { forceNextFailure } from '@/data/api';
 import {
   useAttendance,
   useCompanyUsers,
-  useCreateEmployee,
-  useDepartments,
-  useDisableDepartment,
-  useEmployee,
-  useEmployees,
   useInstallPackage,
   useLeaveRequests,
-  usePositions,
   useSaveSettings,
   useTenantInstallations,
 } from '@/hooks/queries';
+import { useDepartments, useCreateDepartment, useDisableDepartment } from '@/hooks/departments';
+import { usePositions, useCreatePosition, useDisablePosition } from '@/hooks/positions';
+import { useEmployees, useEmployee, useCreateEmployee, useTerminateEmployee } from '@/hooks/employees';
+import { positionFormSchema, type PositionFormValues } from '@/services/position-service';
+import { employeeFormSchema, type EmployeeFormValues } from '@/services/employee-service';
 
 function useTenantId() {
   const { tenantId } = useSession();
@@ -53,11 +52,10 @@ function useTenantId() {
 
 export function WorkspaceDashboard() {
   const { company } = useSession();
-  const tid = useTenantId();
   const hasLeave = canAccessLeave(company);
-  const employees = useEmployees(tid);
-  const departments = useDepartments(tid);
-  const positions = usePositions(tid);
+  const employees = useEmployees();
+  const departments = useDepartments();
+  const positions = usePositions();
 
   if (employees.isPending) return <PageLoadingState label={`Loading ${company?.name ?? 'workspace'}…`} />;
   if (employees.isError)
@@ -97,9 +95,8 @@ export function WorkspaceDashboard() {
 // --- Employees ----------------------------------------------------------------
 
 export function EmployeesList() {
-  const tid = useTenantId();
   const [q, setQ] = useState('');
-  const query = useEmployees(tid);
+  const query = useEmployees();
   const filtered = (query.data ?? []).filter((e) =>
     `${e.fullName} ${e.employeeNumber} ${e.department}`.toLowerCase().includes(q.toLowerCase()),
   );
@@ -160,31 +157,24 @@ export function EmployeesList() {
   );
 }
 
-const employeeSchema = z.object({
-  employeeNumber: z.string().min(1, 'Required'),
-  fullName: z.string().min(2, 'Required'),
-  workEmail: z.string().email('Valid email required'),
-  department: z.string().min(1, 'Required'),
-  position: z.string().min(1, 'Required'),
-  employmentType: z.enum(['full_time', 'part_time', 'contract']),
-});
-type EmployeeForm = z.infer<typeof employeeSchema>;
-
 export function AddEmployee() {
   const navigate = useNavigate();
-  const tid = useTenantId();
-  const mutation = useCreateEmployee(tid);
+  const mutation = useCreateEmployee();
+  const departmentsQuery = useDepartments();
+  const positionsQuery = usePositions();
+  const departmentOptions = (departmentsQuery.data ?? []).filter((d) => d.status === 'active');
+  const positionOptions = (positionsQuery.data ?? []).filter((p) => p.status === 'active');
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<EmployeeForm>({
-    resolver: zodResolver(employeeSchema),
+  } = useForm<EmployeeFormValues>({
+    resolver: zodResolver(employeeFormSchema),
     defaultValues: { employmentType: 'full_time' },
   });
 
-  const onValid = (values: EmployeeForm) =>
-    mutation.mutate({ ...values, tenantId: tid }, { onSuccess: () => navigate({ to: '/employees' }) });
+  const onValid = (values: EmployeeFormValues) =>
+    mutation.mutate(values, { onSuccess: () => navigate({ to: '/employees' }) });
 
   return (
     <>
@@ -201,11 +191,25 @@ export function AddEmployee() {
             <Field label="Work Email" htmlFor="workEmail" error={errors.workEmail?.message}>
               <Input id="workEmail" type="email" aria-invalid={!!errors.workEmail} {...register('workEmail')} />
             </Field>
-            <Field label="Department" htmlFor="department" error={errors.department?.message}>
-              <Input id="department" aria-invalid={!!errors.department} {...register('department')} />
+            <Field label="Department" htmlFor="department" error={errors.departmentId?.message}>
+              <select id="department" className="h-10 w-full rounded-md border border-border bg-surface px-3 text-sm" {...register('departmentId')}>
+                <option value="">Unassigned</option>
+                {departmentOptions.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
             </Field>
-            <Field label="Position" htmlFor="position" error={errors.position?.message}>
-              <Input id="position" aria-invalid={!!errors.position} {...register('position')} />
+            <Field label="Position" htmlFor="position" error={errors.positionId?.message}>
+              <select id="position" className="h-10 w-full rounded-md border border-border bg-surface px-3 text-sm" {...register('positionId')}>
+                <option value="">Unassigned</option>
+                {positionOptions.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.title}
+                  </option>
+                ))}
+              </select>
             </Field>
             <Field label="Employment Type" htmlFor="employmentType" error={errors.employmentType?.message}>
               <select id="employmentType" className="h-10 w-full rounded-md border border-border bg-surface px-3 text-sm" {...register('employmentType')}>
@@ -233,15 +237,15 @@ export function AddEmployee() {
 
 export function EmployeeProfile() {
   const { employeeId } = useParams({ strict: false });
-  const tid = useTenantId();
-  const query = useEmployee(tid, employeeId as string);
+  const query = useEmployee(employeeId as string);
+  const terminateMutation = useTerminateEmployee(employeeId as string);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [terminated, setTerminated] = useState(false);
 
   if (query.isPending) return <PageLoadingState />;
   if (query.isError) return <ErrorState onRetry={() => query.refetch()} retrying={query.isFetching} />;
   const employee = query.data;
   if (!employee) return <EmptyState title="Employee not found" />;
+  const isTerminated = employee.status === 'terminated';
 
   return (
     <>
@@ -249,9 +253,7 @@ export function EmployeeProfile() {
         title={employee.fullName}
         description={`${employee.employeeNumber} · ${employee.workEmail}`}
         actions={
-          <Badge tone={terminated ? 'offline' : 'healthy'}>
-            {terminated ? 'terminated' : employee.status.replace(/_/g, ' ')}
-          </Badge>
+          <Badge tone={isTerminated ? 'offline' : 'healthy'}>{employee.status.replace(/_/g, ' ')}</Badge>
         }
       />
       <div className="grid gap-4 sm:grid-cols-3">
@@ -264,7 +266,7 @@ export function EmployeeProfile() {
           <CardTitle>Danger Zone</CardTitle>
         </CardHeader>
         <CardContent>
-          {terminated ? (
+          {isTerminated ? (
             <p className="text-sm text-danger">This employee has been terminated.</p>
           ) : (
             <Button variant="danger" onClick={() => setConfirmOpen(true)}>
@@ -276,15 +278,17 @@ export function EmployeeProfile() {
       <ConfirmDialog
         open={confirmOpen}
         title="Terminate employee?"
-        description={`This will set ${employee.fullName} to terminated. You can reactivate later.`}
+        description={`This will set ${employee.fullName} to terminated.`}
         confirmLabel="Terminate"
         tone="danger"
+        pending={terminateMutation.isPending}
         onCancel={() => setConfirmOpen(false)}
-        onConfirm={() => {
-          setTerminated(true);
-          setConfirmOpen(false);
-          notify.recordUpdated('Employee');
-        }}
+        onConfirm={() =>
+          terminateMutation.mutate(
+            {},
+            { onSuccess: () => setConfirmOpen(false), onError: () => setConfirmOpen(false) },
+          )
+        }
       />
     </>
   );
@@ -292,16 +296,74 @@ export function EmployeeProfile() {
 
 // --- Departments / Positions --------------------------------------------------
 
+const departmentSchema = z.object({
+  name: z.string().min(2, 'Name is required'),
+  code: z.string().min(1, 'Code is required'),
+  head: z.string().optional(),
+});
+type DepartmentForm = z.infer<typeof departmentSchema>;
+
 export function DepartmentsPage() {
-  const tid = useTenantId();
-  const query = useDepartments(tid);
-  const disableMutation = useDisableDepartment(tid);
+  const query = useDepartments();
+  const createMutation = useCreateDepartment();
+  const disableMutation = useDisableDepartment();
   const [target, setTarget] = useState<{ id: string; name: string } | null>(null);
+  const [showAdd, setShowAdd] = useState(false);
   const filtered = query.data ?? [];
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<DepartmentForm>({ resolver: zodResolver(departmentSchema) });
+
+  const onCreate = (values: DepartmentForm) =>
+    createMutation.mutate(values, {
+      onSuccess: () => {
+        reset();
+        setShowAdd(false);
+      },
+    });
 
   return (
     <>
-      <PageHeader title="Departments" actions={<Button>Add Department</Button>} />
+      <PageHeader
+        title="Departments"
+        actions={<Button onClick={() => setShowAdd((s) => !s)}>Add Department</Button>}
+      />
+      {showAdd && (
+        <Card className="mb-6 max-w-2xl">
+          <CardContent className="pt-6">
+            <form onSubmit={handleSubmit(onCreate, () => notify.validationFailure())} className="grid gap-4 sm:grid-cols-3" noValidate>
+              <Field label="Name" htmlFor="dept-name" error={errors.name?.message}>
+                <Input id="dept-name" aria-invalid={!!errors.name} {...register('name')} />
+              </Field>
+              <Field label="Code" htmlFor="dept-code" error={errors.code?.message}>
+                <Input id="dept-code" aria-invalid={!!errors.code} {...register('code')} />
+              </Field>
+              <Field label="Head" htmlFor="dept-head">
+                <Input id="dept-head" {...register('head')} />
+              </Field>
+              <div className="col-span-full flex gap-2">
+                <SubmitButton pending={createMutation.isPending} pendingLabel="Saving…">
+                  Save Department
+                </SubmitButton>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    reset();
+                    setShowAdd(false);
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
       <TableBoundary query={query} filtered={filtered} cols={4}>
         <DataTable>
           <THead>
@@ -352,12 +414,82 @@ export function DepartmentsPage() {
 }
 
 export function PositionsPage() {
-  const tid = useTenantId();
-  const query = usePositions(tid);
+  const query = usePositions();
+  const departmentsQuery = useDepartments();
+  const createMutation = useCreatePosition();
+  const disableMutation = useDisablePosition();
+  const [showAdd, setShowAdd] = useState(false);
+  const [target, setTarget] = useState<{ id: string; title: string } | null>(null);
   const filtered = query.data ?? [];
+  const departmentOptions = (departmentsQuery.data ?? []).filter((d) => d.status === 'active');
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<PositionFormValues>({ resolver: zodResolver(positionFormSchema) });
+
+  const onCreate = (values: PositionFormValues) =>
+    createMutation.mutate(values, {
+      onSuccess: () => {
+        reset();
+        setShowAdd(false);
+      },
+    });
+
   return (
     <>
-      <PageHeader title="Positions" actions={<Button>Add Position</Button>} />
+      <PageHeader
+        title="Positions"
+        actions={<Button onClick={() => setShowAdd((s) => !s)}>Add Position</Button>}
+      />
+      {showAdd && (
+        <Card className="mb-6 max-w-2xl">
+          <CardContent className="pt-6">
+            <form onSubmit={handleSubmit(onCreate, () => notify.validationFailure())} className="grid gap-4 sm:grid-cols-2" noValidate>
+              <Field label="Title" htmlFor="pos-title" error={errors.title?.message}>
+                <Input id="pos-title" aria-invalid={!!errors.title} {...register('title')} />
+              </Field>
+              <Field label="Code" htmlFor="pos-code" error={errors.code?.message}>
+                <Input id="pos-code" aria-invalid={!!errors.code} {...register('code')} />
+              </Field>
+              <Field label="Department" htmlFor="pos-dept" error={errors.departmentId?.message}>
+                <select
+                  id="pos-dept"
+                  className="h-10 w-full rounded-md border border-border bg-surface px-3 text-sm"
+                  {...register('departmentId')}
+                >
+                  <option value="">Unassigned</option>
+                  {departmentOptions.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Reports To" htmlFor="pos-reports">
+                <Input id="pos-reports" {...register('reportsTo')} />
+              </Field>
+              <div className="col-span-full flex gap-2">
+                <SubmitButton pending={createMutation.isPending} pendingLabel="Saving…">
+                  Save Position
+                </SubmitButton>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    reset();
+                    setShowAdd(false);
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
       <TableBoundary query={query} filtered={filtered} cols={5}>
         <DataTable>
           <THead>
@@ -375,13 +507,36 @@ export function PositionsPage() {
                 <TD>{p.department}</TD>
                 <TD>{p.reportsTo}</TD>
                 <TD>
-                  <Badge tone={p.status === 'active' ? 'healthy' : 'neutral'}>{p.status}</Badge>
+                  <div className="flex items-center justify-between gap-3">
+                    <Badge tone={p.status === 'active' ? 'healthy' : 'neutral'}>{p.status}</Badge>
+                    {p.status === 'active' && (
+                      <Button size="sm" variant="ghost" onClick={() => setTarget({ id: p.id, title: p.title })}>
+                        Disable
+                      </Button>
+                    )}
+                  </div>
                 </TD>
               </TR>
             ))}
           </TBody>
         </DataTable>
       </TableBoundary>
+      <ConfirmDialog
+        open={!!target}
+        title="Disable position?"
+        description={target ? `${target.title} will be disabled.` : ''}
+        confirmLabel="Disable"
+        tone="danger"
+        pending={disableMutation.isPending}
+        onCancel={() => setTarget(null)}
+        onConfirm={() =>
+          target &&
+          disableMutation.mutate(target.id, {
+            onSuccess: () => setTarget(null),
+            onError: () => setTarget(null),
+          })
+        }
+      />
     </>
   );
 }

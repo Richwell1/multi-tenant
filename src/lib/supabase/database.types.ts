@@ -238,6 +238,120 @@ export type Database = {
           },
         ]
       }
+      departments: {
+        Row: {
+          code: string
+          company_id: string
+          created_at: string
+          head: string | null
+          id: string
+          name: string
+          status: Database["public"]["Enums"]["hr_record_status"]
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          company_id: string
+          created_at?: string
+          head?: string | null
+          id?: string
+          name: string
+          status?: Database["public"]["Enums"]["hr_record_status"]
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          company_id?: string
+          created_at?: string
+          head?: string | null
+          id?: string
+          name?: string
+          status?: Database["public"]["Enums"]["hr_record_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "departments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employees: {
+        Row: {
+          company_id: string
+          created_at: string
+          department_id: string | null
+          employee_number: string
+          employment_type: Database["public"]["Enums"]["employment_type"]
+          full_name: string
+          id: string
+          position_id: string | null
+          status: Database["public"]["Enums"]["employee_status"]
+          termination_date: string | null
+          termination_reason: string | null
+          updated_at: string
+          user_id: string | null
+          work_email: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          department_id?: string | null
+          employee_number: string
+          employment_type?: Database["public"]["Enums"]["employment_type"]
+          full_name: string
+          id?: string
+          position_id?: string | null
+          status?: Database["public"]["Enums"]["employee_status"]
+          termination_date?: string | null
+          termination_reason?: string | null
+          updated_at?: string
+          user_id?: string | null
+          work_email?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          department_id?: string | null
+          employee_number?: string
+          employment_type?: Database["public"]["Enums"]["employment_type"]
+          full_name?: string
+          id?: string
+          position_id?: string | null
+          status?: Database["public"]["Enums"]["employee_status"]
+          termination_date?: string | null
+          termination_reason?: string | null
+          updated_at?: string
+          user_id?: string | null
+          work_email?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employees_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employees_department_same_company"
+            columns: ["company_id", "department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "employees_position_same_company"
+            columns: ["company_id", "position_id"]
+            isOneToOne: false
+            referencedRelation: "positions"
+            referencedColumns: ["company_id", "id"]
+          },
+        ]
+      }
       package_versions: {
         Row: {
           created_at: string
@@ -315,6 +429,57 @@ export type Database = {
         }
         Relationships: []
       }
+      positions: {
+        Row: {
+          code: string
+          company_id: string
+          created_at: string
+          department_id: string | null
+          id: string
+          reports_to: string | null
+          status: Database["public"]["Enums"]["hr_record_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          company_id: string
+          created_at?: string
+          department_id?: string | null
+          id?: string
+          reports_to?: string | null
+          status?: Database["public"]["Enums"]["hr_record_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          company_id?: string
+          created_at?: string
+          department_id?: string | null
+          id?: string
+          reports_to?: string | null
+          status?: Database["public"]["Enums"]["hr_record_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "positions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "positions_department_same_company"
+            columns: ["company_id", "department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["company_id", "id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -353,6 +518,9 @@ export type Database = {
       company_package_status: "assigned" | "installing" | "installed" | "failed"
       company_role: "company_admin" | "company_user"
       company_status: "active" | "suspended"
+      employee_status: "active" | "on_leave" | "terminated"
+      employment_type: "full_time" | "part_time" | "contract"
+      hr_record_status: "active" | "disabled"
       membership_status: "active" | "inactive" | "suspended"
       package_type:
         | "standard_update"
@@ -492,6 +660,9 @@ export const Constants = {
       company_package_status: ["assigned", "installing", "installed", "failed"],
       company_role: ["company_admin", "company_user"],
       company_status: ["active", "suspended"],
+      employee_status: ["active", "on_leave", "terminated"],
+      employment_type: ["full_time", "part_time", "contract"],
+      hr_record_status: ["active", "disabled"],
       membership_status: ["active", "inactive", "suspended"],
       package_type: [
         "standard_update",

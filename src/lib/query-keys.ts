@@ -40,6 +40,10 @@ export const queryKeys = {
   },
   positions: {
     all: (companyId: string) => ['positions', companyId] as const,
+    list: (companyId: string, filters?: EmployeeFilters) =>
+      ['positions', companyId, 'list', filters ?? {}] as const,
+    detail: (companyId: string, positionId: string) =>
+      ['positions', companyId, 'detail', positionId] as const,
   },
   users: {
     all: (companyId: string) => ['users', companyId] as const,

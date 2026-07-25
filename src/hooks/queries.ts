@@ -11,7 +11,7 @@ import { queryKeys } from '@/lib/query-keys';
 import { invalidationTargets } from '@/data/invalidation';
 import { notify } from '@/lib/notify';
 import { companyMatchesTarget, companyTargetKeyPart, type CompanyTargetValue } from '@/lib/company-target';
-import type { Employee, PackageKey, RequestRecord, RequestStatus } from '@/data/types';
+import type { PackageKey, RequestRecord, RequestStatus } from '@/data/types';
 
 /** Invalidate a scoped set of query-key prefixes. */
 function invalidate(qc: QueryClient, keys: readonly QueryKey[]) {
@@ -38,18 +38,8 @@ export const useActiveCompanies = () =>
 export const useCompany = (id: string) =>
   useQuery({ queryKey: queryKeys.companies.detail(id), queryFn: () => repository.getCompany(id) });
 
-export const useEmployees = (companyId: string) =>
-  useQuery({ queryKey: queryKeys.employees.list(companyId), queryFn: () => repository.getEmployees(companyId) });
-export const useEmployee = (companyId: string, employeeId: string) =>
-  useQuery({
-    queryKey: queryKeys.employees.detail(companyId, employeeId),
-    queryFn: () => repository.getEmployee(employeeId),
-  });
-
-export const useDepartments = (companyId: string) =>
-  useQuery({ queryKey: queryKeys.departments.all(companyId), queryFn: () => repository.getDepartments(companyId) });
-export const usePositions = (companyId: string) =>
-  useQuery({ queryKey: queryKeys.positions.all(companyId), queryFn: () => repository.getPositions(companyId) });
+// HR Core (Departments, Positions, Employees) is persisted via dedicated hooks
+// in '@/hooks/departments', '@/hooks/positions', '@/hooks/employees'.
 export const useCompanyUsers = (companyId: string) =>
   useQuery({ queryKey: queryKeys.users.all(companyId), queryFn: () => repository.getCompanyUsers(companyId) });
 
@@ -96,18 +86,6 @@ export const useAttendance = (companyId: string) =>
 
 // --- Mutations (scoped invalidation + toasts) --------------------------------
 
-export function useCreateEmployee(companyId: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (input: Omit<Employee, 'id' | 'status'>) => repository.createEmployee(input),
-    onSuccess: () => {
-      notify.recordCreated('Employee');
-      invalidate(qc, invalidationTargets.createEmployee(companyId));
-    },
-    onError: (e: NetworkError) => notify.networkFailure(e.message),
-  });
-}
-
 export function useCreateRequest() {
   const qc = useQueryClient();
   return useMutation({
@@ -152,18 +130,6 @@ export function useCreatePackage() {
       (variables.targetCompanyIds ?? []).forEach((companyId) =>
         qc.invalidateQueries({ queryKey: queryKeys.packages.company(companyId) }),
       );
-    },
-    onError: (e: NetworkError) => notify.networkFailure(e.message),
-  });
-}
-
-export function useDisableDepartment(companyId: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (deptId: string) => repository.disableDepartment(deptId),
-    onSuccess: () => {
-      notify.recordDisabled('Department');
-      invalidate(qc, invalidationTargets.disableDepartment(companyId));
     },
     onError: (e: NetworkError) => notify.networkFailure(e.message),
   });

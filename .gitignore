@@ -13,3 +13,6 @@ coverage/
 # Local editor / agent state
 .vscode/*.local.json
 .claude/settings.local.json
+
+# Agent skills — machine-local symlinks (skill content lives in .agents/)
+.claude/skills/

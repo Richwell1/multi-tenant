@@ -8,21 +8,19 @@
 | | |
 |---|---|
 | Product | Multi-Tenants HR |
-| Current branch | `feat/attendance-management-persistence` (merges 5.1 for combined verification) |
-| Current phase | Phase 5 — Platform Operations (4.3B + 5.1 integrated; 5.2 next) |
-| Current increment | Attendance (4.3B) + Request Records (5.1) combined, migration re-sequenced |
+| Current branch | `feat/diagnostics-release-gate` (from merged `main`, PR #9) |
+| Current phase | Phase 5 — Platform Operations (5.2 Diagnostics & Release Gate complete) |
+| Current increment | 5.2 — Diagnostics & Release Gate |
 | Default data source | `mock` (`VITE_DATA_SOURCE`), Supabase path behind lazy adapters |
 | Local Supabase ports | API/Functions 54331 · DB 54332 · Studio 54333 (project-local +10 offset) |
 | Hosted Supabase | Linked (`uezvaqoqqqgblpcbkujq`); **no migrations pushed** |
-| Test count | 182 (combined) |
+| Test count | 188 |
 
-> Merge order fix: Request Records (5.1) merged to `main` (PR #8) before Attendance
-> (4.3B). To keep a forward-only migration sequence, the attendance migration was
-> **renumbered `090000 → 110000`** (after requests' `100000`). This branch then
-> merged `main` in, so it now carries both features; it is the combined-verified,
-> clean-mergeable Attendance PR. RLS suites under `supabase/tests/`:
-> `package_release_rls.sql` (10), `leave_rls.sql` (14), `attendance_rls.sql` (18),
-> `request_records_rls.sql` (10) — **52 scenarios**.
+> `main` (PR #9) carries everything through 4.3B + 5.1. 5.2 adds diagnostics
+> (migration `120000`) and completes the deferred `request_records.diagnostic_id`
+> FK. RLS suites under `supabase/tests/`: `package_release_rls.sql` (10),
+> `leave_rls.sql` (14), `attendance_rls.sql` (18), `request_records_rls.sql` (10),
+> `diagnostics_rls.sql` (14) — **66 scenarios**.
 
 ## Phase tracker
 
@@ -38,8 +36,9 @@
 | 4.3A | Leave Management persistence | Complete | 2026-07-25 | feat/leave-management-persistence | `554e9d0` | merged (PR #7) + 14 JWT/RLS ✅ | writes scoped to company_admin; self-service + leave_types table deferred |
 | 4.3B | Attendance Management persistence | Complete | 2026-07-25 | feat/attendance-management-persistence | migration `110000` | 182 combined + 18 JWT/RLS ✅ | re-sequenced after 5.1; merges `main` for combined verify |
 | UI | UI/UX polish | In progress | 2026-07-25 | feat/ui-ux-polish | see `git log` | audit + shared foundation + dialog test + 137 tests ✅ | rebase onto updated main before merge |
-| 5.1 | Request Records persistence | Complete | 2026-07-25 | feat/request-records-persistence | merged (PR #8) | 169 tests + 10 JWT/RLS ✅ | platform-admin-only; diagnostic FK deferred to 5.2 |
-| 5.2–5.6 | Diagnostics / installations / usage / audit / CI | Not started | — | — | — | — | diagnostics attach to request/package version |
+| 5.1 | Request Records persistence | Complete | 2026-07-25 | feat/request-records-persistence | merged (PR #8/#9) | 169 tests + 10 JWT/RLS ✅ | platform-admin-only; diagnostic FK completed in 5.2 |
+| 5.2 | Diagnostics & Release Gate | Complete | 2026-07-25 | feat/diagnostics-release-gate | (this branch) | 188 tests + 14 JWT/RLS ✅ | authoring UI (per-check status) deferred |
+| 5.3–5.6 | Installations / usage / audit / CI | Not started | — | — | — | — | recovery, analytics, health, CI |
 | 6 | Deployment / security hardening / subdomains | Not started | — | — | — | — | wildcard DNS, hosted deploy |
 
 ## Milestone checklists
@@ -79,7 +78,8 @@
 
 ### Platform Operations (Phase 5)
 - [x] **5.1 Request Records** — `request_records` table; `request_priority` + `request_status` enums; platform-admin-only RLS (all ops); DB-enforced lifecycle (`request_status_can_transition`) mirrored in `src/data/requests/transitions.ts`; `request.{created,status_changed,updated}` audit; repositories (mock + lazy Supabase) + service + hooks; Admin UI rewired (status dropdown offers only valid next states); 10 JWT/RLS scenarios + unit tests
-- [ ] 5.2 Diagnostics + release gate (attach to request/package version — adds the deferred `request_records.diagnostic_id` FK)
+- [x] **5.2 Diagnostics & Release Gate** — `diagnostic_reports` + `diagnostic_checks` (8 dimensions × PASS/WARN/FAIL, `required` flag); result derived (FAIL>WARN>PASS) by trigger and synced to `package_versions.diagnostic_status`; completed the deferred `request_records.diagnostic_id` FK; **release gate** in `publish_package_release` (required FAIL blocks) + `version_release_blocked()` helper, mirrored in the publish UI + `@/data/diagnostics` (`deriveResult`/`isReleaseBlocked`); platform-admin-only RLS; `diagnostic.{created,evaluated}` audit; repositories (mock + lazy Supabase) + service + hooks; Diagnostic Report page shows per-dimension checks; 14 JWT/RLS/gate scenarios + unit tests
+  - [ ] Diagnostic **authoring UI** (set per-check status/required, run-on-demand button) — deferred; `run()` creates an all-PASS report and the DB/seed cover WARN/FAIL
 - [ ] 5.3 Installation monitoring + recovery
 - [ ] 5.4 Usage analytics
 - [ ] 5.5 Audit logs + system health surfaces
@@ -129,6 +129,7 @@
 | Integration (4.2 + 4.3A) | ✅ | ✅ | ✅ | 158 | ✅ | ✅ leave 14/14 + package-release 10/10 on merged schema | combined verification; database.types regenerated; both suites saved under `supabase/tests/` |
 | 5.1 Request Records | ✅ | ✅ | ✅ | 169 | ✅ | ✅ 10/10 (+ leave 14 + package 10 = 34) | request adapter lazy chunk (1.4 KB); main 475 KB; platform-plane RLS; browser E2E deferred |
 | Combined (4.3B + 5.1) | ✅ | ✅ | ✅ | 182 | ✅ | ✅ package 10 · leave 14 · attendance 18 · requests 10 = 52 | attendance migration renumbered `090000→110000`; database.types regenerated; clean-mergeable Attendance PR |
+| 5.2 Diagnostics & Release Gate | ✅ | ✅ | ✅ | 188 | ✅ | ✅ diagnostics 14 (incl. gate: FAIL blocks, PASS/WARN/advisory-FAIL allow) + 52 prior = 66 | diagnostic adapter lazy chunk (1.7 KB); main 476 KB |
 
 ## Current risks
 - Mock is default; Supabase HR-Core path verified at DB/RLS level, **not yet exercised end-to-end in the browser**.
@@ -153,11 +154,17 @@
 - **Status machine** intentionally minimal: `approved`/`rejected`/`cancelled` are terminal (no `approved → cancelled`). Central rule in `src/data/leave/transitions.ts` mirrors the DB trigger; widen both together if needed.
 
 ## Next actions
-1. **Merge Attendance (4.3B) to `main`**: this branch already merged `main` in, renumbered its migration to `110000`, and is combined-verified (182 tests, 52 suites) — a clean, conflict-free merge. Then rebase/merge `feat/ui-ux-polish` onto updated `main`.
-2. **Phase 5.2 — Diagnostics + release gate**: diagnostics attach to a request and/or package version; adds the deferred `request_records.diagnostic_id` FK; gates release publishing on a passing diagnostic.
-3. **Browser E2E smoke** under `VITE_DATA_SOURCE=supabase` — package publish, Leave, Attendance, **and** Requests (platform admin: create request → advance through the pipeline → confirm audit; illegal transition rejected; non-admin denied). Deferred (interactive Supabase auth not scriptable here). Blocks making Supabase the default.
-4. Automate the JWT/RLS suites in CI (`supabase/tests/*.sql`; currently run via `docker exec psql`).
+1. **Merge Diagnostics (5.2) to `main`** (`feat/diagnostics-release-gate`, migration `120000`) — branches off the merged `main`; then rebase/merge `feat/ui-ux-polish`.
+2. **Phase 5.3 — Installation monitoring & recovery**: persist installation state transitions + retry/rollback for `package_installations` (already written by the publish RPC), monitored per company.
+3. **Browser E2E smoke** under `VITE_DATA_SOURCE=supabase` — package publish (now with the diagnostic gate: a version with a required FAIL cannot be published), Leave, Attendance, Requests, and Diagnostics. Deferred (interactive Supabase auth not scriptable here). Blocks making Supabase the default.
+4. Automate the JWT/RLS suites in CI (`supabase/tests/*.sql` — 66 scenarios; currently run via `docker exec psql`).
 5. Plan hosted rollout (push migrations, deploy Edge Functions, Vercel).
+
+### Manual browser smoke checklist — Diagnostics & gate (run under `VITE_DATA_SOURCE=supabase`)
+- [ ] Platform admin → open a diagnostic report → per-dimension checks render with PASS/WARN/FAIL + required/advisory
+- [ ] Create Release: pick a PASS/WARN version → publish succeeds
+- [ ] A version with a required FAIL check → Publish disabled + message; RPC also rejects if forced
+- [ ] Non-platform user → diagnostics not readable (platform-plane RLS)
 
 ### Manual browser smoke checklist — Requests (run under `VITE_DATA_SOURCE=supabase`)
 - [ ] Platform admin login → Request Records lists persisted rows
@@ -182,6 +189,8 @@
 - One manifest per distinct package; package **assignment** controls availability (not branches).
 - Query-param tenant fallback now; wildcard subdomains later.
 - Mock remains the default data source until the Supabase path is browser-verified.
+- **The release gate is DB-authoritative**: `publish_package_release` refuses a version with any required FAIL check (`version_release_blocked`), and the publish UI mirrors it for fail-fast UX. Report result is derived from checks (FAIL>WARN>PASS) by trigger; `WARN` requires review but does not block; advisory (non-required) checks never block.
+- Diagnostics are **platform-plane** (Platform-Admin-only), and a diagnostic links a **package version** to an optional **request** via `request_records.diagnostic_id`.
 - **Platform-plane data** (package releases, request records) is Platform-Admin-only in RLS — distinct from tenant data (HR core, leave, attendance) which is company-scoped. The two planes never share a read policy.
 - Request Records are the pipeline entry point; **diagnostics attach to a request/package version (5.2), so requests are persisted first** (`diagnostic_id` FK deferred to 5.2).
 - Same-company relationships enforced by **composite foreign keys**, not just RLS/UI.

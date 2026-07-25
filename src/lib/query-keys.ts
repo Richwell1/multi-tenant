@@ -63,6 +63,7 @@ export const queryKeys = {
     company: (companyId: string) => ['package-assignments', companyId] as const,
   },
   diagnostics: {
+    all: ['diagnostics'] as const,
     detail: (diagnosticId: string) => ['diagnostics', 'detail', diagnosticId] as const,
     list: (target: CompanyTargetKeyPart) => ['diagnostics', 'list', target] as const,
   },

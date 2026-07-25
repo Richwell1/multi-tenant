@@ -55,9 +55,7 @@ export const useTenantInstallations = (companyId: string) =>
     queryFn: () => repository.getInstallationsForTenant(companyId),
   });
 
-/** Usage analytics — selection participates in the cache key. */
-export const useUsage = (target: CompanyTargetValue) =>
-  useQuery({ queryKey: queryKeys.usage.summary(companyTargetKeyPart(target)), queryFn: repository.getUsage });
+// Usage analytics is served by the dedicated '@/hooks/usage' hook (audit-derived).
 export const useHealth = () => useQuery({ queryKey: queryKeys.health.all, queryFn: repository.getHealth });
 /** Audit logs — selection participates in the cache key. */
 export const useAudit = (target: CompanyTargetValue) =>

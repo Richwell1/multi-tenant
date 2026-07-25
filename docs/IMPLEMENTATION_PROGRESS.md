@@ -14,7 +14,7 @@
 | Default data source | `mock` (`VITE_DATA_SOURCE`), Supabase path behind lazy adapters |
 | Local Supabase ports | API/Functions 54331 · DB 54332 · Studio 54333 (project-local +10 offset) |
 | Hosted Supabase | Linked (`uezvaqoqqqgblpcbkujq`); **no migrations pushed** |
-| Test count | 136 |
+| Test count | 137 |
 
 ## Phase tracker
 
@@ -27,6 +27,7 @@
 | 3B | Positions | Complete | 2026-07-25 | feat/hr-core-persistence | `f6674b9` | 126 tests + JWT RLS+FK ✅ | mock simulated writes |
 | 3C | Employees | Complete | 2026-07-25 | feat/hr-core-persistence | `b0bb3f6` | 134 tests + JWT RLS (dual FK, uniqueness, terminate audit) ✅ | browser E2E deferred |
 | 4 | Package & extension system | In progress | — | feat/package-entitlements | `69eae2e` | 4.1 ✅ (136 tests + JWT RLS) | defs/versions/assignments UI + Leave/Attendance persistence remain |
+| UI | UI/UX polish | In progress | 2026-07-25 | feat/ui-ux-polish | see `git log` | audit + shared foundation + dialog test + 137 tests ✅ | browser visual QA; push pending GitHub authentication |
 | 5 | Requests / diagnostics / usage / audit | Not started | — | — | — | — | — |
 | 6 | Deployment / security hardening / subdomains | Not started | — | — | — | — | wildcard DNS, hosted deploy |
 

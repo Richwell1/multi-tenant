@@ -1,6 +1,6 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useRouterState } from '@tanstack/react-router';
-import { PanelLeftClose, PanelLeftOpen, LogOut } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, LogOut, Menu, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { useSession } from '@/lib/session';
@@ -21,31 +21,58 @@ interface AppShellProps {
 
 export function AppShell({ portal, brandLine, portalBadge, nav, children }: AppShellProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const { logout, email } = useSession();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   const portalClass = portal === 'admin' ? 'portal-admin' : 'portal-company';
   const accent = portal === 'admin' ? 'bg-platform' : 'bg-company';
 
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMobileOpen(false);
+    };
+    document.addEventListener('keydown', onKeyDown);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = '';
+    };
+  }, [mobileOpen]);
+
   return (
     <div className={cn('flex min-h-screen bg-background', portalClass)}>
       <aside
         className={cn(
-          'flex shrink-0 flex-col border-r border-border bg-surface transition-all duration-200',
-          collapsed ? 'w-sidebar-collapsed' : 'w-sidebar',
+          'fixed inset-y-0 left-0 z-40 flex w-[min(86vw,280px)] -translate-x-full flex-col border-r border-border bg-surface shadow-xl transition-transform duration-200 md:static md:z-auto md:h-auto md:translate-x-0 md:shadow-none',
+          collapsed ? 'md:w-sidebar-collapsed' : 'md:w-sidebar',
+          mobileOpen && 'translate-x-0',
         )}
       >
         <div className="flex items-center gap-3 border-b border-border px-4 py-4">
           <div className={cn('h-8 w-1.5 shrink-0 rounded-pill', accent)} />
-          {!collapsed && (
+          {(!collapsed || mobileOpen) && (
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-content">Multi-Tenants HR</p>
               <p className="truncate text-xs text-content-variant">{brandLine}</p>
             </div>
           )}
+          <button
+            type="button"
+            className="ml-auto rounded-md p-2 text-content-variant hover:bg-surface-subtle hover:text-content md:hidden"
+            aria-label="Close navigation"
+            onClick={() => setMobileOpen(false)}
+          >
+            <X className="size-4" />
+          </button>
         </div>
 
-        {!collapsed && (
+        {(!collapsed || mobileOpen) && (
           <div className="px-4 py-3">
             <Badge tone={portal === 'admin' ? 'platform' : 'company'}>{portalBadge}</Badge>
           </div>
@@ -59,16 +86,17 @@ export function AppShell({ portal, brandLine, portalBadge, nav, children }: AppS
                 key={item.to}
                 to={item.to}
                 className={cn(
-                  'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
+                  'flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors',
                   active
                     ? 'bg-[var(--portal-color)]/10 font-medium text-[var(--portal-color)]'
                     : 'text-content-variant hover:bg-surface-subtle hover:text-content',
                   collapsed && 'justify-center',
                 )}
                 title={collapsed ? item.label : undefined}
+                onClick={() => setMobileOpen(false)}
               >
                 <span className="shrink-0">{item.icon}</span>
-                {!collapsed && <span className="truncate">{item.label}</span>}
+                {(!collapsed || mobileOpen) && <span className="truncate">{item.label}</span>}
               </Link>
             );
           })}
@@ -76,7 +104,10 @@ export function AppShell({ portal, brandLine, portalBadge, nav, children }: AppS
 
         <div className="border-t border-border p-2">
           <button
+            type="button"
             onClick={() => setCollapsed((c) => !c)}
+            aria-expanded={!collapsed}
+            aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'}
             className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-content-variant hover:bg-surface-subtle"
           >
             {collapsed ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}
@@ -85,20 +116,41 @@ export function AppShell({ portal, brandLine, portalBadge, nav, children }: AppS
         </div>
       </aside>
 
+      {mobileOpen && (
+        <button
+          type="button"
+          className="fixed inset-0 z-30 bg-content/30 md:hidden"
+          aria-label="Close navigation"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 items-center justify-between border-b border-border bg-surface px-6">
-          <span className="text-sm text-content-variant">{brandLine}</span>
-          <div className="flex items-center gap-4">
-            {email && <span className="text-sm text-content">{email}</span>}
+        <header className="flex min-h-14 items-center justify-between gap-3 border-b border-border bg-surface px-4 py-3 sm:px-6">
+          <div className="flex min-w-0 items-center gap-3">
             <button
+              type="button"
+              className="rounded-md p-2 text-content-variant hover:bg-surface-subtle hover:text-content md:hidden"
+              aria-label="Open navigation"
+              aria-expanded={mobileOpen}
+              onClick={() => setMobileOpen(true)}
+            >
+              <Menu className="size-5" />
+            </button>
+            <span className="truncate text-sm font-medium text-content-variant">{brandLine}</span>
+          </div>
+          <div className="flex min-w-0 items-center gap-3">
+            {email && <span className="hidden max-w-[220px] truncate text-sm text-content sm:inline">{email}</span>}
+            <button
+              type="button"
               onClick={logout}
-              className="flex items-center gap-2 text-sm text-content-variant hover:text-content"
+              className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-content-variant hover:bg-surface-subtle hover:text-content"
             >
               <LogOut className="size-4" /> Logout
             </button>
           </div>
         </header>
-        <main className="mx-auto w-full max-w-container flex-1 p-8">{children}</main>
+        <main className="mx-auto w-full max-w-container flex-1 p-4 sm:p-6 lg:p-8">{children}</main>
       </div>
     </div>
   );

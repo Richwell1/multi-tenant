@@ -108,7 +108,7 @@ export function EmployeesList() {
         actions={
           <>
             <RefreshingIndicator show={query.isFetching && !query.isPending} />
-            <Input className="w-56" placeholder="Search employees…" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search employees" />
+            <Input className="w-full sm:w-56" placeholder="Search employees…" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search employees" />
             <Link to="/employees/new">
               <Button>Add Employee</Button>
             </Link>

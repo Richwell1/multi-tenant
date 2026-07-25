@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn('rounded-lg border border-border bg-surface shadow-sm', className)}
+      className={cn('rounded-lg border border-border/90 bg-surface shadow-[0_1px_2px_rgba(11,28,48,0.04)]', className)}
       {...props}
     />
   );
@@ -12,7 +12,7 @@ export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
 
 export function CardHeader({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn('flex items-start justify-between gap-4 p-6 pb-2', className)} {...props} />
+    <div className={cn('flex flex-wrap items-start justify-between gap-3 p-6 pb-3', className)} {...props} />
   );
 }
 
@@ -21,5 +21,5 @@ export function CardTitle({ className, ...props }: HTMLAttributes<HTMLHeadingEle
 }
 
 export function CardContent({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn('p-6 pt-2', className)} {...props} />;
+  return <div className={cn('p-6 pt-3', className)} {...props} />;
 }

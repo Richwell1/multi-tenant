@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -27,13 +27,40 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  const previouslyFocused = useRef<HTMLElement | null>(null);
+
   useEffect(() => {
     if (!open) return;
+    previouslyFocused.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    cancelRef.current?.focus();
+
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && !pending) onCancel();
+      if (e.key !== 'Tab' || !dialogRef.current) return;
+
+      const focusable = Array.from(
+        dialogRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled])',
+        ),
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
     };
     document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      previouslyFocused.current?.focus();
+    };
   }, [open, pending, onCancel]);
 
   if (!open) return null;
@@ -44,18 +71,20 @@ export function ConfirmDialog({
       role="dialog"
       aria-modal="true"
       aria-labelledby="confirm-title"
+      aria-describedby={description ? 'confirm-description' : undefined}
       onClick={() => !pending && onCancel()}
     >
       <div
-        className={cn('w-full max-w-md rounded-lg border border-border bg-surface p-6 shadow-lg')}
+        ref={dialogRef}
+        className={cn('w-full max-w-md rounded-lg border border-border bg-surface p-5 shadow-xl sm:p-6')}
         onClick={(e) => e.stopPropagation()}
       >
         <h2 id="confirm-title" className="text-lg font-semibold text-content">
           {title}
         </h2>
-        {description && <div className="mt-2 text-sm text-content-variant">{description}</div>}
+        {description && <div id="confirm-description" className="mt-2 text-sm leading-6 text-content-variant">{description}</div>}
         <div className="mt-6 flex justify-end gap-2">
-          <Button variant="secondary" onClick={onCancel} disabled={pending}>
+          <Button ref={cancelRef} variant="secondary" onClick={onCancel} disabled={pending}>
             {cancelLabel}
           </Button>
           <Button variant={tone === 'danger' ? 'danger' : 'primary'} onClick={onConfirm} disabled={pending}>

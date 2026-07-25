@@ -352,9 +352,148 @@ export type Database = {
           },
         ]
       }
+      package_installations: {
+        Row: {
+          company_id: string
+          completed_at: string | null
+          created_at: string
+          error: string | null
+          id: string
+          package_key: string
+          release_id: string
+          started_at: string
+          status: Database["public"]["Enums"]["installation_status"]
+          version: string
+        }
+        Insert: {
+          company_id: string
+          completed_at?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          package_key: string
+          release_id: string
+          started_at?: string
+          status?: Database["public"]["Enums"]["installation_status"]
+          version: string
+        }
+        Update: {
+          company_id?: string
+          completed_at?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          package_key?: string
+          release_id?: string
+          started_at?: string
+          status?: Database["public"]["Enums"]["installation_status"]
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "package_installations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "package_installations_package_key_fkey"
+            columns: ["package_key"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "package_installations_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: false
+            referencedRelation: "package_releases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      package_release_targets: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          release_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          release_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          release_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "package_release_targets_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "package_release_targets_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: false
+            referencedRelation: "package_releases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      package_releases: {
+        Row: {
+          automatic_install: boolean
+          created_at: string
+          id: string
+          package_version_id: string
+          released_at: string
+          released_by: string | null
+          status: Database["public"]["Enums"]["release_status"]
+          target_mode: Database["public"]["Enums"]["release_target_mode"]
+        }
+        Insert: {
+          automatic_install?: boolean
+          created_at?: string
+          id?: string
+          package_version_id: string
+          released_at?: string
+          released_by?: string | null
+          status?: Database["public"]["Enums"]["release_status"]
+          target_mode: Database["public"]["Enums"]["release_target_mode"]
+        }
+        Update: {
+          automatic_install?: boolean
+          created_at?: string
+          id?: string
+          package_version_id?: string
+          released_at?: string
+          released_by?: string | null
+          status?: Database["public"]["Enums"]["release_status"]
+          target_mode?: Database["public"]["Enums"]["release_target_mode"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "package_releases_package_version_id_fkey"
+            columns: ["package_version_id"]
+            isOneToOne: false
+            referencedRelation: "package_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       package_versions: {
         Row: {
           created_at: string
+          diagnostic_status: string | null
           id: string
           notes: string
           package_key: string
@@ -363,6 +502,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          diagnostic_status?: string | null
           id?: string
           notes?: string
           package_key: string
@@ -371,6 +511,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          diagnostic_status?: string | null
           id?: string
           notes?: string
           package_key?: string
@@ -390,6 +531,7 @@ export type Database = {
       packages: {
         Row: {
           created_at: string
+          description: string | null
           is_active: boolean
           key: string
           name: string
@@ -398,6 +540,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          description?: string | null
           is_active?: boolean
           key: string
           name: string
@@ -406,6 +549,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          description?: string | null
           is_active?: boolean
           key?: string
           name?: string
@@ -513,6 +657,15 @@ export type Database = {
         }
         Returns: Json
       }
+      publish_package_release: {
+        Args: {
+          p_automatic_install?: boolean
+          p_company_ids?: string[]
+          p_target_mode: Database["public"]["Enums"]["release_target_mode"]
+          p_version_id: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       company_package_status: "assigned" | "installing" | "installed" | "failed"
@@ -521,12 +674,26 @@ export type Database = {
       employee_status: "active" | "on_leave" | "terminated"
       employment_type: "full_time" | "part_time" | "contract"
       hr_record_status: "active" | "disabled"
+      installation_status:
+        | "pending"
+        | "installing"
+        | "installed"
+        | "failed"
+        | "retrying"
+        | "rolled_back"
       membership_status: "active" | "inactive" | "suspended"
       package_type:
         | "standard_update"
         | "private_customization"
         | "shared_extension"
         | "bug_fix"
+        | "configuration_update"
+        | "security_update"
+      release_status: "published" | "failed"
+      release_target_mode:
+        | "all_companies"
+        | "selected_companies"
+        | "one_company"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -663,12 +830,28 @@ export const Constants = {
       employee_status: ["active", "on_leave", "terminated"],
       employment_type: ["full_time", "part_time", "contract"],
       hr_record_status: ["active", "disabled"],
+      installation_status: [
+        "pending",
+        "installing",
+        "installed",
+        "failed",
+        "retrying",
+        "rolled_back",
+      ],
       membership_status: ["active", "inactive", "suspended"],
       package_type: [
         "standard_update",
         "private_customization",
         "shared_extension",
         "bug_fix",
+        "configuration_update",
+        "security_update",
+      ],
+      release_status: ["published", "failed"],
+      release_target_mode: [
+        "all_companies",
+        "selected_companies",
+        "one_company",
       ],
     },
   },

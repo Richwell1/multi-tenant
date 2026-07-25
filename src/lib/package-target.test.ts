@@ -18,6 +18,10 @@ describe('allowedTargetModesForPackageType', () => {
     ]);
     expect(allowedTargetModesForPackageType('bug_fix')).toHaveLength(3);
   });
+  it('configuration and security updates allow all three modes', () => {
+    expect(allowedTargetModesForPackageType('configuration_update')).toHaveLength(3);
+    expect(allowedTargetModesForPackageType('security_update')).toHaveLength(3);
+  });
 });
 
 describe('allowedTargetModesForExtension', () => {

@@ -22,8 +22,8 @@ import {
   useCompanies,
   useCompany,
   useHealth,
-  useUsage,
 } from '@/hooks/queries';
+import { useUsage } from '@/hooks/usage';
 import { useDiagnostic } from '@/hooks/diagnostics';
 import { DIAGNOSTIC_DIMENSIONS, type DiagnosticCheck } from '@/data/diagnostics';
 import {

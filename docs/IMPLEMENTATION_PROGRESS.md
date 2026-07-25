@@ -8,20 +8,20 @@
 | | |
 |---|---|
 | Product | Multi-Tenants HR |
-| Current branch | `feat/installation-monitoring-recovery` (from merged `main`, PR #10) |
-| Current phase | Phase 5 — Platform Operations (5.3 Installation Monitoring & Recovery complete) |
-| Current increment | 5.3 — Installation Monitoring & Recovery |
+| Current branch | `feat/usage-analytics` (from merged `main`, PR #11) |
+| Current phase | Phase 5 — Platform Operations (5.4 Usage Analytics complete) |
+| Current increment | 5.4 — Usage Analytics |
 | Default data source | `mock` (`VITE_DATA_SOURCE`), Supabase path behind lazy adapters |
 | Local Supabase ports | API/Functions 54331 · DB 54332 · Studio 54333 (project-local +10 offset) |
 | Hosted Supabase | Linked (`uezvaqoqqqgblpcbkujq`); **no migrations pushed** |
-| Test count | 194 |
+| Test count | 197 |
 
-> `main` (PR #10) carries everything through 5.2. 5.3 adds the installation state
-> machine + recovery RPCs (migration `130000`) — retry re-enables, rollback
-> revokes the tenant entitlement. RLS suites under `supabase/tests/`:
-> `package_release_rls.sql` (10), `leave_rls.sql` (14), `attendance_rls.sql` (18),
-> `request_records_rls.sql` (10), `diagnostics_rls.sql` (14),
-> `installation_recovery_rls.sql` (12) — **78 scenarios**.
+> `main` (PR #11) carries everything through 5.3. 5.4 adds `usage_metrics()`
+> (migration `140000`) — usage is **derived from `audit_logs`** (no separate events
+> table). RLS suites under `supabase/tests/`: `package_release_rls.sql` (10),
+> `leave_rls.sql` (14), `attendance_rls.sql` (18), `request_records_rls.sql` (10),
+> `diagnostics_rls.sql` (14), `installation_recovery_rls.sql` (12),
+> `usage_analytics_rls.sql` (7) — **85 scenarios**.
 
 ## Phase tracker
 
@@ -39,8 +39,9 @@
 | UI | UI/UX polish | In progress | 2026-07-25 | feat/ui-ux-polish | see `git log` | audit + shared foundation + dialog test + 137 tests ✅ | rebase onto updated main before merge |
 | 5.1 | Request Records persistence | Complete | 2026-07-25 | feat/request-records-persistence | merged (PR #8/#9) | 169 tests + 10 JWT/RLS ✅ | platform-admin-only; diagnostic FK completed in 5.2 |
 | 5.2 | Diagnostics & Release Gate | Complete | 2026-07-25 | feat/diagnostics-release-gate | merged (PR #10) | 188 tests + 14 JWT/RLS ✅ | authoring UI (per-check status) deferred |
-| 5.3 | Installation Monitoring & Recovery | Complete | 2026-07-25 | feat/installation-monitoring-recovery | (this branch) | 194 tests + 12 JWT/RLS ✅ | retry/rollback reconcile entitlements |
-| 5.4–5.6 | Usage / audit / CI | Not started | — | — | — | — | analytics, health, CI |
+| 5.3 | Installation Monitoring & Recovery | Complete | 2026-07-25 | feat/installation-monitoring-recovery | merged (PR #11) | 194 tests + 12 JWT/RLS ✅ | retry/rollback reconcile entitlements |
+| 5.4 | Usage Analytics | Complete | 2026-07-25 | feat/usage-analytics | (this branch) | 197 tests + 7 JWT/RLS ✅ | audit-derived; time-series deferred |
+| 5.5–5.6 | Audit surfaces / CI | Not started | — | — | — | — | health, CI |
 | 6 | Deployment / security hardening / subdomains | Not started | — | — | — | — | wildcard DNS, hosted deploy |
 
 ## Milestone checklists
@@ -83,7 +84,7 @@
 - [x] **5.2 Diagnostics & Release Gate** — `diagnostic_reports` + `diagnostic_checks` (8 dimensions × PASS/WARN/FAIL, `required` flag); result derived (FAIL>WARN>PASS) by trigger and synced to `package_versions.diagnostic_status`; completed the deferred `request_records.diagnostic_id` FK; **release gate** in `publish_package_release` (required FAIL blocks) + `version_release_blocked()` helper, mirrored in the publish UI + `@/data/diagnostics` (`deriveResult`/`isReleaseBlocked`); platform-admin-only RLS; `diagnostic.{created,evaluated}` audit; repositories (mock + lazy Supabase) + service + hooks; Diagnostic Report page shows per-dimension checks; 14 JWT/RLS/gate scenarios + unit tests
   - [ ] Diagnostic **authoring UI** (set per-check status/required, run-on-demand button) — deferred; `run()` creates an all-PASS report and the DB/seed cover WARN/FAIL
 - [x] **5.3 Installation Monitoring & Recovery** — installation state machine (`installation_can_transition` + enforce trigger); Platform-Admin-only `retry_package_installation` (failed→installed, **re-enables** `company_packages`) and `rollback_package_installation` (installed→rolled_back, **disables** the assignment so the tenant loses access via `can_use_company_package`); `installation.{retried,rolled_back}` audit; repository (mock + lazy Supabase RPC) + service + hooks + `InstallationsPage` recovery actions (Retry / confirmed Roll back); 12 JWT/RLS scenarios + unit tests
-- [ ] 5.4 Usage analytics
+- [x] **5.4 Usage Analytics** — `usage_metrics(company_ids)` SECURITY DEFINER function **derives** per-module metrics (action count + distinct companies) from `audit_logs` (action prefix = module); platform-admin self-gated (non-admin → empty); company-target filter; usage module (mock + lazy Supabase RPC) + service + hook; `UsagePage` rewired; 7 JWT/RLS scenarios + unit tests
 - [ ] 5.5 Audit logs + system health surfaces
 - [ ] 5.6 CI automation for the RLS/security suites
 
@@ -133,6 +134,7 @@
 | Combined (4.3B + 5.1) | ✅ | ✅ | ✅ | 182 | ✅ | ✅ package 10 · leave 14 · attendance 18 · requests 10 = 52 | attendance migration renumbered `090000→110000`; database.types regenerated; clean-mergeable Attendance PR |
 | 5.2 Diagnostics & Release Gate | ✅ | ✅ | ✅ | 188 | ✅ | ✅ diagnostics 14 (incl. gate: FAIL blocks, PASS/WARN/advisory-FAIL allow) + 52 prior = 66 | diagnostic adapter lazy chunk (1.7 KB); main 476 KB |
 | 5.3 Installation Recovery | ✅ | ✅ | ✅ | 194 | ✅ | ✅ recovery 12 (retry/rollback authz, entitlement sync, state trigger, audit) + 66 prior = 78 | recovery via existing packages adapter; main 476 KB |
+| 5.4 Usage Analytics | ✅ | ✅ | ✅ | 197 | ✅ | ✅ usage 7 (audit-derived aggregation, self-gate, company filter, distinct companies) + 78 prior = 85 | usage adapter lazy chunk (0.4 KB); main 476 KB |
 
 ## Current risks
 - Mock is default; Supabase HR-Core path verified at DB/RLS level, **not yet exercised end-to-end in the browser**.
@@ -157,8 +159,8 @@
 - **Status machine** intentionally minimal: `approved`/`rejected`/`cancelled` are terminal (no `approved → cancelled`). Central rule in `src/data/leave/transitions.ts` mirrors the DB trigger; widen both together if needed.
 
 ## Next actions
-1. **Merge Installation Recovery (5.3) to `main`** (`feat/installation-monitoring-recovery`, migration `130000`) — branches off the merged `main`; then rebase/merge `feat/ui-ux-polish`.
-2. **Phase 5.4 — Usage analytics**: persist per-module usage metrics (currently mock `useUsage`), scoped by company-target, feeding the analytics surfaces.
+1. **Merge Usage Analytics (5.4) to `main`** (`feat/usage-analytics`, migration `140000`) — branches off the merged `main`; then rebase/merge `feat/ui-ux-polish`.
+2. **Phase 5.5 — Audit surfaces & system health**: persist the platform audit log view (currently mock `useAudit`) scoped by company-target, and real health signals; then **5.6 CI** to run the 85-scenario SQL matrix automatically.
 3. **Browser E2E smoke** under `VITE_DATA_SOURCE=supabase` — publish + diagnostic gate, Leave, Attendance, Requests, Diagnostics, and **Recovery** (retry a failed install → access restored; roll back an installed package → tenant loses access). Deferred (interactive Supabase auth not scriptable here). Blocks making Supabase the default.
 4. Automate the JWT/RLS suites in CI (`supabase/tests/*.sql` — 78 scenarios; currently run via `docker exec psql`).
 5. Plan hosted rollout (push migrations, deploy Edge Functions, Vercel).
@@ -202,6 +204,7 @@
 - **The release gate is DB-authoritative**: `publish_package_release` refuses a version with any required FAIL check (`version_release_blocked`), and the publish UI mirrors it for fail-fast UX. Report result is derived from checks (FAIL>WARN>PASS) by trigger; `WARN` requires review but does not block; advisory (non-required) checks never block.
 - Diagnostics are **platform-plane** (Platform-Admin-only), and a diagnostic links a **package version** to an optional **request** via `request_records.diagnostic_id`.
 - **Recovery reconciles entitlements, not just install rows**: `rollback` disables `company_packages.enabled` (the tenant loses access via `can_use_company_package` immediately), and `retry` re-enables it. Both are Platform-Admin-only SECURITY DEFINER RPCs; direct client UPDATEs on `package_installations` remain blocked (no update policy) and the state-machine trigger guards every transition.
+- **Usage analytics is derived from `audit_logs`, not a separate events table**: every action already writes an audit row, so `usage_metrics()` aggregates by action-prefix module (count + distinct companies). DRY and always in sync; a dedicated time-series/usage-events table is deferred until trend analysis is required.
 - **Platform-plane data** (package releases, request records) is Platform-Admin-only in RLS — distinct from tenant data (HR core, leave, attendance) which is company-scoped. The two planes never share a read policy.
 - Request Records are the pipeline entry point; **diagnostics attach to a request/package version (5.2), so requests are persisted first** (`diagnostic_id` FK deferred to 5.2).
 - Same-company relationships enforced by **composite foreign keys**, not just RLS/UI.

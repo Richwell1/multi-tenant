@@ -977,6 +977,14 @@ export type Database = {
         Args: { p_installation_id: string }
         Returns: Json
       }
+      usage_metrics: {
+        Args: { p_company_ids?: string[] }
+        Returns: {
+          action_count: number
+          companies_using: number
+          module: string
+        }[]
+      }
       version_release_blocked: {
         Args: { p_version_id: string }
         Returns: boolean

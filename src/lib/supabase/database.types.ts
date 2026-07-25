@@ -34,6 +34,47 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_logs: {
+        Row: {
+          action: string
+          actor_user_id: string | null
+          company_id: string | null
+          created_at: string
+          entity_id: string | null
+          entity_type: string
+          id: string
+          metadata: Json
+        }
+        Insert: {
+          action: string
+          actor_user_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          metadata?: Json
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          metadata?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       companies: {
         Row: {
           created_at: string
@@ -70,6 +111,7 @@ export type Database = {
           created_at: string
           id: string
           role: Database["public"]["Enums"]["company_role"]
+          status: Database["public"]["Enums"]["membership_status"]
           updated_at: string
           user_id: string
         }
@@ -78,6 +120,7 @@ export type Database = {
           created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["company_role"]
+          status?: Database["public"]["Enums"]["membership_status"]
           updated_at?: string
           user_id: string
         }
@@ -86,6 +129,7 @@ export type Database = {
           created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["company_role"]
+          status?: Database["public"]["Enums"]["membership_status"]
           updated_at?: string
           user_id?: string
         }
@@ -150,6 +194,47 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "packages"
             referencedColumns: ["key"]
+          },
+        ]
+      }
+      company_settings: {
+        Row: {
+          company_email: string | null
+          company_id: string
+          created_at: string
+          locale: string | null
+          logo_url: string | null
+          phone: string | null
+          timezone: string | null
+          updated_at: string
+        }
+        Insert: {
+          company_email?: string | null
+          company_id: string
+          created_at?: string
+          locale?: string | null
+          logo_url?: string | null
+          phone?: string | null
+          timezone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          company_email?: string | null
+          company_id?: string
+          created_at?: string
+          locale?: string | null
+          logo_url?: string | null
+          phone?: string | null
+          timezone?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_settings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -252,11 +337,23 @@ export type Database = {
         Returns: boolean
       }
       is_platform_admin: { Args: { uid?: string }; Returns: boolean }
+      onboard_company: {
+        Args: {
+          p_company_email?: string
+          p_company_name: string
+          p_phone?: string
+          p_slug: string
+          p_subdomain: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       company_package_status: "assigned" | "installing" | "installed" | "failed"
       company_role: "company_admin" | "company_user"
       company_status: "active" | "suspended"
+      membership_status: "active" | "inactive" | "suspended"
       package_type:
         | "standard_update"
         | "private_customization"
@@ -395,6 +492,7 @@ export const Constants = {
       company_package_status: ["assigned", "installing", "installed", "failed"],
       company_role: ["company_admin", "company_user"],
       company_status: ["active", "suspended"],
+      membership_status: ["active", "inactive", "suspended"],
       package_type: [
         "standard_update",
         "private_customization",

@@ -13,6 +13,8 @@ import { Badge } from '@/components/ui/badge';
 import { AccessDeniedState, CompanySuspendedState } from '@/components/states';
 import { useSession } from '@/lib/session';
 import { useLoginPortalContext } from '@/hooks/use-login-portal-context';
+import { useRegisterCompany } from '@/hooks/use-register-company';
+import { RepositoryError } from '@/data/errors';
 import { notify } from '@/lib/notify';
 import { cn } from '@/lib/utils';
 
@@ -33,7 +35,7 @@ function AuthLayout({ children, portalClass }: { children: React.ReactNode; port
 }
 
 export function LoginPage() {
-  const { login } = useSession();
+  const { signIn } = useSession();
   const ctx = useLoginPortalContext();
   const navigate = useNavigate();
   const isAdmin = ctx.type === 'platform_admin';
@@ -47,17 +49,16 @@ export function LoginPage() {
     formState: { errors, isSubmitting },
   } = useForm<LoginForm>({ resolver: zodResolver(loginSchema) });
 
-  // Mock auth: any credentials succeed EXCEPT the sentinel password "wrong",
-  // which surfaces the inline invalid-credentials state (not toast-only).
+  // Sign in through the auth boundary. Invalid credentials surface an inline
+  // error (not toast-only); the mock adapter treats password "wrong" as invalid.
   const onSubmit = async (values: LoginForm) => {
     setAuthError(null);
-    await new Promise((r) => setTimeout(r, 400));
-    if (values.password === 'wrong') {
-      setAuthError('Invalid email or password. Please try again.');
-      return;
+    try {
+      await signIn({ email: values.email, password: values.password });
+      navigate({ to: isAdmin ? '/admin' : '/dashboard' });
+    } catch (e) {
+      setAuthError(e instanceof RepositoryError ? e.message : 'Sign-in failed. Please try again.');
     }
-    login(values.email);
-    navigate({ to: isAdmin ? '/admin' : '/dashboard' });
   };
 
   return (
@@ -154,24 +155,35 @@ type RegisterForm = z.infer<typeof registerSchema>;
 
 export function RegisterPage() {
   const navigate = useNavigate();
+  const mutation = useRegisterCompany();
+  const [registerError, setRegisterError] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
     watch,
-    formState: { errors, isSubmitting, isSubmitSuccessful },
+    formState: { errors },
   } = useForm<RegisterForm>({ resolver: zodResolver(registerSchema) });
 
   const slug = watch('slug');
 
-  const onValid = () => {
-    // Phase 1: no backend. Simulate success then route to login.
-    return new Promise<void>((resolve) => {
-      setTimeout(() => {
-        notify.recordCreated('Company');
-        navigate({ to: '/login' });
-        resolve();
-      }, 600);
-    });
+  // Register page → hook → registration service → adapter. Never calls the Edge
+  // Function directly. On success we route to the company login (a session is
+  // NOT fabricated here — the founder signs in explicitly).
+  const onValid = async (values: RegisterForm) => {
+    setRegisterError(null);
+    try {
+      const result = await mutation.mutateAsync({
+        companyName: values.companyName,
+        slug: values.slug,
+        requestedSubdomain: values.slug,
+        adminName: values.adminName,
+        email: values.adminEmail,
+        password: values.password,
+      });
+      navigate({ to: '/login', search: { tenant: result.slug } });
+    } catch (e) {
+      setRegisterError(e instanceof RepositoryError ? e.message : 'Registration failed. Please try again.');
+    }
   };
 
   return (
@@ -183,6 +195,15 @@ export function RegisterPage() {
             Company self-registration. HR Core is assigned automatically.
           </p>
         </div>
+        {registerError && (
+          <div
+            role="alert"
+            className="mb-4 flex items-center gap-2 rounded-md border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger"
+          >
+            <AlertCircle className="size-4 shrink-0" />
+            {registerError}
+          </div>
+        )}
         <form onSubmit={handleSubmit(onValid, () => notify.validationFailure())} className="space-y-4" noValidate>
           <Field label="Company name" htmlFor="companyName" error={errors.companyName?.message}>
             <Input id="companyName" aria-invalid={!!errors.companyName} {...register('companyName')} />
@@ -212,11 +233,7 @@ export function RegisterPage() {
               {...register('confirmPassword')}
             />
           </Field>
-          <SubmitButton
-            className="w-full"
-            pending={isSubmitting || isSubmitSuccessful}
-            pendingLabel="Creating company…"
-          >
+          <SubmitButton className="w-full" pending={mutation.isPending} pendingLabel="Creating company…">
             Create company
           </SubmitButton>
         </form>

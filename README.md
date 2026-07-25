@@ -297,6 +297,35 @@ AGENTS.md               product scope & rules for contributors/agents
 
 ---
 
+## Local Supabase backend (in progress)
+
+The backend is being built behind the existing repository/auth interfaces; **mock
+stays the default** (`VITE_DATA_SOURCE=mock`), so the app runs with no backend.
+
+Local dev stack (requires Docker). This project uses **non-default ports (+10)**
+to coexist with other local Supabase stacks:
+
+| Service | URL |
+|---|---|
+| API / Functions | http://127.0.0.1:54331 |
+| Postgres | 127.0.0.1:54332 |
+| Studio | http://127.0.0.1:54333 |
+
+```bash
+npx supabase start                       # boot the local stack
+npx supabase db reset                    # apply migrations + HR Core seed
+npx supabase functions serve register-company --no-verify-jwt
+```
+
+Applied so far: platform/tenancy foundation + auth/onboarding (companies,
+memberships, platform_admins, packages, package_versions, company_packages,
+company_settings, audit_logs), RLS + helper functions, the service-role-only
+`onboard_company()` RPC, and the public `register-company` Edge Function
+(atomic Auth-user + tenant creation with rollback). The service-role key lives
+only in the Edge Function, never in the browser.
+
+---
+
 ## Roadmap — next phase
 
 The current mock repository is a drop-in seam for the backend. Planned next:

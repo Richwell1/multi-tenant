@@ -174,11 +174,14 @@ export interface AuditLogEntry {
 export interface LeaveRequest {
   id: string;
   tenantId: string;
+  employeeId: string;
+  /** Denormalized employee display name (joined for the table view). */
   employee: string;
   leaveType: 'annual' | 'sick' | 'unpaid';
   startDate: string;
   endDate: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'cancelled';
+  reason?: string;
 }
 
 export interface AttendanceRecord {

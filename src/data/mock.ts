@@ -224,8 +224,8 @@ export const auditLog: AuditLogEntry[] = [
 ];
 
 export const leaveRequests: LeaveRequest[] = [
-  { id: 'l1', tenantId: 'alpha', employee: 'Wei Chen', leaveType: 'annual', startDate: '2026-06-01', endDate: '2026-06-07', status: 'approved' },
-  { id: 'l2', tenantId: 'alpha', employee: 'Maria Santos', leaveType: 'sick', startDate: '2026-05-20', endDate: '2026-05-21', status: 'pending' },
+  { id: 'l1', tenantId: 'alpha', employeeId: 'e3', employee: 'Wei Chen', leaveType: 'annual', startDate: '2026-06-01', endDate: '2026-06-07', status: 'approved' },
+  { id: 'l2', tenantId: 'alpha', employeeId: 'e1', employee: 'Maria Santos', leaveType: 'sick', startDate: '2026-05-20', endDate: '2026-05-21', status: 'pending' },
 ];
 
 export const attendanceRecords: AttendanceRecord[] = [

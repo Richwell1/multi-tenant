@@ -80,6 +80,9 @@ export const queryKeys = {
     all: ['audit'] as const,
     list: (target: CompanyTargetKeyPart) => ['audit', 'list', target] as const,
   },
-  leave: { all: (companyId: string) => ['leave', companyId] as const },
+  leave: {
+    all: (companyId: string) => ['leave', companyId] as const,
+    list: (companyId: string) => ['leave', companyId, 'list'] as const,
+  },
   attendance: { all: (companyId: string) => ['attendance', companyId] as const },
 } as const;

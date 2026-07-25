@@ -139,5 +139,13 @@ export const invalidationTargets = {
     k.packages.company(companyId),
   ],
 
+  /** Recovery (retry/rollback) flips the install state AND the company entitlement. */
+  recoverInstallation: (companyId: string): QueryKey[] => [
+    k.installations.all,
+    k.packages.all,
+    k.packages.company(companyId),
+    k.audit.all,
+  ],
+
   saveSettings: (companyId: string): QueryKey[] => [k.companies.detail(companyId)],
 };

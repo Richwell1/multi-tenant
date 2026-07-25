@@ -62,4 +62,8 @@ export const assignmentService = {
 
 export const installationService = {
   list: (filters?: InstallationFilters) => installationRepository.list(filters),
+  /** Recover a failed installation. RLS/RPC authorize and enforce state server-side. */
+  retry: (id: string) => installationRepository.retry(id),
+  /** Roll back an installed package (revokes the tenant's entitlement). */
+  rollback: (id: string) => installationRepository.rollback(id),
 };

@@ -33,8 +33,6 @@ import {
   useAttendance,
   useCompanyUsers,
   useCreateEmployee,
-  useDepartments,
-  useDisableDepartment,
   useEmployee,
   useEmployees,
   useInstallPackage,
@@ -43,6 +41,7 @@ import {
   useSaveSettings,
   useTenantInstallations,
 } from '@/hooks/queries';
+import { useDepartments, useCreateDepartment, useDisableDepartment } from '@/hooks/departments';
 
 function useTenantId() {
   const { tenantId } = useSession();
@@ -56,7 +55,7 @@ export function WorkspaceDashboard() {
   const tid = useTenantId();
   const hasLeave = canAccessLeave(company);
   const employees = useEmployees(tid);
-  const departments = useDepartments(tid);
+  const departments = useDepartments();
   const positions = usePositions(tid);
 
   if (employees.isPending) return <PageLoadingState label={`Loading ${company?.name ?? 'workspace'}…`} />;
@@ -292,16 +291,74 @@ export function EmployeeProfile() {
 
 // --- Departments / Positions --------------------------------------------------
 
+const departmentSchema = z.object({
+  name: z.string().min(2, 'Name is required'),
+  code: z.string().min(1, 'Code is required'),
+  head: z.string().optional(),
+});
+type DepartmentForm = z.infer<typeof departmentSchema>;
+
 export function DepartmentsPage() {
-  const tid = useTenantId();
-  const query = useDepartments(tid);
-  const disableMutation = useDisableDepartment(tid);
+  const query = useDepartments();
+  const createMutation = useCreateDepartment();
+  const disableMutation = useDisableDepartment();
   const [target, setTarget] = useState<{ id: string; name: string } | null>(null);
+  const [showAdd, setShowAdd] = useState(false);
   const filtered = query.data ?? [];
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<DepartmentForm>({ resolver: zodResolver(departmentSchema) });
+
+  const onCreate = (values: DepartmentForm) =>
+    createMutation.mutate(values, {
+      onSuccess: () => {
+        reset();
+        setShowAdd(false);
+      },
+    });
 
   return (
     <>
-      <PageHeader title="Departments" actions={<Button>Add Department</Button>} />
+      <PageHeader
+        title="Departments"
+        actions={<Button onClick={() => setShowAdd((s) => !s)}>Add Department</Button>}
+      />
+      {showAdd && (
+        <Card className="mb-6 max-w-2xl">
+          <CardContent className="pt-6">
+            <form onSubmit={handleSubmit(onCreate, () => notify.validationFailure())} className="grid gap-4 sm:grid-cols-3" noValidate>
+              <Field label="Name" htmlFor="dept-name" error={errors.name?.message}>
+                <Input id="dept-name" aria-invalid={!!errors.name} {...register('name')} />
+              </Field>
+              <Field label="Code" htmlFor="dept-code" error={errors.code?.message}>
+                <Input id="dept-code" aria-invalid={!!errors.code} {...register('code')} />
+              </Field>
+              <Field label="Head" htmlFor="dept-head">
+                <Input id="dept-head" {...register('head')} />
+              </Field>
+              <div className="col-span-full flex gap-2">
+                <SubmitButton pending={createMutation.isPending} pendingLabel="Saving…">
+                  Save Department
+                </SubmitButton>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    reset();
+                    setShowAdd(false);
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
       <TableBoundary query={query} filtered={filtered} cols={4}>
         <DataTable>
           <THead>

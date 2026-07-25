@@ -238,6 +238,47 @@ export type Database = {
           },
         ]
       }
+      departments: {
+        Row: {
+          code: string
+          company_id: string
+          created_at: string
+          head: string | null
+          id: string
+          name: string
+          status: Database["public"]["Enums"]["hr_record_status"]
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          company_id: string
+          created_at?: string
+          head?: string | null
+          id?: string
+          name: string
+          status?: Database["public"]["Enums"]["hr_record_status"]
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          company_id?: string
+          created_at?: string
+          head?: string | null
+          id?: string
+          name?: string
+          status?: Database["public"]["Enums"]["hr_record_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "departments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       package_versions: {
         Row: {
           created_at: string
@@ -353,6 +394,7 @@ export type Database = {
       company_package_status: "assigned" | "installing" | "installed" | "failed"
       company_role: "company_admin" | "company_user"
       company_status: "active" | "suspended"
+      hr_record_status: "active" | "disabled"
       membership_status: "active" | "inactive" | "suspended"
       package_type:
         | "standard_update"
@@ -492,6 +534,7 @@ export const Constants = {
       company_package_status: ["assigned", "installing", "installed", "failed"],
       company_role: ["company_admin", "company_user"],
       company_status: ["active", "suspended"],
+      hr_record_status: ["active", "disabled"],
       membership_status: ["active", "inactive", "suspended"],
       package_type: [
         "standard_update",

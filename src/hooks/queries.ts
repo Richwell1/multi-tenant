@@ -46,8 +46,8 @@ export const useEmployee = (companyId: string, employeeId: string) =>
     queryFn: () => repository.getEmployee(employeeId),
   });
 
-export const useDepartments = (companyId: string) =>
-  useQuery({ queryKey: queryKeys.departments.all(companyId), queryFn: () => repository.getDepartments(companyId) });
+// Departments are persisted via the dedicated hooks in '@/hooks/departments'
+// (DepartmentRepository + service). Positions/Employees follow in later increments.
 export const usePositions = (companyId: string) =>
   useQuery({ queryKey: queryKeys.positions.all(companyId), queryFn: () => repository.getPositions(companyId) });
 export const useCompanyUsers = (companyId: string) =>
@@ -152,18 +152,6 @@ export function useCreatePackage() {
       (variables.targetCompanyIds ?? []).forEach((companyId) =>
         qc.invalidateQueries({ queryKey: queryKeys.packages.company(companyId) }),
       );
-    },
-    onError: (e: NetworkError) => notify.networkFailure(e.message),
-  });
-}
-
-export function useDisableDepartment(companyId: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (deptId: string) => repository.disableDepartment(deptId),
-    onSuccess: () => {
-      notify.recordDisabled('Department');
-      invalidate(qc, invalidationTargets.disableDepartment(companyId));
     },
     onError: (e: NetworkError) => notify.networkFailure(e.message),
   });

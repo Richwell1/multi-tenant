@@ -24,6 +24,19 @@ export const invalidationTargets = {
     k.audit.all,
   ],
 
+  createDepartment: (companyId: string): QueryKey[] => [
+    k.departments.all(companyId),
+    k.employees.all(companyId), // department labels are embedded on employees
+    k.audit.all,
+  ],
+
+  updateDepartment: (companyId: string): QueryKey[] => [
+    k.departments.all(companyId),
+    k.positions.all(companyId), // positions reference departments
+    k.employees.all(companyId),
+    k.audit.all,
+  ],
+
   disableDepartment: (companyId: string): QueryKey[] => [
     k.departments.all(companyId),
     k.employees.all(companyId), // department labels are embedded on employees

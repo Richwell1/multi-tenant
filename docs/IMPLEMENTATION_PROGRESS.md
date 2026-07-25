@@ -9,12 +9,12 @@
 |---|---|
 | Product | Multi-Tenants HR |
 | Current branch | `feat/package-release-management` |
-| Current phase | Phase 4 — Package system (4.2a release backend complete) |
-| Current increment | 4.2a — Package release backend: schema + atomic publish RPC (complete) |
+| Current phase | Phase 4 — Package system (4.2b admin wiring complete) |
+| Current increment | 4.2b — Package repos/services + Admin UI wiring (complete) |
 | Default data source | `mock` (`VITE_DATA_SOURCE`), Supabase path behind lazy adapters |
 | Local Supabase ports | API/Functions 54331 · DB 54332 · Studio 54333 (project-local +10 offset) |
 | Hosted Supabase | Linked (`uezvaqoqqqgblpcbkujq`); **no migrations pushed** |
-| Test count | 138 |
+| Test count | 149 |
 
 ## Phase tracker
 
@@ -26,7 +26,7 @@
 | 3A | Departments | Complete | 2026-07-25 | feat/hr-core-persistence | `59b7276` | 119 tests + JWT RLS ✅ | mock simulated writes |
 | 3B | Positions | Complete | 2026-07-25 | feat/hr-core-persistence | `f6674b9` | 126 tests + JWT RLS+FK ✅ | mock simulated writes |
 | 3C | Employees | Complete | 2026-07-25 | feat/hr-core-persistence | `b0bb3f6` | 134 tests + JWT RLS (dual FK, uniqueness, terminate audit) ✅ | browser E2E deferred |
-| 4 | Package & extension system | In progress | — | feat/package-release-management | `e421a53` | 4.1 ✅; 4.2a ✅ (publish RPC + JWT: authz, classification rules, entitlement refresh, tenant-safe installs) | 4.2b: repos/services/admin UI wiring + browser smoke |
+| 4 | Package & extension system | In progress | — | feat/package-release-management | `f4c1888` | 4.1 ✅; 4.2a ✅; 4.2b ✅ (publish RPC + JWT: authz, classification rules, entitlement refresh, tenant-safe installs) | 4.2b: repos/services/admin UI wiring + browser smoke |
 | UI | UI/UX polish | In progress | 2026-07-25 | feat/ui-ux-polish | see `git log` | audit + shared foundation + dialog test + 137 tests ✅ | browser visual QA; push pending GitHub authentication |
 | 5 | Requests / diagnostics / usage / audit | Not started | — | — | — | — | — |
 | 6 | Deployment / security hardening / subdomains | Not started | — | — | — | — | wildcard DNS, hosted deploy |
@@ -62,7 +62,7 @@
 - [x] Real entitlements (`enabledPackageCodes` from context; enabled ∧ is_active) as single source
 - [x] Reusable route-level `PackageGuard` (Open/Closed via `packageCode`)
 - [x] Release schema (package_releases / targets / installations) + atomic `publish_package_release` RPC (Platform-Admin-only, DB-enforced classification→target rules)
-- [ ] Package repositories/services + Admin UI wiring (Create Release, Package Details, Installation Monitoring) — 4.2b
+- [x] Package repositories/services (mock + lazy Supabase; publish via RPC) + Admin UI wiring (Create Release, Package Details, Installation Monitoring, Company assignments)
 - [ ] Leave / Attendance persistence
 
 ### Hosted deployment
@@ -87,6 +87,7 @@
 | 3C Employees | ✅ | ✅ | ✅ | 134 | ✅ | ✅ (dual FK, per-company unique #/email, terminate audit) | employee adapter lazy chunk; browser E2E deferred |
 | 4.1 Package entitlements + guard | ✅ | ✅ | ✅ | 136 | ✅ | ✅ (company_packages entitlement isolation) | bundle unchanged (471 KB) |
 | 4.2a Release backend (RPC) | ✅ | ✅ | ✅ | 138 | ✅ | ✅ (publish authz, private→one only, all→2 targets, entitlement upsert, Alpha-only installs, audit) | backend-only; frontend wiring in 4.2b |
+| 4.2b Package admin wiring | ✅ | ✅ | ✅ | 149 | ✅ | reuses 4.2a JWT suite | browser E2E deferred; publish via RPC service |
 
 ## Current risks
 - Mock is default; Supabase HR-Core path verified at DB/RLS level, **not yet exercised end-to-end in the browser**.
@@ -98,7 +99,7 @@
 - Leave/Attendance data still read from the mock repository (persistence is a later Phase 4 increment); only the entitlement gate is unified now.
 
 ## Next actions
-1. **Phase 4.2b**: Package/PackageVersion/PackageRelease/PackageAssignment/Installation repositories (mock + lazy Supabase; publish via the `publish_package_release` RPC) + services; wire Admin **Create Release / Package Details / Installation Monitoring** through the shared company-target selector; targeted invalidation of package + affected-company entitlement queries.
+1. **Phase 4.3A**: Leave Management persistence — leave tables, entitlement-backed RLS (Alpha allowed / Beta denied), repositories/services/hooks, wire the Leave page off the mock repo.
 2. **Browser E2E smoke** under `VITE_DATA_SOURCE=supabase` (login → publish all/selected/one → entitlement refresh → Alpha Leave / Beta denial). Blocks making Supabase the default.
 3. Merge `feat/package-release-management` into `main` (PR) once 4.2b lands.
 4. Automate JWT/RLS + RPC integration tests in CI (currently run manually via psql).

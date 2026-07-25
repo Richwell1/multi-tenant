@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { Link, useParams, useNavigate } from '@tanstack/react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { Search } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import { StatCard } from '@/components/stat-card';
@@ -20,15 +19,11 @@ import { formatDate } from '@/lib/utils';
 import { notify } from '@/lib/notify';
 import {
   useAudit,
-  useChangeRequestStatus,
   useCompanies,
   useCompany,
-  useCreateRequest,
   useDiagnostic,
   useDiagnostics,
   useHealth,
-  useRequest,
-  useRequests,
   useUsage,
 } from '@/hooks/queries';
 import {
@@ -39,6 +34,9 @@ import {
   usePackageVersions,
   usePublishRelease,
 } from '@/hooks/packages';
+import { useRequests, useRequest, useCreateRequest, useChangeRequestStatus } from '@/hooks/requests';
+import { requestFormSchema, type RequestFormValues } from '@/services/request-service';
+import { allowedNextStatuses } from '@/data/requests';
 import { RepositoryError } from '@/data/errors';
 import type { PackageInstallationStatus } from '@/data/packages';
 import {
@@ -84,18 +82,6 @@ const requestTone = (s: RequestStatus) =>
       ? 'offline'
       : 'platform';
 
-const REQUEST_STATUSES: RequestStatus[] = [
-  'received',
-  'under_review',
-  'approved',
-  'rejected',
-  'in_development',
-  'testing',
-  'ready_for_release',
-  'released',
-  'installed',
-  'closed',
-];
 
 function SearchBar({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
@@ -341,16 +327,6 @@ export function RequestsList() {
   );
 }
 
-const createRequestSchema = z.object({
-  companyId: z.string().min(1, 'Select a company'),
-  title: z.string().min(3, 'Title is required'),
-  requestType: z.string().min(1, 'Type is required'),
-  sourceEmailReference: z.string().min(1, 'Email reference is required'),
-  description: z.string().min(1, 'Description is required'),
-  priority: z.enum(['low', 'medium', 'high']),
-});
-type CreateRequestForm = z.infer<typeof createRequestSchema>;
-
 export function CreateRequest() {
   const navigate = useNavigate();
   const companies = useCompanies();
@@ -359,8 +335,8 @@ export function CreateRequest() {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<CreateRequestForm>({
-    resolver: zodResolver(createRequestSchema),
+  } = useForm<RequestFormValues>({
+    resolver: zodResolver(requestFormSchema),
     defaultValues: { priority: 'medium' },
   });
 
@@ -376,7 +352,7 @@ export function CreateRequest() {
     );
   }, [allowedLinkModes]);
 
-  const onValid = (values: CreateRequestForm) => {
+  const onValid = (values: RequestFormValues) => {
     const parsed = createCompanyTargetSchema({ allowedModes: allowedLinkModes }).safeParse(linkTarget);
     if (!parsed.success) {
       setLinkError(parsed.error.issues[0]?.message ?? 'Invalid company target');
@@ -541,7 +517,7 @@ export function RequestDetails() {
               onChange={(e) => setStatus(e.target.value as RequestStatus)}
             >
               <option value="">Select new status…</option>
-              {REQUEST_STATUSES.map((s) => (
+              {allowedNextStatuses(request.status).map((s) => (
                 <option key={s} value={s}>
                   {s.replace(/_/g, ' ')}
                 </option>
@@ -551,11 +527,14 @@ export function RequestDetails() {
               pending={statusMutation.isPending}
               pendingLabel="Updating…"
               disabled={!status}
-              onClick={() => status && statusMutation.mutate(status)}
+              onClick={() => status && statusMutation.mutate({ current: request.status, next: status })}
               type="button"
             >
               Update Status
             </SubmitButton>
+            {allowedNextStatuses(request.status).length === 0 && (
+              <p className="text-xs text-content-variant">This request is in a terminal state.</p>
+            )}
           </CardContent>
         </Card>
       </div>

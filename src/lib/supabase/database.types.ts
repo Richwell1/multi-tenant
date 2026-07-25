@@ -926,6 +926,13 @@ export type Database = {
         }
         Returns: boolean
       }
+      installation_can_transition: {
+        Args: {
+          from_status: Database["public"]["Enums"]["installation_status"]
+          to_status: Database["public"]["Enums"]["installation_status"]
+        }
+        Returns: boolean
+      }
       is_company_member: {
         Args: { target_company: string; uid?: string }
         Returns: boolean
@@ -961,6 +968,14 @@ export type Database = {
           to_status: Database["public"]["Enums"]["request_status"]
         }
         Returns: boolean
+      }
+      retry_package_installation: {
+        Args: { p_installation_id: string }
+        Returns: Json
+      }
+      rollback_package_installation: {
+        Args: { p_installation_id: string }
+        Returns: Json
       }
       version_release_blocked: {
         Args: { p_version_id: string }

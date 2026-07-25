@@ -10,6 +10,7 @@ import type {
 import type {
   CompanyPackageAssignment,
   InstallationFilters,
+  InstallationRecoveryResult,
   Package,
   PackageDiagnosticStatus,
   PackageInstallation,
@@ -129,5 +130,21 @@ export class SupabaseInstallationRepository implements InstallationRepository {
         error: r.error,
       }),
     );
+  }
+
+  async retry(id: string): Promise<InstallationRecoveryResult> {
+    const { data, error } = await getSupabaseClient().rpc('retry_package_installation', {
+      p_installation_id: id,
+    });
+    if (error) throw mapSupabaseError(error);
+    return data as unknown as InstallationRecoveryResult;
+  }
+
+  async rollback(id: string): Promise<InstallationRecoveryResult> {
+    const { data, error } = await getSupabaseClient().rpc('rollback_package_installation', {
+      p_installation_id: id,
+    });
+    if (error) throw mapSupabaseError(error);
+    return data as unknown as InstallationRecoveryResult;
   }
 }

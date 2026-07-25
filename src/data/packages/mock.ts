@@ -8,6 +8,7 @@ import type {
 import type {
   CompanyPackageAssignment,
   InstallationFilters,
+  InstallationRecoveryResult,
   Package,
   PackageInstallation,
   PackageInstallationStatus,
@@ -107,5 +108,15 @@ export class MockInstallationRepository implements InstallationRepository {
         error: null,
       }))
       .filter((i) => !filters.status || i.status === filters.status);
+  }
+
+  async retry(id: string): Promise<InstallationRecoveryResult> {
+    await delay();
+    return { id, status: 'installed' };
+  }
+
+  async rollback(id: string): Promise<InstallationRecoveryResult> {
+    await delay();
+    return { id, status: 'rolled_back' };
   }
 }

@@ -10,7 +10,7 @@ import { queryKeys } from '@/lib/query-keys';
 import { invalidationTargets } from '@/data/invalidation';
 import { notify } from '@/lib/notify';
 import type { NetworkError } from '@/data/api';
-import type { InstallationFilters } from '@/data/packages';
+import type { InstallationFilters, PackageInstallation } from '@/data/packages';
 
 function invalidate(qc: ReturnType<typeof useQueryClient>, keys: readonly QueryKey[]) {
   keys.forEach((queryKey) => qc.invalidateQueries({ queryKey }));
@@ -48,6 +48,30 @@ export function useInstallationsMonitor(filters: InstallationFilters) {
   return useQuery({
     queryKey: queryKeys.installations.monitor(filters as Record<string, unknown>),
     queryFn: () => installationService.list(filters),
+  });
+}
+
+export function useRetryInstallation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (installation: PackageInstallation) => installationService.retry(installation.id),
+    onSuccess: (_res, installation) => {
+      notify.recordUpdated('Installation');
+      invalidate(qc, invalidationTargets.recoverInstallation(installation.companyId));
+    },
+    onError: (e: NetworkError) => notify.networkFailure(e.message),
+  });
+}
+
+export function useRollbackInstallation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (installation: PackageInstallation) => installationService.rollback(installation.id),
+    onSuccess: (_res, installation) => {
+      notify.recordUpdated('Installation');
+      invalidate(qc, invalidationTargets.recoverInstallation(installation.companyId));
+    },
+    onError: (e: NetworkError) => notify.networkFailure(e.message),
   });
 }
 

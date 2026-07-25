@@ -40,6 +40,12 @@ class LazyInstallationRepository implements InstallationRepository {
   list(filters?: InstallationFilters) {
     return supa().then((m) => new m.SupabaseInstallationRepository().list(filters));
   }
+  retry(id: string) {
+    return supa().then((m) => new m.SupabaseInstallationRepository().retry(id));
+  }
+  rollback(id: string) {
+    return supa().then((m) => new m.SupabaseInstallationRepository().rollback(id));
+  }
 }
 
 const isSupabase = (source = resolveDataSource()) => source === 'supabase';
@@ -64,3 +70,5 @@ export type {
   InstallationRepository,
 } from './package-repository';
 export type * from './types';
+// Value exports (the type-only re-export above would otherwise hide these helpers).
+export { canRetryInstallation, canRollbackInstallation } from './types';

@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Field } from '@/components/ui/field';
 import { DataTable, TBody, TD, TH, THead, TR } from '@/components/ui/table';
 import { TableBoundary, RefreshingIndicator } from '@/components/table-boundary';
-import { PageLoadingState, ErrorState, EmptyState } from '@/components/states';
+import { PageLoadingState, ErrorState, EmptyState, ConfirmDialog } from '@/components/states';
 import { CompanyTargetSelector } from '@/components/company-target';
 import { formatDate } from '@/lib/utils';
 import { notify } from '@/lib/notify';
@@ -33,12 +33,19 @@ import {
   usePackages,
   usePackageVersions,
   usePublishRelease,
+  useRetryInstallation,
+  useRollbackInstallation,
 } from '@/hooks/packages';
 import { useRequests, useRequest, useCreateRequest, useChangeRequestStatus } from '@/hooks/requests';
 import { requestFormSchema, type RequestFormValues } from '@/services/request-service';
 import { allowedNextStatuses } from '@/data/requests';
 import { RepositoryError } from '@/data/errors';
-import type { PackageInstallationStatus } from '@/data/packages';
+import {
+  canRetryInstallation,
+  canRollbackInstallation,
+  type PackageInstallation,
+  type PackageInstallationStatus,
+} from '@/data/packages';
 import {
   emptyCompanyTarget,
   createCompanyTargetSchema,
@@ -923,10 +930,14 @@ const INSTALL_STATUSES: PackageInstallationStatus[] = [
 export function InstallationsPage() {
   const [target, setTarget] = useState<CompanyTargetValue>(emptyCompanyTarget('all_companies'));
   const [status, setStatus] = useState<PackageInstallationStatus | ''>('');
+  const retry = useRetryInstallation();
+  const rollback = useRollbackInstallation();
+  const [pending, setPending] = useState<PackageInstallation | null>(null);
   // all_companies → no company filter; RLS keeps results tenant-safe regardless.
   const companyIds = target.mode === 'all_companies' ? undefined : target.companyIds;
   const query = useInstallationsMonitor({ companyIds, status: status || undefined });
   const filtered = query.data ?? [];
+  const recovering = retry.isPending || rollback.isPending;
   return (
     <>
       <PageHeader
@@ -954,7 +965,7 @@ export function InstallationsPage() {
           </Field>
         </CardContent>
       </Card>
-      <TableBoundary query={query} filtered={filtered} cols={5}>
+      <TableBoundary query={query} filtered={filtered} cols={6}>
         <DataTable>
           <THead>
             <TH>Company</TH>
@@ -962,6 +973,7 @@ export function InstallationsPage() {
             <TH>Version</TH>
             <TH>Status</TH>
             <TH>Completed</TH>
+            <TH>Recovery</TH>
           </THead>
           <TBody>
             {filtered.map((i) => (
@@ -973,11 +985,38 @@ export function InstallationsPage() {
                   <Badge tone={installTone(i.status)}>{i.status.replace(/_/g, ' ')}</Badge>
                 </TD>
                 <TD className="text-content-variant">{i.completedAt ? formatDate(i.completedAt) : '—'}</TD>
+                <TD>
+                  {canRetryInstallation(i.status) ? (
+                    <Button size="sm" variant="ghost" disabled={recovering} onClick={() => retry.mutate(i)}>
+                      Retry
+                    </Button>
+                  ) : canRollbackInstallation(i.status) ? (
+                    <Button size="sm" variant="ghost" disabled={recovering} onClick={() => setPending(i)}>
+                      Roll back
+                    </Button>
+                  ) : (
+                    <span className="text-sm text-content-variant">—</span>
+                  )}
+                </TD>
               </TR>
             ))}
           </TBody>
         </DataTable>
       </TableBoundary>
+      <ConfirmDialog
+        open={!!pending}
+        title="Roll back installation?"
+        description={
+          pending
+            ? `${pending.packageCode} will be rolled back for ${pending.companyName}, and the company will immediately lose access to it.`
+            : ''
+        }
+        confirmLabel="Roll back"
+        tone="danger"
+        pending={rollback.isPending}
+        onCancel={() => setPending(null)}
+        onConfirm={() => pending && rollback.mutate(pending, { onSettled: () => setPending(null) })}
+      />
     </>
   );
 }

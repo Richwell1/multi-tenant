@@ -1,6 +1,7 @@
 import type {
   CompanyPackageAssignment,
   InstallationFilters,
+  InstallationRecoveryResult,
   Package,
   PackageInstallation,
   PackageVersion,
@@ -25,7 +26,14 @@ export interface PackageAssignmentRepository {
   listForCompany(companyId: string): Promise<CompanyPackageAssignment[]>;
 }
 
-/** Installation monitoring (RLS keeps this tenant-safe). */
+/**
+ * Installation monitoring + recovery. Reads are RLS-tenant-safe; recovery runs
+ * through Platform-Admin-only RPCs that also reconcile the company's entitlement.
+ */
 export interface InstallationRepository {
   list(filters?: InstallationFilters): Promise<PackageInstallation[]>;
+  /** Recover a failed installation (re-enables the assignment). */
+  retry(id: string): Promise<InstallationRecoveryResult>;
+  /** Roll back an installed package (revokes the assignment). */
+  rollback(id: string): Promise<InstallationRecoveryResult>;
 }

@@ -77,3 +77,13 @@ export interface InstallationFilters {
   packageCode?: string;
   status?: PackageInstallationStatus;
 }
+
+/** Outcome of a recovery action (retry / rollback). */
+export interface InstallationRecoveryResult {
+  id: string;
+  status: PackageInstallationStatus;
+}
+
+/** Only a failed install can be retried; only an installed one can be rolled back. */
+export const canRetryInstallation = (status: PackageInstallationStatus): boolean => status === 'failed';
+export const canRollbackInstallation = (status: PackageInstallationStatus): boolean => status === 'installed';

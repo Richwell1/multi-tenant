@@ -189,10 +189,15 @@ export interface LeaveRequest {
 export interface AttendanceRecord {
   id: string;
   tenantId: string;
+  employeeId: string;
+  /** Denormalized employee display name (joined for the table view). */
   employee: string;
   date: string;
+  /** Time-of-day 'HH:MM' or '' when not yet recorded. */
   checkIn: string;
   checkOut: string;
+  /** Derived from check-in/out; never stored. */
   totalHours: number;
   status: 'present' | 'late' | 'absent';
+  notes?: string;
 }

@@ -70,6 +70,16 @@ export const invalidationTargets = {
     k.audit.all,
   ],
 
+  createAttendance: (companyId: string): QueryKey[] => [
+    k.attendance.all(companyId), // records list for this company
+    k.audit.all,
+  ],
+
+  checkOutAttendance: (companyId: string): QueryKey[] => [
+    k.attendance.all(companyId),
+    k.audit.all,
+  ],
+
   createRequest: (): QueryKey[] => [k.requests.all, k.audit.all],
 
   changeRequestStatus: (requestId: string): QueryKey[] => [

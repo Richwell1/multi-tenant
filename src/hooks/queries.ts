@@ -11,7 +11,7 @@ import { queryKeys } from '@/lib/query-keys';
 import { invalidationTargets } from '@/data/invalidation';
 import { notify } from '@/lib/notify';
 import { companyMatchesTarget, companyTargetKeyPart, type CompanyTargetValue } from '@/lib/company-target';
-import type { Employee, PackageKey, RequestRecord, RequestStatus } from '@/data/types';
+import type { PackageKey, RequestRecord, RequestStatus } from '@/data/types';
 
 /** Invalidate a scoped set of query-key prefixes. */
 function invalidate(qc: QueryClient, keys: readonly QueryKey[]) {
@@ -38,16 +38,8 @@ export const useActiveCompanies = () =>
 export const useCompany = (id: string) =>
   useQuery({ queryKey: queryKeys.companies.detail(id), queryFn: () => repository.getCompany(id) });
 
-export const useEmployees = (companyId: string) =>
-  useQuery({ queryKey: queryKeys.employees.list(companyId), queryFn: () => repository.getEmployees(companyId) });
-export const useEmployee = (companyId: string, employeeId: string) =>
-  useQuery({
-    queryKey: queryKeys.employees.detail(companyId, employeeId),
-    queryFn: () => repository.getEmployee(employeeId),
-  });
-
-// Departments and Positions are persisted via dedicated hooks in
-// '@/hooks/departments' and '@/hooks/positions'. Employees follow next.
+// HR Core (Departments, Positions, Employees) is persisted via dedicated hooks
+// in '@/hooks/departments', '@/hooks/positions', '@/hooks/employees'.
 export const useCompanyUsers = (companyId: string) =>
   useQuery({ queryKey: queryKeys.users.all(companyId), queryFn: () => repository.getCompanyUsers(companyId) });
 
@@ -93,18 +85,6 @@ export const useAttendance = (companyId: string) =>
   useQuery({ queryKey: queryKeys.attendance.all(companyId), queryFn: () => repository.getAttendance(companyId) });
 
 // --- Mutations (scoped invalidation + toasts) --------------------------------
-
-export function useCreateEmployee(companyId: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (input: Omit<Employee, 'id' | 'status'>) => repository.createEmployee(input),
-    onSuccess: () => {
-      notify.recordCreated('Employee');
-      invalidate(qc, invalidationTargets.createEmployee(companyId));
-    },
-    onError: (e: NetworkError) => notify.networkFailure(e.message),
-  });
-}
 
 export function useCreateRequest() {
   const qc = useQueryClient();

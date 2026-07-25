@@ -70,7 +70,9 @@ export type PackageType =
   | 'standard_update'
   | 'private_customization'
   | 'shared_extension'
-  | 'bug_fix';
+  | 'bug_fix'
+  | 'configuration_update'
+  | 'security_update';
 
 export type PackageStatus = 'draft' | 'released' | 'installed' | 'deprecated';
 

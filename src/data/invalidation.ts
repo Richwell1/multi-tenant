@@ -95,6 +95,20 @@ export const invalidationTargets = {
     ['diagnostics'],
   ],
 
+  /**
+   * Publishing a release affects packages, installations, every company's
+   * assignments, and any loaded company entitlement context (nav/PackageGuard
+   * refresh). Prefixes keep it scoped — never the whole cache.
+   */
+  publishRelease: (): QueryKey[] => [
+    k.packages.all,
+    k.installations.all,
+    k.companies.all,
+    k.audit.all,
+    ['package-assignments'],
+    ['context'],
+  ],
+
   installPackage: (companyId: string): QueryKey[] => [
     k.installations.all,
     k.installations.company(companyId),

@@ -10,7 +10,7 @@ import type { NetworkError } from '@/data/api';
 import { queryKeys } from '@/lib/query-keys';
 import { invalidationTargets } from '@/data/invalidation';
 import { notify } from '@/lib/notify';
-import { companyMatchesTarget, companyTargetKeyPart, type CompanyTargetValue } from '@/lib/company-target';
+import { companyTargetKeyPart, type CompanyTargetValue } from '@/lib/company-target';
 import type { PackageKey, RequestRecord, RequestStatus } from '@/data/types';
 
 /** Invalidate a scoped set of query-key prefixes. */
@@ -48,20 +48,11 @@ export const useRequests = () =>
 export const useRequest = (id: string) =>
   useQuery({ queryKey: queryKeys.requests.detail(id), queryFn: () => repository.getRequest(id) });
 
-export const usePackages = () =>
-  useQuery({ queryKey: queryKeys.packages.all, queryFn: repository.getPackages });
-export const usePackage = (key: string) =>
-  useQuery({ queryKey: queryKeys.packages.detail(key), queryFn: () => repository.getPackage(key) });
+// Package catalog, versions, releases, installations, and assignments are
+// served by the dedicated '@/hooks/packages' layer (package repositories + RPC).
 export const useDiagnostic = (id: string) =>
   useQuery({ queryKey: queryKeys.diagnostics.detail(id), queryFn: () => repository.getDiagnostic(id) });
 
-/** Installation monitoring, filtered by a company-target selection. */
-export const useInstallations = (target: CompanyTargetValue) =>
-  useQuery({
-    queryKey: queryKeys.installations.list(companyTargetKeyPart(target)),
-    queryFn: repository.getInstallations,
-    select: (rows) => rows.filter((r) => companyMatchesTarget(r.companyId, target)),
-  });
 export const useTenantInstallations = (companyId: string) =>
   useQuery({
     queryKey: queryKeys.installations.company(companyId),
@@ -115,23 +106,6 @@ export function useChangeRequestStatus(id: string) {
     },
     onSuccess: (res) => notify.requestStatusChanged(res.status.replace(/_/g, ' ')),
     onSettled: () => invalidate(qc, invalidationTargets.changeRequestStatus(id)),
-  });
-}
-
-export function useCreatePackage() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: repository.createPackage,
-    onSuccess: (_data, variables) => {
-      notify.recordCreated('Package release');
-      invalidate(qc, invalidationTargets.createPackage());
-      // Targeted companies also have their entitlements refreshed — scoped, so
-      // untargeted tenants are never touched.
-      (variables.targetCompanyIds ?? []).forEach((companyId) =>
-        qc.invalidateQueries({ queryKey: queryKeys.packages.company(companyId) }),
-      );
-    },
-    onError: (e: NetworkError) => notify.networkFailure(e.message),
   });
 }
 

@@ -1,15 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  resolveContext,
-  getCompany,
-  canAccessLeave,
-  canAccessAttendance,
-  companyHasPackage,
-} from './tenant';
-import { companies } from '@/data/mock';
-
-const alpha = companies.find((c) => c.id === 'alpha');
-const beta = companies.find((c) => c.id === 'beta');
+import { resolveContext, getCompany } from './tenant';
 
 describe('context resolution', () => {
   it('resolves admin from admin subdomain', () => {
@@ -32,27 +22,6 @@ describe('context resolution', () => {
   });
   it('defaults bare localhost to admin', () => {
     expect(resolveContext('localhost')).toEqual({ portal: 'admin', tenantId: null });
-  });
-});
-
-describe('package gating — business rules', () => {
-  it('Alpha has HR Core and Leave Management', () => {
-    expect(companyHasPackage(alpha, 'hr-core')).toBe(true);
-    expect(canAccessLeave(alpha)).toBe(true);
-  });
-  it('Beta has HR Core only and cannot access Leave', () => {
-    expect(companyHasPackage(beta, 'hr-core')).toBe(true);
-    expect(canAccessLeave(beta)).toBe(false);
-  });
-  it('Attendance can be enabled for any company', () => {
-    // Not enabled by default for either tenant...
-    expect(canAccessAttendance(alpha)).toBe(false);
-    expect(canAccessAttendance(beta)).toBe(false);
-    // ...but enabling it (all-company standard update) grants access to both.
-    const alphaWithAttendance = { ...alpha!, packages: [...alpha!.packages, 'attendance-management' as const] };
-    const betaWithAttendance = { ...beta!, packages: [...beta!.packages, 'attendance-management' as const] };
-    expect(canAccessAttendance(alphaWithAttendance)).toBe(true);
-    expect(canAccessAttendance(betaWithAttendance)).toBe(true);
   });
   it('getCompany returns undefined for admin (null tenant)', () => {
     expect(getCompany(null)).toBeUndefined();

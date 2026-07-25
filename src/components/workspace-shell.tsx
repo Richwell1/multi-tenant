@@ -13,10 +13,12 @@ import {
 } from 'lucide-react';
 import { AppShell, type NavItem } from './app-shell';
 import { useSession } from '@/lib/session';
-import { canAccessAttendance, canAccessLeave } from '@/lib/tenant';
+import { usePackageEntitlements } from '@/hooks/entitlements';
+import { hasPackage, PACKAGE_CODES } from '@/lib/entitlements';
 
 export function WorkspaceShell({ children }: { children: ReactNode }) {
   const { company } = useSession();
+  const { codes } = usePackageEntitlements();
 
   const nav: NavItem[] = [
     { to: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="size-4" /> },
@@ -29,12 +31,13 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
     { to: '/settings', label: 'Settings', icon: <Settings className="size-4" /> },
   ];
 
-  // Package-gated nav — Leave is Alpha-only; Beta must never see it.
-  if (canAccessLeave(company)) {
+  // Package-gated nav — driven by real entitlements (Leave is Alpha-only).
+  const canLeave = hasPackage(codes, PACKAGE_CODES.leave);
+  if (canLeave) {
     nav.splice(4, 0, { to: '/leave', label: 'Leave Management', icon: <CalendarClock className="size-4" /> });
   }
-  if (canAccessAttendance(company)) {
-    nav.splice(canAccessLeave(company) ? 5 : 4, 0, {
+  if (hasPackage(codes, PACKAGE_CODES.attendance)) {
+    nav.splice(canLeave ? 5 : 4, 0, {
       to: '/attendance',
       label: 'Attendance',
       icon: <Clock className="size-4" />,

@@ -37,11 +37,12 @@ import {
   useEmployees,
   useInstallPackage,
   useLeaveRequests,
-  usePositions,
   useSaveSettings,
   useTenantInstallations,
 } from '@/hooks/queries';
 import { useDepartments, useCreateDepartment, useDisableDepartment } from '@/hooks/departments';
+import { usePositions, useCreatePosition, useDisablePosition } from '@/hooks/positions';
+import { positionFormSchema, type PositionFormValues } from '@/services/position-service';
 
 function useTenantId() {
   const { tenantId } = useSession();
@@ -56,7 +57,7 @@ export function WorkspaceDashboard() {
   const hasLeave = canAccessLeave(company);
   const employees = useEmployees(tid);
   const departments = useDepartments();
-  const positions = usePositions(tid);
+  const positions = usePositions();
 
   if (employees.isPending) return <PageLoadingState label={`Loading ${company?.name ?? 'workspace'}…`} />;
   if (employees.isError)
@@ -409,12 +410,82 @@ export function DepartmentsPage() {
 }
 
 export function PositionsPage() {
-  const tid = useTenantId();
-  const query = usePositions(tid);
+  const query = usePositions();
+  const departmentsQuery = useDepartments();
+  const createMutation = useCreatePosition();
+  const disableMutation = useDisablePosition();
+  const [showAdd, setShowAdd] = useState(false);
+  const [target, setTarget] = useState<{ id: string; title: string } | null>(null);
   const filtered = query.data ?? [];
+  const departmentOptions = (departmentsQuery.data ?? []).filter((d) => d.status === 'active');
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<PositionFormValues>({ resolver: zodResolver(positionFormSchema) });
+
+  const onCreate = (values: PositionFormValues) =>
+    createMutation.mutate(values, {
+      onSuccess: () => {
+        reset();
+        setShowAdd(false);
+      },
+    });
+
   return (
     <>
-      <PageHeader title="Positions" actions={<Button>Add Position</Button>} />
+      <PageHeader
+        title="Positions"
+        actions={<Button onClick={() => setShowAdd((s) => !s)}>Add Position</Button>}
+      />
+      {showAdd && (
+        <Card className="mb-6 max-w-2xl">
+          <CardContent className="pt-6">
+            <form onSubmit={handleSubmit(onCreate, () => notify.validationFailure())} className="grid gap-4 sm:grid-cols-2" noValidate>
+              <Field label="Title" htmlFor="pos-title" error={errors.title?.message}>
+                <Input id="pos-title" aria-invalid={!!errors.title} {...register('title')} />
+              </Field>
+              <Field label="Code" htmlFor="pos-code" error={errors.code?.message}>
+                <Input id="pos-code" aria-invalid={!!errors.code} {...register('code')} />
+              </Field>
+              <Field label="Department" htmlFor="pos-dept" error={errors.departmentId?.message}>
+                <select
+                  id="pos-dept"
+                  className="h-10 w-full rounded-md border border-border bg-surface px-3 text-sm"
+                  {...register('departmentId')}
+                >
+                  <option value="">Unassigned</option>
+                  {departmentOptions.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Reports To" htmlFor="pos-reports">
+                <Input id="pos-reports" {...register('reportsTo')} />
+              </Field>
+              <div className="col-span-full flex gap-2">
+                <SubmitButton pending={createMutation.isPending} pendingLabel="Saving…">
+                  Save Position
+                </SubmitButton>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    reset();
+                    setShowAdd(false);
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
       <TableBoundary query={query} filtered={filtered} cols={5}>
         <DataTable>
           <THead>
@@ -432,13 +503,36 @@ export function PositionsPage() {
                 <TD>{p.department}</TD>
                 <TD>{p.reportsTo}</TD>
                 <TD>
-                  <Badge tone={p.status === 'active' ? 'healthy' : 'neutral'}>{p.status}</Badge>
+                  <div className="flex items-center justify-between gap-3">
+                    <Badge tone={p.status === 'active' ? 'healthy' : 'neutral'}>{p.status}</Badge>
+                    {p.status === 'active' && (
+                      <Button size="sm" variant="ghost" onClick={() => setTarget({ id: p.id, title: p.title })}>
+                        Disable
+                      </Button>
+                    )}
+                  </div>
                 </TD>
               </TR>
             ))}
           </TBody>
         </DataTable>
       </TableBoundary>
+      <ConfirmDialog
+        open={!!target}
+        title="Disable position?"
+        description={target ? `${target.title} will be disabled.` : ''}
+        confirmLabel="Disable"
+        tone="danger"
+        pending={disableMutation.isPending}
+        onCancel={() => setTarget(null)}
+        onConfirm={() =>
+          target &&
+          disableMutation.mutate(target.id, {
+            onSuccess: () => setTarget(null),
+            onError: () => setTarget(null),
+          })
+        }
+      />
     </>
   );
 }

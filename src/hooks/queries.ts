@@ -46,10 +46,8 @@ export const useEmployee = (companyId: string, employeeId: string) =>
     queryFn: () => repository.getEmployee(employeeId),
   });
 
-// Departments are persisted via the dedicated hooks in '@/hooks/departments'
-// (DepartmentRepository + service). Positions/Employees follow in later increments.
-export const usePositions = (companyId: string) =>
-  useQuery({ queryKey: queryKeys.positions.all(companyId), queryFn: () => repository.getPositions(companyId) });
+// Departments and Positions are persisted via dedicated hooks in
+// '@/hooks/departments' and '@/hooks/positions'. Employees follow next.
 export const useCompanyUsers = (companyId: string) =>
   useQuery({ queryKey: queryKeys.users.all(companyId), queryFn: () => repository.getCompanyUsers(companyId) });
 

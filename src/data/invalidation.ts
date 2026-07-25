@@ -43,6 +43,17 @@ export const invalidationTargets = {
     k.audit.all,
   ],
 
+  createPosition: (companyId: string): QueryKey[] => [
+    k.positions.all(companyId),
+    k.employees.all(companyId), // position labels are embedded on employees
+    k.audit.all,
+  ],
+  disablePosition: (companyId: string): QueryKey[] => [
+    k.positions.all(companyId),
+    k.employees.all(companyId),
+    k.audit.all,
+  ],
+
   createRequest: (): QueryKey[] => [k.requests.all, k.audit.all],
 
   changeRequestStatus: (requestId: string): QueryKey[] => [

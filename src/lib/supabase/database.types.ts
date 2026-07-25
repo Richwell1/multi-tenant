@@ -356,6 +356,57 @@ export type Database = {
         }
         Relationships: []
       }
+      positions: {
+        Row: {
+          code: string
+          company_id: string
+          created_at: string
+          department_id: string | null
+          id: string
+          reports_to: string | null
+          status: Database["public"]["Enums"]["hr_record_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          company_id: string
+          created_at?: string
+          department_id?: string | null
+          id?: string
+          reports_to?: string | null
+          status?: Database["public"]["Enums"]["hr_record_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          company_id?: string
+          created_at?: string
+          department_id?: string | null
+          id?: string
+          reports_to?: string | null
+          status?: Database["public"]["Enums"]["hr_record_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "positions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "positions_department_same_company"
+            columns: ["company_id", "department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["company_id", "id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

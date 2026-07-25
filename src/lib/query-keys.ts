@@ -55,8 +55,12 @@ export const queryKeys = {
   packages: {
     all: ['packages'] as const,
     detail: (packageKey: string) => ['packages', 'detail', packageKey] as const,
+    versions: (packageKey: string) => ['packages', packageKey, 'versions'] as const,
     /** A single company's package entitlements. */
     company: (companyId: string) => ['packages', 'company', companyId] as const,
+  },
+  packageAssignments: {
+    company: (companyId: string) => ['package-assignments', companyId] as const,
   },
   diagnostics: {
     detail: (diagnosticId: string) => ['diagnostics', 'detail', diagnosticId] as const,
@@ -66,6 +70,7 @@ export const queryKeys = {
     all: ['installations'] as const,
     company: (companyId: string) => ['installations', 'company', companyId] as const,
     list: (target: CompanyTargetKeyPart) => ['installations', 'list', target] as const,
+    monitor: (filters: Record<string, unknown>) => ['installations', 'monitor', filters] as const,
   },
   context: {
     platformAdmin: (userId: string) => ['context', 'platform-admin', userId] as const,

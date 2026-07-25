@@ -15,7 +15,7 @@ import { Field } from '@/components/ui/field';
 import { DataTable, TBody, TD, TH, THead, TR } from '@/components/ui/table';
 import { TableBoundary, RefreshingIndicator } from '@/components/table-boundary';
 import { PageLoadingState, ErrorState, EmptyState } from '@/components/states';
-import { CompanyTargetSelector, CompanyTargetSummary } from '@/components/company-target';
+import { CompanyTargetSelector } from '@/components/company-target';
 import { formatDate } from '@/lib/utils';
 import { notify } from '@/lib/notify';
 import {
@@ -23,33 +23,31 @@ import {
   useChangeRequestStatus,
   useCompanies,
   useCompany,
-  useCreatePackage,
   useCreateRequest,
   useDiagnostic,
   useDiagnostics,
   useHealth,
-  useInstallations,
-  usePackage,
-  usePackages,
   useRequest,
   useRequests,
   useUsage,
 } from '@/hooks/queries';
 import {
+  useCompanyAssignments,
+  useInstallationsMonitor,
+  usePackage,
+  usePackages,
+  usePackageVersions,
+  usePublishRelease,
+} from '@/hooks/packages';
+import { RepositoryError } from '@/data/errors';
+import type { PackageInstallationStatus } from '@/data/packages';
+import {
   emptyCompanyTarget,
   createCompanyTargetSchema,
-  toCompanyTargetPayload,
-  TARGET_MODE_LABEL,
   type CompanyTargetValue,
 } from '@/lib/company-target';
 import { allowedTargetModesForPackageType, allowedTargetModesForExtension, type ExtensionNature } from '@/lib/package-target';
-import type {
-  CompanyStatus,
-  DiagnosticResult,
-  PackageStatus,
-  PackageType,
-  RequestStatus,
-} from '@/data/types';
+import type { CompanyStatus, DiagnosticResult, PackageType, RequestStatus } from '@/data/types';
 
 /** Shared page-level company-target filter used by monitoring/analytics pages. */
 function TargetFilter({
@@ -77,8 +75,8 @@ function TargetFilter({
 const companyTone = (s: CompanyStatus) => (s === 'active' ? 'healthy' : 'suspended');
 const diagTone = (r: DiagnosticResult) =>
   r === 'PASS' ? 'healthy' : r === 'WARN' ? 'degraded' : 'offline';
-const pkgTone = (s: PackageStatus) =>
-  s === 'installed' ? 'healthy' : s === 'released' ? 'platform' : s === 'draft' ? 'neutral' : 'degraded';
+const installTone = (s: PackageInstallationStatus) =>
+  s === 'installed' ? 'healthy' : s === 'failed' ? 'offline' : s === 'rolled_back' ? 'neutral' : 'degraded';
 const requestTone = (s: RequestStatus) =>
   s === 'released' || s === 'installed' || s === 'closed'
     ? 'healthy'
@@ -231,11 +229,14 @@ export function CompaniesList() {
 
 export function CompanyDetails() {
   const { companyId } = useParams({ strict: false });
-  const query = useCompany(companyId as string);
+  const cid = companyId as string;
+  const query = useCompany(cid);
+  const assignments = useCompanyAssignments(cid);
   if (query.isPending) return <PageLoadingState />;
   if (query.isError) return <ErrorState onRetry={() => query.refetch()} retrying={query.isFetching} />;
   const company = query.data;
   if (!company) return <EmptyState title="Company not found" description="This company may have been removed." />;
+  const rows = assignments.data ?? [];
   return (
     <>
       <PageHeader
@@ -250,14 +251,31 @@ export function CompanyDetails() {
       </div>
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle>Enabled Packages</CardTitle>
+          <CardTitle>Package Assignments</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-wrap gap-2">
-          {company.packages.map((p) => (
-            <Badge key={p} tone="company">
-              {p}
-            </Badge>
-          ))}
+        <CardContent>
+          <TableBoundary query={assignments} filtered={rows} cols={4} emptyTitle="No package assignments">
+            <DataTable>
+              <THead>
+                <TH>Package</TH>
+                <TH>Version</TH>
+                <TH>Enabled</TH>
+                <TH>Status</TH>
+              </THead>
+              <TBody>
+                {rows.map((a) => (
+                  <TR key={a.packageCode}>
+                    <TD className="font-medium">{a.packageName}</TD>
+                    <TD>{a.version ?? '—'}</TD>
+                    <TD>
+                      <Badge tone={a.enabled ? 'healthy' : 'neutral'}>{a.enabled ? 'enabled' : 'disabled'}</Badge>
+                    </TD>
+                    <TD className="text-content-variant">{a.status}</TD>
+                  </TR>
+                ))}
+              </TBody>
+            </DataTable>
+          </TableBoundary>
         </CardContent>
       </Card>
     </>
@@ -565,34 +583,29 @@ export function PackagesList() {
           </>
         }
       />
-      <TableBoundary query={query} filtered={filtered} searchTerm={q} cols={6}>
+      <TableBoundary query={query} filtered={filtered} searchTerm={q} cols={3}>
         <DataTable>
           <THead>
             <TH>Package</TH>
-            <TH>Version</TH>
-            <TH>Type</TH>
-            <TH>Target</TH>
-            <TH>Installs</TH>
-            <TH>Status</TH>
+            <TH>Classification</TH>
+            <TH>Global status</TH>
           </THead>
           <TBody>
             {filtered.map((p) => (
-              <TR key={p.key}>
+              <TR key={p.code}>
                 <TD>
                   <Link
                     to="/admin/packages/$packageId"
-                    params={{ packageId: p.key }}
+                    params={{ packageId: p.code }}
                     className="font-medium text-platform hover:underline"
                   >
                     {p.name}
                   </Link>
+                  <span className="ml-2 text-content-variant">{p.code}</span>
                 </TD>
-                <TD>{p.version}</TD>
-                <TD className="text-content-variant">{p.type.replace(/_/g, ' ')}</TD>
-                <TD>{p.target === 'all_companies' ? 'All companies' : 'One company'}</TD>
-                <TD>{p.installCount}</TD>
+                <TD className="text-content-variant">{p.classification.replace(/_/g, ' ')}</TD>
                 <TD>
-                  <Badge tone={pkgTone(p.status)}>{p.status}</Badge>
+                  <Badge tone={p.isActive ? 'healthy' : 'neutral'}>{p.isActive ? 'active' : 'inactive'}</Badge>
                 </TD>
               </TR>
             ))}
@@ -603,105 +616,107 @@ export function PackagesList() {
   );
 }
 
-const createPackageSchema = z.object({
-  name: z.string().min(2, 'Name is required'),
-  version: z.string().regex(/^\d+\.\d+\.\d+$/, 'Use semver, e.g. 1.0.0'),
-  type: z.enum(['standard_update', 'private_customization', 'shared_extension', 'bug_fix']),
-  releaseNotes: z.string().min(1, 'Release notes are required'),
-});
-type CreatePackageForm = z.infer<typeof createPackageSchema>;
-
 export function CreatePackage() {
   const navigate = useNavigate();
-  const mutation = useCreatePackage();
-  const {
-    register,
-    handleSubmit,
-    watch,
-    formState: { errors },
-  } = useForm<CreatePackageForm>({
-    resolver: zodResolver(createPackageSchema),
-    defaultValues: { type: 'standard_update' },
-  });
-  const type = watch('type') as PackageType;
-  const allowedModes = allowedTargetModesForPackageType(type);
+  const packagesQuery = usePackages();
+  const [packageCode, setPackageCode] = useState('');
+  const versionsQuery = usePackageVersions(packageCode);
+  const [versionId, setVersionId] = useState('');
+  const [automaticInstall, setAutomaticInstall] = useState(true);
+  const publish = usePublishRelease();
 
-  // Target selection is managed with the shared system; its mode is constrained
-  // by the classification and re-normalized whenever the classification changes.
+  const selectedPackage = packagesQuery.data?.find((p) => p.code === packageCode);
+  const classification: PackageType = selectedPackage?.classification ?? 'standard_update';
+  const allowedModes = allowedTargetModesForPackageType(classification);
   const [target, setTarget] = useState<CompanyTargetValue>(emptyCompanyTarget(allowedModes[0]));
-  const [targetError, setTargetError] = useState<string | undefined>();
+  const [error, setError] = useState<string | undefined>();
+
+  // Re-normalize the target when the selected package's classification changes,
+  // and reset the version when the package changes (versions are package-scoped).
   useEffect(() => {
-    setTarget((current) =>
-      allowedModes.includes(current.mode) ? current : emptyCompanyTarget(allowedModes[0]),
-    );
-  }, [allowedModes]);
+    const modes = allowedTargetModesForPackageType(classification);
+    setTarget((current) => (modes.includes(current.mode) ? current : emptyCompanyTarget(modes[0])));
+  }, [classification]);
+  useEffect(() => setVersionId(''), [packageCode]);
 
-  const diag = useDiagnostic('diag-attendance');
-  const publishBlocked = diag.data?.result === 'FAIL'; // FAIL diagnostic disables publish
-
-  const onValid = (values: CreatePackageForm) => {
-    const parsed = createCompanyTargetSchema({ allowedModes }).safeParse(target);
-    if (!parsed.success) {
-      setTargetError(parsed.error.issues[0]?.message ?? 'Invalid company target');
-      notify.validationFailure();
-      return;
-    }
-    setTargetError(undefined);
-    const payload = toCompanyTargetPayload(target);
-    mutation.mutate(
-      { ...values, target: payload.target, targetCompanyIds: payload.targetCompanyIds },
-      { onSuccess: () => navigate({ to: '/admin/packages' }) },
+  const onSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(undefined);
+    if (!packageCode) return setError('Select a package.');
+    if (!versionId) return setError('Select a version to publish.');
+    publish.mutate(
+      { packageVersionId: versionId, classification, target, automaticInstall },
+      {
+        onSuccess: () => navigate({ to: '/admin/packages' }),
+        onError: (err) => setError(err instanceof RepositoryError ? err.message : 'Publish failed. Please try again.'),
+      },
     );
   };
 
   return (
     <>
-      <PageHeader title="Create Package Release" description="Define a package and choose its target" />
+      <PageHeader title="Create Package Release" description="Publish a package version to companies" />
       <Card className="max-w-2xl">
         <CardContent className="pt-6">
-          <form onSubmit={handleSubmit(onValid, () => notify.validationFailure())} className="space-y-4" noValidate>
-            <Field label="Package Name" htmlFor="name" error={errors.name?.message}>
-              <Input id="name" aria-invalid={!!errors.name} {...register('name')} />
-            </Field>
-            <Field label="Version" htmlFor="version" error={errors.version?.message}>
-              <Input id="version" placeholder="1.0.0" aria-invalid={!!errors.version} {...register('version')} />
-            </Field>
-            <Field label="Classification" htmlFor="type" error={errors.type?.message}>
-              <select id="type" className="h-10 w-full rounded-md border border-border bg-surface px-3 text-sm" {...register('type')}>
-                <option value="standard_update">Standard update</option>
-                <option value="private_customization">Private customization</option>
-                <option value="shared_extension">Shared extension</option>
-                <option value="bug_fix">Bug fix</option>
+          {error && (
+            <div role="alert" className="mb-4 rounded-md border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">
+              {error}
+            </div>
+          )}
+          <form onSubmit={onSubmit} className="space-y-4" noValidate>
+            <Field label="Package">
+              <select
+                className="h-10 w-full rounded-md border border-border bg-surface px-3 text-sm"
+                value={packageCode}
+                onChange={(e) => setPackageCode(e.target.value)}
+                aria-label="Package"
+              >
+                <option value="">Select a package…</option>
+                {packagesQuery.data?.map((p) => (
+                  <option key={p.code} value={p.code}>
+                    {p.name} ({p.classification.replace(/_/g, ' ')})
+                  </option>
+                ))}
               </select>
             </Field>
+
+            <Field label="Version">
+              <select
+                className="h-10 w-full rounded-md border border-border bg-surface px-3 text-sm disabled:opacity-50"
+                value={versionId}
+                onChange={(e) => setVersionId(e.target.value)}
+                disabled={!packageCode || versionsQuery.isPending}
+                aria-label="Version"
+              >
+                <option value="">Select a version…</option>
+                {versionsQuery.data?.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.version}
+                  </option>
+                ))}
+              </select>
+            </Field>
+
             <CompanyTargetSelector
               label="Target"
               description={
-                type === 'private_customization'
+                classification === 'private_customization'
                   ? 'Private customizations target exactly one company.'
-                  : type === 'shared_extension'
+                  : classification === 'shared_extension'
                     ? 'Shared extensions target selected companies or all companies.'
-                    : 'Standard releases can target all, selected, or one company.'
+                    : 'This classification can target all, selected, or one company.'
               }
               value={target}
               onChange={setTarget}
               allowedModes={allowedModes}
-              error={targetError}
             />
-            <Field label="Release Notes" htmlFor="releaseNotes" error={errors.releaseNotes?.message}>
-              <textarea
-                id="releaseNotes"
-                rows={3}
-                className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm"
-                {...register('releaseNotes')}
-              />
-            </Field>
-            <SubmitButton
-              pending={mutation.isPending}
-              pendingLabel="Publishing…"
-              disabled={publishBlocked}
-              title={publishBlocked ? 'A FAIL diagnostic blocks publishing' : undefined}
-            >
+
+            <label className="flex items-center gap-2 text-sm text-content-variant">
+              <input type="checkbox" checked={automaticInstall} onChange={(e) => setAutomaticInstall(e.target.checked)} />
+              Install automatically on publish
+            </label>
+
+            <SubmitButton pending={publish.isPending} pendingLabel="Publishing…" disabled={!packageCode || !versionId}>
               Publish Release
             </SubmitButton>
           </form>
@@ -713,86 +728,93 @@ export function CreatePackage() {
 
 export function PackageDetails() {
   const { packageId } = useParams({ strict: false });
-  const query = usePackage(packageId as string);
-  const companies = useCompanies();
-  const diagId = query.data?.diagnosticId ?? 'diag-leave';
-  const diag = useDiagnostic(diagId);
+  const code = packageId as string;
+  const query = usePackage(code);
+  const versions = usePackageVersions(code);
+  const installs = useInstallationsMonitor({ packageCode: code });
 
   if (query.isPending) return <PageLoadingState />;
   if (query.isError) return <ErrorState onRetry={() => query.refetch()} retrying={query.isFetching} />;
   const pkg = query.data;
   if (!pkg) return <EmptyState title="Package not found" />;
-  const targetValue: CompanyTargetValue = { mode: pkg.target, companyIds: pkg.targetCompanyIds };
-  const companyOptions = (companies.data ?? []).map((c) => ({ id: c.id, name: c.name }));
+
+  const rows = installs.data ?? [];
+  const installed = rows.filter((r) => r.status === 'installed').length;
+  const pending = rows.filter((r) => r.status === 'pending' || r.status === 'installing').length;
+  const failed = rows.filter((r) => r.status === 'failed').length;
 
   return (
     <>
       <PageHeader
         title={pkg.name}
-        description={`v${pkg.version} · ${pkg.type.replace(/_/g, ' ')}`}
-        actions={<Badge tone={pkgTone(pkg.status)}>{pkg.status}</Badge>}
+        description={`${pkg.code} · ${pkg.classification.replace(/_/g, ' ')}`}
+        actions={<Badge tone={pkg.isActive ? 'healthy' : 'neutral'}>{pkg.isActive ? 'active' : 'inactive'}</Badge>}
       />
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard label="Version" value={pkg.version} />
-        <StatCard label="Installs" value={pkg.installCount} />
-        <StatCard label="Target" value={TARGET_MODE_LABEL[pkg.target]} />
-      </div>
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Release Notes</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-content-variant">{pkg.releaseNotes}</CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Diagnostic Result</CardTitle>
-            {diag.data && <Badge tone={diagTone(diag.data.result)}>{diag.data.result}</Badge>}
-          </CardHeader>
-          <CardContent className="text-sm text-content-variant">
-            {diag.data ? (
-              <Link
-                to="/admin/diagnostics/$diagnosticId"
-                params={{ diagnosticId: diag.data.id }}
-                className="text-platform hover:underline"
-              >
-                {diag.data.recommendation}
-              </Link>
-            ) : (
-              'No diagnostic linked.'
-            )}
-          </CardContent>
-        </Card>
+        <StatCard label="Installed" value={installed} />
+        <StatCard label="Pending" value={pending} />
+        <StatCard label="Failed" value={failed} />
       </div>
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle>Target Companies</CardTitle>
+          <CardTitle>Description</CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm text-content-variant">{pkg.description || '—'}</CardContent>
+      </Card>
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Versions</CardTitle>
         </CardHeader>
         <CardContent>
-          <CompanyTargetSummary value={targetValue} companies={companyOptions} />
+          <TableBoundary query={versions} filtered={versions.data ?? []} cols={4} emptyTitle="No versions">
+            <DataTable>
+              <THead>
+                <TH>Version</TH>
+                <TH>Released</TH>
+                <TH>Diagnostic</TH>
+                <TH>Notes</TH>
+              </THead>
+              <TBody>
+                {(versions.data ?? []).map((v) => (
+                  <TR key={v.id}>
+                    <TD>{v.version}</TD>
+                    <TD className="text-content-variant">{v.releasedAt ? formatDate(v.releasedAt) : '—'}</TD>
+                    <TD>{v.diagnosticStatus ? <Badge tone={diagTone(v.diagnosticStatus)}>{v.diagnosticStatus}</Badge> : '—'}</TD>
+                    <TD className="text-content-variant">{v.releaseNotes}</TD>
+                  </TR>
+                ))}
+              </TBody>
+            </DataTable>
+          </TableBoundary>
         </CardContent>
       </Card>
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle>Version History</CardTitle>
+          <CardTitle>Installations</CardTitle>
         </CardHeader>
         <CardContent>
-          <DataTable>
-            <THead>
-              <TH>Version</TH>
-              <TH>Released</TH>
-              <TH>Notes</TH>
-            </THead>
-            <TBody>
-              {pkg.history.map((h) => (
-                <TR key={h.version}>
-                  <TD>{h.version}</TD>
-                  <TD className="text-content-variant">{h.releasedAt || '—'}</TD>
-                  <TD className="text-content-variant">{h.notes}</TD>
-                </TR>
-              ))}
-            </TBody>
-          </DataTable>
+          <TableBoundary query={installs} filtered={rows} cols={4} emptyTitle="No installations yet">
+            <DataTable>
+              <THead>
+                <TH>Company</TH>
+                <TH>Version</TH>
+                <TH>Status</TH>
+                <TH>Completed</TH>
+              </THead>
+              <TBody>
+                {rows.map((r) => (
+                  <TR key={r.id}>
+                    <TD>{r.companyName}</TD>
+                    <TD>{r.version}</TD>
+                    <TD>
+                      <Badge tone={installTone(r.status)}>{r.status.replace(/_/g, ' ')}</Badge>
+                    </TD>
+                    <TD className="text-content-variant">{r.completedAt ? formatDate(r.completedAt) : '—'}</TD>
+                  </TR>
+                ))}
+              </TBody>
+            </DataTable>
+          </TableBoundary>
         </CardContent>
       </Card>
     </>
@@ -856,40 +878,68 @@ export function DiagnosticReportPage() {
 
 // --- Installations / Usage / Health / Audit ----------------------------------
 
+const INSTALL_STATUSES: PackageInstallationStatus[] = [
+  'pending',
+  'installing',
+  'installed',
+  'failed',
+  'retrying',
+  'rolled_back',
+];
+
 export function InstallationsPage() {
   const [target, setTarget] = useState<CompanyTargetValue>(emptyCompanyTarget('all_companies'));
-  const query = useInstallations(target);
-  const companies = useCompanies();
+  const [status, setStatus] = useState<PackageInstallationStatus | ''>('');
+  // all_companies → no company filter; RLS keeps results tenant-safe regardless.
+  const companyIds = target.mode === 'all_companies' ? undefined : target.companyIds;
+  const query = useInstallationsMonitor({ companyIds, status: status || undefined });
   const filtered = query.data ?? [];
   return (
     <>
       <PageHeader
         title="Installation Monitoring"
-        description="Package assignments across companies"
+        description="Package installations across companies"
         actions={<RefreshingIndicator show={query.isFetching && !query.isPending} />}
       />
       <TargetFilter value={target} onChange={setTarget} />
+      <Card className="mb-6 max-w-xs">
+        <CardContent className="pt-6">
+          <Field label="Status">
+            <select
+              className="h-10 w-full rounded-md border border-border bg-surface px-3 text-sm"
+              value={status}
+              onChange={(e) => setStatus(e.target.value as PackageInstallationStatus | '')}
+              aria-label="Installation status"
+            >
+              <option value="">All statuses</option>
+              {INSTALL_STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {s.replace(/_/g, ' ')}
+                </option>
+              ))}
+            </select>
+          </Field>
+        </CardContent>
+      </Card>
       <TableBoundary query={query} filtered={filtered} cols={5}>
         <DataTable>
           <THead>
             <TH>Company</TH>
             <TH>Package</TH>
             <TH>Version</TH>
-            <TH>State</TH>
-            <TH>Activated</TH>
+            <TH>Status</TH>
+            <TH>Completed</TH>
           </THead>
           <TBody>
             {filtered.map((i) => (
               <TR key={i.id}>
-                <TD>{companies.data?.find((c) => c.id === i.companyId)?.name ?? i.companyId}</TD>
-                <TD>{i.packageKey}</TD>
-                <TD>{i.packageVersion}</TD>
+                <TD>{i.companyName}</TD>
+                <TD>{i.packageCode}</TD>
+                <TD>{i.version}</TD>
                 <TD>
-                  <Badge tone={i.state === 'installed' ? 'healthy' : i.state === 'failed' ? 'offline' : 'degraded'}>
-                    {i.state}
-                  </Badge>
+                  <Badge tone={installTone(i.status)}>{i.status.replace(/_/g, ' ')}</Badge>
                 </TD>
-                <TD className="text-content-variant">{i.activatedAt ? formatDate(i.activatedAt) : '—'}</TD>
+                <TD className="text-content-variant">{i.completedAt ? formatDate(i.completedAt) : '—'}</TD>
               </TR>
             ))}
           </TBody>

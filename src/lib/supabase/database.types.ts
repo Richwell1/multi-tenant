@@ -339,6 +339,85 @@ export type Database = {
           },
         ]
       }
+      diagnostic_checks: {
+        Row: {
+          created_at: string
+          detail: string
+          dimension: Database["public"]["Enums"]["diagnostic_dimension"]
+          id: string
+          report_id: string
+          required: boolean
+          status: Database["public"]["Enums"]["diagnostic_status"]
+        }
+        Insert: {
+          created_at?: string
+          detail?: string
+          dimension: Database["public"]["Enums"]["diagnostic_dimension"]
+          id?: string
+          report_id: string
+          required?: boolean
+          status?: Database["public"]["Enums"]["diagnostic_status"]
+        }
+        Update: {
+          created_at?: string
+          detail?: string
+          dimension?: Database["public"]["Enums"]["diagnostic_dimension"]
+          id?: string
+          report_id?: string
+          required?: boolean
+          status?: Database["public"]["Enums"]["diagnostic_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "diagnostic_checks_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "diagnostic_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      diagnostic_reports: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          package_version_id: string
+          recommendation: string
+          result: Database["public"]["Enums"]["diagnostic_status"]
+          summary: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          package_version_id: string
+          recommendation?: string
+          result?: Database["public"]["Enums"]["diagnostic_status"]
+          summary?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          package_version_id?: string
+          recommendation?: string
+          result?: Database["public"]["Enums"]["diagnostic_status"]
+          summary?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "diagnostic_reports_package_version_id_fkey"
+            columns: ["package_version_id"]
+            isOneToOne: false
+            referencedRelation: "package_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employees: {
         Row: {
           company_id: string
@@ -811,6 +890,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "request_records_diagnostic_fk"
+            columns: ["diagnostic_id"]
+            isOneToOne: false
+            referencedRelation: "diagnostic_reports"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "request_records_linked_package_key_fkey"
             columns: ["linked_package_key"]
             isOneToOne: false
@@ -865,11 +951,19 @@ export type Database = {
         }
         Returns: Json
       }
+      recompute_diagnostic_result: {
+        Args: { p_report: string }
+        Returns: undefined
+      }
       request_status_can_transition: {
         Args: {
           from_status: Database["public"]["Enums"]["request_status"]
           to_status: Database["public"]["Enums"]["request_status"]
         }
+        Returns: boolean
+      }
+      version_release_blocked: {
+        Args: { p_version_id: string }
         Returns: boolean
       }
     }
@@ -878,6 +972,16 @@ export type Database = {
       company_package_status: "assigned" | "installing" | "installed" | "failed"
       company_role: "company_admin" | "company_user"
       company_status: "active" | "suspended"
+      diagnostic_dimension:
+        | "frontend"
+        | "backend"
+        | "database"
+        | "security"
+        | "dependency"
+        | "data_impact"
+        | "rollback"
+        | "test_evidence"
+      diagnostic_status: "PASS" | "WARN" | "FAIL"
       employee_status: "active" | "on_leave" | "terminated"
       employment_type: "full_time" | "part_time" | "contract"
       hr_record_status: "active" | "disabled"
@@ -1049,6 +1153,17 @@ export const Constants = {
       company_package_status: ["assigned", "installing", "installed", "failed"],
       company_role: ["company_admin", "company_user"],
       company_status: ["active", "suspended"],
+      diagnostic_dimension: [
+        "frontend",
+        "backend",
+        "database",
+        "security",
+        "dependency",
+        "data_impact",
+        "rollback",
+        "test_evidence",
+      ],
+      diagnostic_status: ["PASS", "WARN", "FAIL"],
       employee_status: ["active", "on_leave", "terminated"],
       employment_type: ["full_time", "part_time", "contract"],
       hr_record_status: ["active", "disabled"],

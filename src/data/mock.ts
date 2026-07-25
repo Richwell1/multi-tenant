@@ -93,6 +93,7 @@ export const diagnostics: DiagnosticReport[] = [
   {
     id: 'diag-leave',
     packageKey: 'leave-management',
+    packageVersionId: null,
     targetCompanyId: 'alpha',
     affectedFrontend: ['/leave', 'Company Sidebar', 'Company Dashboard'],
     affectedBackend: ['extensions/leave-management'],
@@ -103,10 +104,14 @@ export const diagnostics: DiagnosticReport[] = [
     compatibility: 'Compatible with Alpha Trading (HR Core present)',
     result: 'PASS',
     recommendation: 'Safe to release to Alpha Trading.',
+    checks: (
+      ['frontend', 'backend', 'database', 'security', 'dependency', 'data_impact', 'rollback', 'test_evidence'] as const
+    ).map((dimension) => ({ dimension, status: 'PASS' as const, required: true, detail: 'No issues detected.' })),
   },
   {
     id: 'diag-attendance',
     packageKey: 'attendance-management',
+    packageVersionId: null,
     targetCompanyId: null,
     affectedFrontend: ['/attendance', 'Company Sidebar'],
     affectedBackend: ['extensions/attendance-management'],
@@ -117,6 +122,16 @@ export const diagnostics: DiagnosticReport[] = [
     compatibility: 'Compatible with all active companies',
     result: 'WARN',
     recommendation: 'Confirm activation window before releasing to all companies.',
+    checks: [
+      { dimension: 'frontend', status: 'PASS', required: true, detail: 'Routes render.' },
+      { dimension: 'backend', status: 'PASS', required: true, detail: 'Endpoints healthy.' },
+      { dimension: 'database', status: 'PASS', required: true, detail: 'Migration reversible.' },
+      { dimension: 'security', status: 'PASS', required: true, detail: 'RLS enforced.' },
+      { dimension: 'dependency', status: 'PASS', required: true, detail: 'HR Core present.' },
+      { dimension: 'data_impact', status: 'WARN', required: true, detail: 'Creates rows for all companies.' },
+      { dimension: 'rollback', status: 'PASS', required: true, detail: 'Rollback tested.' },
+      { dimension: 'test_evidence', status: 'PASS', required: false, detail: 'Suite attached.' },
+    ],
   },
 ];
 

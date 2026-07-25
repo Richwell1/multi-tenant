@@ -80,6 +80,9 @@ export const invalidationTargets = {
     k.audit.all,
   ],
 
+  /** Running a diagnostic changes the version's diagnostic status (release gate). */
+  runDiagnostic: (): QueryKey[] => [k.diagnostics.all, k.packages.all, k.audit.all],
+
   createRequest: (): QueryKey[] => [k.requests.all, k.audit.all],
 
   changeRequestStatus: (requestId: string): QueryKey[] => [

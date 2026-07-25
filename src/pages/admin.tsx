@@ -21,11 +21,11 @@ import {
   useAudit,
   useCompanies,
   useCompany,
-  useDiagnostic,
-  useDiagnostics,
   useHealth,
   useUsage,
 } from '@/hooks/queries';
+import { useDiagnostic } from '@/hooks/diagnostics';
+import { DIAGNOSTIC_DIMENSIONS, type DiagnosticCheck } from '@/data/diagnostics';
 import {
   useCompanyAssignments,
   useInstallationsMonitor,
@@ -610,6 +610,11 @@ export function CreatePackage() {
   const [target, setTarget] = useState<CompanyTargetValue>(emptyCompanyTarget(allowedModes[0]));
   const [error, setError] = useState<string | undefined>();
 
+  // Release gate (fail-fast UX; the publish RPC is authoritative): a version whose
+  // diagnostic ended in FAIL cannot be released.
+  const selectedVersion = versionsQuery.data?.find((v) => v.id === versionId);
+  const gateBlocked = selectedVersion?.diagnosticStatus === 'FAIL';
+
   // Re-normalize the target when the selected package's classification changes,
   // and reset the version when the package changes (versions are package-scoped).
   useEffect(() => {
@@ -623,11 +628,19 @@ export function CreatePackage() {
     setError(undefined);
     if (!packageCode) return setError('Select a package.');
     if (!versionId) return setError('Select a version to publish.');
+    if (gateBlocked) return setError('This version has a failing required diagnostic check and cannot be released.');
     publish.mutate(
       { packageVersionId: versionId, classification, target, automaticInstall },
       {
         onSuccess: () => navigate({ to: '/admin/packages' }),
-        onError: (err) => setError(err instanceof RepositoryError ? err.message : 'Publish failed. Please try again.'),
+        onError: (err) => {
+          const msg = err instanceof RepositoryError ? err.message : 'Publish failed. Please try again.';
+          setError(
+            msg === 'release_blocked_by_diagnostic'
+              ? 'Release blocked: a required diagnostic check is FAIL for this version.'
+              : msg,
+          );
+        },
       },
     );
   };
@@ -671,10 +684,16 @@ export function CreatePackage() {
                 {versionsQuery.data?.map((v) => (
                   <option key={v.id} value={v.id}>
                     {v.version}
+                    {v.diagnosticStatus ? ` — diagnostic ${v.diagnosticStatus}` : ''}
                   </option>
                 ))}
               </select>
             </Field>
+            {gateBlocked && (
+              <p className="text-sm font-medium text-danger">
+                This version has a failing required diagnostic check and cannot be released.
+              </p>
+            )}
 
             <CompanyTargetSelector
               label="Target"
@@ -695,7 +714,11 @@ export function CreatePackage() {
               Install automatically on publish
             </label>
 
-            <SubmitButton pending={publish.isPending} pendingLabel="Publishing…" disabled={!packageCode || !versionId}>
+            <SubmitButton
+              pending={publish.isPending}
+              pendingLabel="Publishing…"
+              disabled={!packageCode || !versionId || gateBlocked}
+            >
               Publish Release
             </SubmitButton>
           </form>
@@ -800,15 +823,61 @@ export function PackageDetails() {
   );
 }
 
+const dimensionLabel = (d: DiagnosticCheck['dimension']) =>
+  ({
+    frontend: 'Frontend impact',
+    backend: 'Backend impact',
+    database: 'Database impact',
+    security: 'Security impact',
+    dependency: 'Dependency impact',
+    data_impact: 'Data impact',
+    rollback: 'Rollback readiness',
+    test_evidence: 'Test evidence',
+  })[d];
+
+function DiagnosticChecksCard({ checks }: { checks: DiagnosticCheck[] }) {
+  // Present the eight dimensions in a stable order even if some are absent.
+  const byDimension = new Map(checks.map((c) => [c.dimension, c]));
+  return (
+    <Card className="mb-6">
+      <CardHeader>
+        <CardTitle>Diagnostic Checks</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <DataTable>
+          <THead>
+            <TH>Dimension</TH>
+            <TH>Status</TH>
+            <TH>Required</TH>
+            <TH>Detail</TH>
+          </THead>
+          <TBody>
+            {DIAGNOSTIC_DIMENSIONS.map((d) => {
+              const c = byDimension.get(d);
+              return (
+                <TR key={d}>
+                  <TD className="font-medium">{dimensionLabel(d)}</TD>
+                  <TD>{c ? <Badge tone={diagTone(c.status)}>{c.status}</Badge> : '—'}</TD>
+                  <TD className="text-content-variant">{c ? (c.required ? 'Required' : 'Advisory') : '—'}</TD>
+                  <TD className="text-content-variant">{c?.detail || '—'}</TD>
+                </TR>
+              );
+            })}
+          </TBody>
+        </DataTable>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function DiagnosticReportPage() {
   const { diagnosticId } = useParams({ strict: false });
-  const [scope, setScope] = useState<CompanyTargetValue>(emptyCompanyTarget('all_companies'));
   const query = useDiagnostic(diagnosticId as string);
-  const scoped = useDiagnostics(scope); // selection participates in the query key
   if (query.isPending) return <PageLoadingState />;
   if (query.isError) return <ErrorState onRetry={() => query.refetch()} retrying={query.isFetching} />;
   const diag = query.data;
   if (!diag) return <EmptyState title="Diagnostic not found" />;
+  const blocked = diag.checks.some((c) => c.required && c.status === 'FAIL');
   return (
     <>
       <PageHeader
@@ -816,39 +885,24 @@ export function DiagnosticReportPage() {
         description={diag.packageKey}
         actions={<Badge tone={diagTone(diag.result)}>{diag.result}</Badge>}
       />
-      <Card className="mb-6">
-        <CardContent className="pt-6">
-          <CompanyTargetSelector
-            label="Compatibility scope"
-            description="Run diagnostics against all, selected, or one company."
-            value={scope}
-            onChange={setScope}
-          />
-          <p className="mt-3 text-sm text-content-variant">
-            {scoped.isPending ? 'Loading…' : `${scoped.data?.length ?? 0} diagnostic report(s) in scope.`}
-          </p>
-        </CardContent>
-      </Card>
+      <DiagnosticChecksCard checks={diag.checks} />
       <div className="grid gap-6 lg:grid-cols-2">
-        <ListCard title="Affected Frontend" items={diag.affectedFrontend} />
-        <ListCard title="Affected Backend" items={diag.affectedBackend} />
-        <ListCard title="Affected Tables" items={diag.affectedTables} />
-        <ListCard title="Required Permissions" items={diag.requiredPermissions} />
-        <ListCard title="Dependencies" items={diag.dependencies} />
+        {diag.affectedFrontend.length > 0 && <ListCard title="Affected Frontend" items={diag.affectedFrontend} />}
+        {diag.affectedBackend.length > 0 && <ListCard title="Affected Backend" items={diag.affectedBackend} />}
+        {diag.affectedTables.length > 0 && <ListCard title="Affected Tables" items={diag.affectedTables} />}
+        {diag.dependencies.length > 0 && <ListCard title="Dependencies" items={diag.dependencies} />}
         <Card>
           <CardHeader>
             <CardTitle>Summary</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <Row label="Data Impact" value={diag.estimatedDataImpact} />
-            <Row label="Compatibility" value={diag.compatibility} />
-            <Row label="Recommendation" value={diag.recommendation} />
+            <Row label="Recommendation" value={diag.recommendation || '—'} />
           </CardContent>
         </Card>
       </div>
-      {diag.result === 'FAIL' && (
+      {blocked && (
         <p className="mt-4 text-sm font-medium text-danger">
-          A FAIL result disables the Publish action for this package.
+          A required check is FAIL — releasing this package version is blocked.
         </p>
       )}
     </>

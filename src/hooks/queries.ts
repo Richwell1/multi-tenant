@@ -47,8 +47,7 @@ export const useCompanyUsers = (companyId: string) =>
 
 // Package catalog, versions, releases, installations, and assignments are
 // served by the dedicated '@/hooks/packages' layer (package repositories + RPC).
-export const useDiagnostic = (id: string) =>
-  useQuery({ queryKey: queryKeys.diagnostics.detail(id), queryFn: () => repository.getDiagnostic(id) });
+// Diagnostics are persisted via dedicated hooks in '@/hooks/diagnostics'.
 
 export const useTenantInstallations = (companyId: string) =>
   useQuery({
@@ -63,9 +62,6 @@ export const useHealth = () => useQuery({ queryKey: queryKeys.health.all, queryF
 /** Audit logs — selection participates in the cache key. */
 export const useAudit = (target: CompanyTargetValue) =>
   useQuery({ queryKey: queryKeys.audit.list(companyTargetKeyPart(target)), queryFn: repository.getAudit });
-/** Diagnostics in scope of a company-target selection. */
-export const useDiagnostics = (target: CompanyTargetValue) =>
-  useQuery({ queryKey: queryKeys.diagnostics.list(companyTargetKeyPart(target)), queryFn: repository.getDiagnostics });
 
 // Leave and Attendance are persisted via dedicated hooks in '@/hooks/leave'
 // and '@/hooks/attendance'.

@@ -128,9 +128,29 @@ export interface RequestRecord {
 
 export type DiagnosticResult = 'PASS' | 'WARN' | 'FAIL';
 
+/** Fixed impact dimensions a diagnostic evaluates a package version against. */
+export type DiagnosticDimension =
+  | 'frontend'
+  | 'backend'
+  | 'database'
+  | 'security'
+  | 'dependency'
+  | 'data_impact'
+  | 'rollback'
+  | 'test_evidence';
+
+export interface DiagnosticCheck {
+  dimension: DiagnosticDimension;
+  status: DiagnosticResult;
+  /** A required check in FAIL blocks release; non-required checks inform only. */
+  required: boolean;
+  detail: string;
+}
+
 export interface DiagnosticReport {
   id: string;
   packageKey: PackageKey;
+  packageVersionId: string | null;
   targetCompanyId: string | null;
   affectedFrontend: string[];
   affectedBackend: string[];
@@ -139,8 +159,11 @@ export interface DiagnosticReport {
   dependencies: string[];
   estimatedDataImpact: 'none' | 'create' | 'modify' | 'delete';
   compatibility: string;
+  /** Derived from checks: FAIL > WARN > PASS. */
   result: DiagnosticResult;
   recommendation: string;
+  /** Per-dimension checks (empty on the legacy mock records). */
+  checks: DiagnosticCheck[];
 }
 
 export interface Installation {

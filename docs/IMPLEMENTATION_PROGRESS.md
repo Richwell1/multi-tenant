@@ -95,6 +95,12 @@
 - [ ] CI gates + smoke tests
 - [ ] Monitoring / error logging
 
+### 4.3A explicit sign-off notes
+- **Leave types:** Fixed PostgreSQL enum for MVP. Tenant-configurable leave types deferred until a management UI and business requirement exist (upgrade path recorded above).
+- **Roles:** `company_admin` may write and review; `company_user` is read-only. Employee self-service deferred until reliable auth-user-to-employee identity linkage exists. `hr_manager` is **not** introduced (do not add it indirectly until the role model is deliberately expanded).
+- **Browser E2E:** Deferred; manual checklist documented (see Next actions).
+- **Integration:** This branch must be merged **after** `feat/package-release-management` and verified against the combined migration + test baseline (both share the package-assignment infrastructure).
+
 ## Verification history
 
 | Increment | db reset | typecheck | lint | tests | build | RLS/JWT | notes |
@@ -118,6 +124,7 @@
 - **Role model** still `company_admin` / `company_user` only — no `hr_manager`. Leave **writes** (create/approve/reject/cancel) are scoped to `company_admin`; `company_user` has read-only leave. An `hr_manager` role (and finer leave permissions) is deferred, not silently assumed.
 - **Employee self-service** (a `company_user` filing their *own* leave, tied to `employees.user_id`) is deferred: the identity→employee linkage is not yet reliable for the demo tenants. First implementation is admin-managed.
 - **`leave_types` as a per-company table** (with its own same-company composite FK) is deferred. The current UI exposes only the fixed categories `annual|sick|unpaid`, so leave type is a Postgres enum — no speculative type-management surface. Revisit when leave-type CRUD is required.
+  - **Upgrade path** (enum → tenant-configurable types, when a management UI + business need exist): add `leave_types(id, company_id, name, is_active, unique(company_id,name), unique(company_id,id))` with entitlement-backed RLS + per-tenant seeding; add nullable `leave_type_id uuid` to `leave_requests` with composite FK `(company_id, leave_type_id) → leave_types(company_id, id)`; backfill from the enum; move reads to the FK; retire the enum last. No data loss — the enum values become the initial seeded rows.
 - **Status machine** intentionally minimal: `approved`/`rejected`/`cancelled` are terminal (no `approved → cancelled`). Central rule in `src/data/leave/transitions.ts` mirrors the DB trigger; widen both together if needed.
 
 ## Next actions

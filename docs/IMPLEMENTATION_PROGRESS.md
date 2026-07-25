@@ -8,16 +8,16 @@
 | | |
 |---|---|
 | Product | Multi-Tenants HR |
-| Current branch | `feat/audit-health-surfaces` (from merged `main`, PR #12) |
-| Current phase | Phase 5 — Platform Operations (5.5 Audit Surfaces & System Health complete) |
-| Current increment | 5.5 — Audit Surfaces & System Health |
+| Current branch | `feat/ci-security-suites` |
+| Current phase | Phase 5 — Platform Operations (5.6 CI Automation) |
+| Current increment | 5.6 — CI Automation |
 | Default data source | `mock` (`VITE_DATA_SOURCE`), Supabase path behind lazy adapters |
 | Local Supabase ports | API/Functions 54331 · DB 54332 · Studio 54333 (project-local +10 offset) |
 | Hosted Supabase | Linked (`uezvaqoqqqgblpcbkujq`); **no migrations pushed** |
 | Test count | 201 |
 
-> `main` (PR #12) carries everything through 5.4. 5.5 adds `platform_audit_log()`
-> + `system_health()` (migration `150000`). RLS suites under `supabase/tests/`:
+> `main` carries everything through 5.5. 5.6 adds a reproducible GitHub Actions
+> quality gate for the full SQL/RLS matrix and application checks. RLS suites under `supabase/tests/`:
 > `package_release_rls.sql` (10), `leave_rls.sql` (14), `attendance_rls.sql` (18),
 > `request_records_rls.sql` (10), `diagnostics_rls.sql` (14),
 > `installation_recovery_rls.sql` (12), `usage_analytics_rls.sql` (7),
@@ -42,7 +42,7 @@
 | 5.3 | Installation Monitoring & Recovery | Complete | 2026-07-25 | feat/installation-monitoring-recovery | merged (PR #11) | 194 tests + 12 JWT/RLS ✅ | retry/rollback reconcile entitlements |
 | 5.4 | Usage Analytics | Complete | 2026-07-25 | feat/usage-analytics | merged (PR #12) | 197 tests + 7 JWT/RLS ✅ | audit-derived; time-series deferred |
 | 5.5 | Audit Surfaces & System Health | Complete | 2026-07-25 | feat/audit-health-surfaces | (this branch) | 201 tests + 9 JWT/RLS ✅ | enriched audit view; derived health |
-| 5.6 | CI automation | Not started | — | — | — | — | run the 94-scenario SQL matrix in CI |
+| 5.6 | CI automation | Complete | 2026-07-25 | feat/ci-security-suites | see `git log` | workflow + runner + npm script; 201 application tests ✅ | first GitHub Actions SQL run pending; local Docker unavailable in this environment |
 | 6 | Deployment / security hardening / subdomains | Not started | — | — | — | — | wildcard DNS, hosted deploy |
 
 ## Milestone checklists
@@ -87,7 +87,7 @@
 - [x] **5.3 Installation Monitoring & Recovery** — installation state machine (`installation_can_transition` + enforce trigger); Platform-Admin-only `retry_package_installation` (failed→installed, **re-enables** `company_packages`) and `rollback_package_installation` (installed→rolled_back, **disables** the assignment so the tenant loses access via `can_use_company_package`); `installation.{retried,rolled_back}` audit; repository (mock + lazy Supabase RPC) + service + hooks + `InstallationsPage` recovery actions (Retry / confirmed Roll back); 12 JWT/RLS scenarios + unit tests
 - [x] **5.4 Usage Analytics** — `usage_metrics(company_ids)` SECURITY DEFINER function **derives** per-module metrics (action count + distinct companies) from `audit_logs` (action prefix = module); platform-admin self-gated (non-admin → empty); company-target filter; usage module (mock + lazy Supabase RPC) + service + hook; `UsagePage` rewired; 7 JWT/RLS scenarios + unit tests
 - [x] **5.5 Audit Surfaces & System Health** — `platform_audit_log(company_ids, limit)` SECURITY DEFINER enriches audit rows (actor **email** via `auth.users` join + company name), platform-admin self-gated, company-filtered, recent-first; `system_health()` derives live signals (DB online, active companies, **failed installations → degraded**, 24h activity); audit + health modules (mock + lazy Supabase RPC) + services + hooks; `AuditPage`/`HealthPage` rewired; 9 JWT/RLS scenarios + unit tests
-- [ ] 5.6 CI automation for the RLS/security suites (94 scenarios)
+- [x] **5.6 CI automation** — `.github/workflows/ci.yml` starts/resets local Supabase, runs all 8 committed SQL/RLS suites (94 scenarios), then typecheck/lint/unit tests/build; cleanup always runs
 
 ### Leave Management (4.3A)
 - [x] `leave_requests` table; same-company composite FK `(company_id, employee_id)→employees`
@@ -137,6 +137,7 @@
 | 5.3 Installation Recovery | ✅ | ✅ | ✅ | 194 | ✅ | ✅ recovery 12 (retry/rollback authz, entitlement sync, state trigger, audit) + 66 prior = 78 | recovery via existing packages adapter; main 476 KB |
 | 5.4 Usage Analytics | ✅ | ✅ | ✅ | 197 | ✅ | ✅ usage 7 (audit-derived aggregation, self-gate, company filter, distinct companies) + 78 prior = 85 | usage adapter lazy chunk (0.4 KB); main 476 KB |
 | 5.5 Audit & Health | ✅ | ✅ | ✅ | 201 | ✅ | ✅ audit/health 9 (enriched actor/company, self-gate, company filter, failed→degraded) + 85 prior = 94 | audit + health adapters lazy chunks; main 476 KB |
+| 5.6 CI automation | deferred locally | ✅ | ✅ | 201 | ✅ | workflow runs 8 SQL/RLS suites (94 scenarios) via `test:rls` | Docker approval unavailable in this environment; first hosted CI run remains required |
 
 ## Current risks
 - Mock is default; Supabase HR-Core path verified at DB/RLS level, **not yet exercised end-to-end in the browser**.
@@ -161,11 +162,9 @@
 - **Status machine** intentionally minimal: `approved`/`rejected`/`cancelled` are terminal (no `approved → cancelled`). Central rule in `src/data/leave/transitions.ts` mirrors the DB trigger; widen both together if needed.
 
 ## Next actions
-1. **Merge Audit & Health (5.5) to `main`** (`feat/audit-health-surfaces`, migration `150000`) — branches off the merged `main`; then rebase/merge `feat/ui-ux-polish`.
-2. **Phase 5.6 — CI automation**: run the full `supabase/tests/*.sql` matrix (94 scenarios) + `npm test`/typecheck/lint/build on CI (GitHub Actions with a local Supabase), closing out Phase 5.
-3. **Browser E2E smoke** under `VITE_DATA_SOURCE=supabase` — publish + diagnostic gate, Leave, Attendance, Requests, Diagnostics, and **Recovery** (retry a failed install → access restored; roll back an installed package → tenant loses access). Deferred (interactive Supabase auth not scriptable here). Blocks making Supabase the default.
-4. Automate the JWT/RLS suites in CI (`supabase/tests/*.sql` — 78 scenarios; currently run via `docker exec psql`).
-5. Plan hosted rollout (push migrations, deploy Edge Functions, Vercel).
+1. **Run the first hosted CI workflow** and confirm the 8 SQL/RLS suites (94 scenarios) pass on GitHub Actions.
+2. **Browser E2E smoke** under `VITE_DATA_SOURCE=supabase` — publish + diagnostic gate, Leave, Attendance, Requests, Diagnostics, and **Recovery** (retry a failed install → access restored; roll back an installed package → tenant loses access). Deferred (interactive Supabase auth not scriptable here). Blocks making Supabase the default.
+3. Plan hosted rollout (push migrations, deploy Edge Functions, Vercel).
 
 ### Manual browser smoke checklist — Installation recovery (run under `VITE_DATA_SOURCE=supabase`)
 - [ ] Platform admin → Installation Monitoring lists installs; a failed row shows **Retry**, an installed row shows **Roll back**

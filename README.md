@@ -111,6 +111,7 @@ npm run dev        # start Vite dev server (http://localhost:5173)
 | `npm run lint` | `eslint .` | Lint the codebase |
 | `npm run typecheck` | `tsc -b` | Full project type-check (no emit) |
 | `npm run test` | `vitest run` | Run the test suite once |
+| `npm run test:rls` | `bash scripts/run-sql-suites.sh` | Run every committed SQL/JWT/RLS suite against local Supabase |
 
 ---
 

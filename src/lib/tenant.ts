@@ -1,5 +1,8 @@
 // ---------------------------------------------------------------------------
-// Tenant + portal resolution and package gating.
+// Tenant + portal resolution.
+//
+// Package entitlements live in '@/lib/entitlements' + '@/hooks/entitlements'
+// (sourced from the membership context), not here.
 //
 // Context is derived from the hostname:
 //   admin.multi-tenants-hr.com  -> Platform Super Admin portal
@@ -12,7 +15,7 @@
 //   /login?tenant=beta
 // ---------------------------------------------------------------------------
 
-import type { Company, PackageKey, Portal } from '@/data/types';
+import type { Company, Portal } from '@/data/types';
 import { companies } from '@/data/mock';
 
 export interface ResolvedContext {
@@ -55,20 +58,4 @@ export function resolveContext(hostname: string, search = ''): ResolvedContext {
 export function getCompany(tenantId: string | null): Company | undefined {
   if (!tenantId) return undefined;
   return companies.find((c) => c.id === tenantId);
-}
-
-/** Package gating — backend-equivalent check the UI must respect. */
-export function companyHasPackage(company: Company | undefined, key: PackageKey): boolean {
-  if (!company) return false;
-  return company.packages.includes(key);
-}
-
-/** Whether a tenant may access /leave. Beta must always be false. */
-export function canAccessLeave(company: Company | undefined): boolean {
-  return companyHasPackage(company, 'leave-management');
-}
-
-/** Whether a tenant may access /attendance. */
-export function canAccessAttendance(company: Company | undefined): boolean {
-  return companyHasPackage(company, 'attendance-management');
 }

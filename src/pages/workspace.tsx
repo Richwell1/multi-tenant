@@ -18,7 +18,6 @@ import {
   PageLoadingState,
   ErrorState,
   EmptyState,
-  PackageUnavailableState,
   ConfirmDialog,
   InstallationProgress,
   InstallationSuccess,
@@ -26,7 +25,9 @@ import {
   type InstallationPhase,
 } from '@/components/states';
 import { useSession } from '@/lib/session';
-import { canAccessAttendance, canAccessLeave } from '@/lib/tenant';
+import { PackageGuard } from '@/components/guards';
+import { useHasPackage } from '@/hooks/entitlements';
+import { PACKAGE_CODES } from '@/lib/entitlements';
 import { notify } from '@/lib/notify';
 import { forceNextFailure } from '@/data/api';
 import {
@@ -52,7 +53,7 @@ function useTenantId() {
 
 export function WorkspaceDashboard() {
   const { company } = useSession();
-  const hasLeave = canAccessLeave(company);
+  const hasLeave = useHasPackage(PACKAGE_CODES.leave);
   const employees = useEmployees();
   const departments = useDepartments();
   const positions = usePositions();
@@ -793,12 +794,14 @@ export function SettingsPage() {
 // --- Optional package modules (gated) ----------------------------------------
 
 export function LeavePage() {
-  const { company } = useSession();
   const tid = useTenantId();
-  // Backend-equivalent gate: Beta (no Leave package) must never reach content.
-  if (!canAccessLeave(company)) return <PackageUnavailableState packageName="Leave Management" />;
-
-  return <LeaveContent tenantId={tid} />;
+  // Route-level entitlement gate (Beta has no Leave package). RLS still enforces
+  // access on the server; this is the UX boundary.
+  return (
+    <PackageGuard packageCode={PACKAGE_CODES.leave} packageName="Leave Management">
+      <LeaveContent tenantId={tid} />
+    </PackageGuard>
+  );
 }
 
 function LeaveContent({ tenantId }: { tenantId: string }) {
@@ -850,10 +853,12 @@ function LeaveContent({ tenantId }: { tenantId: string }) {
 }
 
 export function AttendancePage() {
-  const { company } = useSession();
   const tid = useTenantId();
-  if (!canAccessAttendance(company)) return <PackageUnavailableState packageName="Attendance Management" />;
-  return <AttendanceContent tenantId={tid} />;
+  return (
+    <PackageGuard packageCode={PACKAGE_CODES.attendance} packageName="Attendance Management">
+      <AttendanceContent tenantId={tid} />
+    </PackageGuard>
+  );
 }
 
 function AttendanceContent({ tenantId }: { tenantId: string }) {

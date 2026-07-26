@@ -1,5 +1,25 @@
 # Changelog
 
+## Unreleased — Package category clarity (branch `refactor/package-categories`)
+
+- Stop showing raw enum values (`standard_update`, `private_extension`,
+  `private_customization`) in the UI. A centralized presentation mapper
+  (`src/lib/packages/category.ts`) maps the persisted `packages.category` to four
+  human labels: **System Package**, **Marketplace Extension**, **Private
+  Extension**, **Private Standalone Package**, plus derived **visibility**
+  (Platform managed / Marketplace / Private) and an "installed by" description.
+- Admin **Packages** table columns are now Package · Category · Visibility ·
+  Base Package · Status with distinct badges, an explanation line, and category
+  filters (All / System / Marketplace / Private Extension / Private Standalone).
+  Search spans name, key, category label, and base-package name. Package details
+  show category, visibility, base package, installer, and description.
+- `Package` domain model now carries `category` + `basePackageKey` (from the
+  existing `packages.category` / `base_package_key` columns — no migration; the
+  data was already correct). Mock derives category from the legacy type.
+- Tests: `category.test.ts` (mapper/visibility/installer/compat) + a
+  `PackagesList` component test (labels shown, raw enums hidden, base package,
+  filter). 305 app tests.
+
 ## Unreleased — Marketplace fixes (branch `fix/marketplace-entitlement-and-ui`)
 
 - **Fix (authorization):** installing a marketplace extension enabled the

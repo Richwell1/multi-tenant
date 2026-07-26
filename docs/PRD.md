@@ -279,6 +279,12 @@ standard → all active companies; marketplace install → the installing compan
 marketplace update → current adopters; private → the assigned company. No package
 action changes `APP_VERSION`.
 
+These four models are presented to users as **System Package**, **Marketplace
+Extension**, **Private Extension**, and **Private Standalone Package** — raw
+database enum values are never shown. The Admin Packages table shows category,
+visibility, and base package, with category filters, so the differences are
+immediately clear.
+
 ### 5.10 Standard Update Flow
 
 The Platform Super Admin shall be able to publish a standard update to all active companies.

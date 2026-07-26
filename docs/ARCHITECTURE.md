@@ -216,6 +216,13 @@ entitlement records an `installation_source`, and marketplace updates
 (`publish_update_to_installers`) reach only current adopters. Logout clears the
 React Query cache, so entitlement and marketplace data never leak across sessions.
 
+Raw category enums are never rendered: `src/lib/packages/category.ts` is the one
+presentation mapper from `packages.category` to human labels (System Package /
+Marketplace Extension / Private Extension / Private Standalone Package), with
+visibility derived from category. `Package` domain objects carry `category` and
+`basePackageKey`; a `toPackageCategory` compatibility helper prefers the explicit
+persisted category and never infers a category from the package name.
+
 The operational lifecycle is:
 
 ```text

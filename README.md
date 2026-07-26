@@ -294,6 +294,13 @@ Every entitlement records an **installation_source** (`platform_push`,
 Platform Admin can see how each package reached each company. The admin
 **Adoption** page shows install counts per marketplace extension.
 
+The UI never shows raw enum values. A centralized mapper
+(`src/lib/packages/category.ts`) turns `packages.category` into human labels —
+**System Package**, **Marketplace Extension**, **Private Extension**, **Private
+Standalone Package** — with derived visibility (Platform managed / Marketplace /
+Private). The admin Packages table columns are Package · Category · Visibility ·
+Base Package · Status, with category filters.
+
 **Update matrix** (package versions never change the platform `APP_VERSION`):
 
 | Action | Who moves |

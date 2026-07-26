@@ -12,6 +12,21 @@ const GATING_LOGIC_FILES = [
   'src/lib/packages/manifest.ts',
   'src/components/workspace-shell.tsx',
   'src/components/guards/package-guard.tsx',
+  // Marketplace + private-package implementations must be identity-free too.
+  'src/data/marketplace/index.ts',
+  'src/data/marketplace/supabase.ts',
+  'src/data/document-notes/index.ts',
+  'src/data/document-notes/supabase.ts',
+  'src/data/expense-requests/index.ts',
+  'src/data/expense-requests/supabase.ts',
+  'src/data/visitor-register/index.ts',
+  'src/data/visitor-register/supabase.ts',
+  'src/services/marketplace-service.ts',
+  // Package migrations: keys/targets are dynamic — no company identity in logic.
+  'supabase/migrations/20260729010000_marketplace_foundation.sql',
+  'supabase/migrations/20260729020000_marketplace_packages.sql',
+  'supabase/migrations/20260729030000_private_extensions.sql',
+  'supabase/migrations/20260729040000_private_standalone.sql',
 ];
 
 // Quoted demo company identifiers used elsewhere as fixtures.

@@ -6,8 +6,13 @@ import { z } from 'zod';
 import { CheckCircle2, Circle } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import { APP_VERSION } from '@/lib/app-version';
-import { PACKAGE_MANIFEST, availableFeatures } from '@/lib/packages/manifest';
+import { PACKAGE_MANIFEST, availableFeatures, hasFeature } from '@/lib/packages/manifest';
 import type { PackageKey } from '@/data/types';
+import { useMarketplacePackages, useInstallMarketplaceExtension } from '@/hooks/marketplace';
+import { useDocumentNotes, useCreateDocumentNote } from '@/hooks/document-notes';
+import { useExpenseRequests, useCreateExpenseRequest } from '@/hooks/expense-requests';
+import { useVisitorEntries, useCreateVisitor } from '@/hooks/visitor-register';
+import { RepositoryError } from '@/data/errors';
 import { StatCard } from '@/components/stat-card';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -118,6 +123,9 @@ export function EmployeesList() {
 function EmployeesListContent() {
   const [q, setQ] = useState('');
   const query = useEmployees();
+  const { packages } = usePackageEntitlements();
+  // Private extension: only the assigned company (with HR Core >= 1.1.0) sees this card.
+  const hasApproval = hasFeature(packages, PACKAGE_CODES.employeeApproval, '1.0.0');
   const filtered = (query.data ?? []).filter((e) =>
     `${e.fullName} ${e.employeeNumber} ${e.department}`.toLowerCase().includes(q.toLowerCase()),
   );
@@ -135,6 +143,16 @@ function EmployeesListContent() {
           </>
         }
       />
+      {hasApproval && (
+        <Card className="mb-6 max-w-md">
+          <CardHeader>
+            <CardTitle>Employee Approval</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Badge tone="healthy">Enabled</Badge>
+          </CardContent>
+        </Card>
+      )}
       <TableBoundary
         query={query}
         filtered={filtered}
@@ -317,9 +335,11 @@ export function EmployeeProfile() {
 
 // --- Departments / Positions --------------------------------------------------
 
+// Code is an optional field provided by the Custom Department Code Field
+// extension; baseline HR Core departments do not require it.
 const departmentSchema = z.object({
   name: z.string().min(2, 'Name is required'),
-  code: z.string().min(1, 'Code is required'),
+  code: z.string().trim().max(40).optional(),
   head: z.string().optional(),
 });
 type DepartmentForm = z.infer<typeof departmentSchema>;
@@ -337,6 +357,9 @@ function DepartmentsContent() {
   const query = useDepartments();
   const createMutation = useCreateDepartment();
   const disableMutation = useDisableDepartment();
+  const { packages } = usePackageEntitlements();
+  // Private extension: only the assigned company surfaces the Department Code field.
+  const hasDeptCode = hasFeature(packages, PACKAGE_CODES.departmentCode, '1.0.0');
   const [target, setTarget] = useState<{ id: string; name: string } | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const filtered = query.data ?? [];
@@ -369,9 +392,11 @@ function DepartmentsContent() {
               <Field label="Name" htmlFor="dept-name" error={errors.name?.message}>
                 <Input id="dept-name" aria-invalid={!!errors.name} {...register('name')} />
               </Field>
-              <Field label="Code" htmlFor="dept-code" error={errors.code?.message}>
-                <Input id="dept-code" aria-invalid={!!errors.code} {...register('code')} />
-              </Field>
+              {hasDeptCode && (
+                <Field label="Code" htmlFor="dept-code" error={errors.code?.message}>
+                  <Input id="dept-code" aria-invalid={!!errors.code} {...register('code')} />
+                </Field>
+              )}
               <Field label="Head" htmlFor="dept-head">
                 <Input id="dept-head" {...register('head')} />
               </Field>
@@ -394,11 +419,11 @@ function DepartmentsContent() {
           </CardContent>
         </Card>
       )}
-      <TableBoundary query={query} filtered={filtered} cols={4}>
+      <TableBoundary query={query} filtered={filtered} cols={hasDeptCode ? 4 : 3}>
         <DataTable>
           <THead>
             <TH>Name</TH>
-            <TH>Code</TH>
+            {hasDeptCode && <TH>Code</TH>}
             <TH>Head</TH>
             <TH>Status</TH>
           </THead>
@@ -406,7 +431,7 @@ function DepartmentsContent() {
             {filtered.map((d) => (
               <TR key={d.id}>
                 <TD className="font-medium">{d.name}</TD>
-                <TD className="text-content-variant">{d.code}</TD>
+                {hasDeptCode && <TD className="text-content-variant">{d.code}</TD>}
                 <TD>{d.head}</TD>
                 <TD>
                   <div className="flex items-center justify-between gap-3">
@@ -1162,6 +1187,275 @@ function AttendanceContent() {
           </TBody>
         </DataTable>
       </TableBoundary>
+    </>
+  );
+}
+
+// --- Extensions Marketplace (company self-service) ---------------------------
+
+export function MarketplacePage() {
+  const query = useMarketplacePackages();
+  const { codes, packages } = usePackageEntitlements();
+  const context = useCompanyContext();
+  const isAdmin = context.data?.role === 'company_admin';
+  const install = useInstallMarketplaceExtension();
+  const items = query.data ?? [];
+  return (
+    <>
+      <PageHeader title="Extensions Marketplace" description="Optional extensions your company can install" />
+      {query.isPending ? (
+        <PageLoadingState label="Loading marketplace…" />
+      ) : query.isError ? (
+        <ErrorState />
+      ) : items.length === 0 ? (
+        <EmptyState title="No extensions available" description="Published marketplace extensions will appear here." />
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2">
+          {items.map((p) => {
+            const installed = codes.includes(p.code);
+            const installedVersion = packages.find((x) => x.code === p.code)?.version ?? null;
+            return (
+              <Card key={p.code}>
+                <CardHeader>
+                  <CardTitle>{p.name}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Badge tone="neutral">Latest version {p.latestVersion ?? '—'}</Badge>
+                  {installed ? (
+                    <Badge tone="healthy">Installed{installedVersion ? ` · ${installedVersion}` : ''}</Badge>
+                  ) : isAdmin ? (
+                    <Button onClick={() => install.mutate(p.code)} disabled={install.isPending}>
+                      {install.isPending ? 'Installing…' : 'Install'}
+                    </Button>
+                  ) : (
+                    <p className="text-sm text-content-variant">Ask a company admin to install this extension.</p>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+    </>
+  );
+}
+
+export function DocumentNotesPage() {
+  return (
+    <PackageGuard packageCode={PACKAGE_CODES.documentNotes} packageName="Document Notes">
+      <DocumentNotesContent />
+    </PackageGuard>
+  );
+}
+
+function DocumentNotesContent() {
+  const query = useDocumentNotes();
+  const create = useCreateDocumentNote();
+  const { packages } = usePackageEntitlements();
+  // The note category field is introduced in Document Notes 1.1.0.
+  const showCategory = hasFeature(packages, PACKAGE_CODES.documentNotes, '1.1.0');
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [category, setCategory] = useState('');
+  const [error, setError] = useState<string>();
+  const notes = query.data ?? [];
+
+  const submit = (event: React.FormEvent) => {
+    event.preventDefault();
+    setError(undefined);
+    create.mutate(
+      { title, description, category: showCategory ? category || undefined : undefined },
+      {
+        onSuccess: () => { setTitle(''); setDescription(''); setCategory(''); },
+        onError: (err) => setError(err instanceof RepositoryError ? err.message : 'Could not add the note.'),
+      },
+    );
+  };
+
+  return (
+    <>
+      <PageHeader title="Document Notes" description="Simple notes for your company" />
+      <Card className="mb-6 max-w-2xl">
+        <CardContent className="pt-6">
+          {error && <div role="alert" className="mb-4 rounded-md border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">{error}</div>}
+          <form onSubmit={submit} className="space-y-4" noValidate>
+            <Field label="Title">
+              <Input required value={title} onChange={(e) => setTitle(e.target.value)} />
+            </Field>
+            <Field label="Description">
+              <textarea className="min-h-24 w-full rounded-md border border-border bg-surface px-3 py-2 text-sm" value={description} onChange={(e) => setDescription(e.target.value)} />
+            </Field>
+            {showCategory && (
+              <Field label="Category">
+                <Input value={category} onChange={(e) => setCategory(e.target.value)} />
+              </Field>
+            )}
+            <SubmitButton pending={create.isPending} pendingLabel="Adding…">Add Note</SubmitButton>
+          </form>
+        </CardContent>
+      </Card>
+      {query.isPending ? (
+        <PageLoadingState label="Loading notes…" />
+      ) : notes.length === 0 ? (
+        <EmptyState title="No notes yet" description="Add your first note above." />
+      ) : (
+        <DataTable>
+          <THead>
+            <TH>Title</TH>
+            <TH>Description</TH>
+            {showCategory && <TH>Category</TH>}
+          </THead>
+          <TBody>
+            {notes.map((n) => (
+              <TR key={n.id}>
+                <TD className="font-medium">{n.title}</TD>
+                <TD className="text-content-variant">{n.description}</TD>
+                {showCategory && <TD>{n.category ?? '—'}</TD>}
+              </TR>
+            ))}
+          </TBody>
+        </DataTable>
+      )}
+    </>
+  );
+}
+
+export function ExpenseRequestsPage() {
+  return (
+    <PackageGuard packageCode={PACKAGE_CODES.expenseRequests} packageName="Expense Requests">
+      <ExpenseRequestsContent />
+    </PackageGuard>
+  );
+}
+
+function ExpenseRequestsContent() {
+  const query = useExpenseRequests();
+  const create = useCreateExpenseRequest();
+  const [amount, setAmount] = useState('');
+  const [description, setDescription] = useState('');
+  const [error, setError] = useState<string>();
+  const rows = query.data ?? [];
+
+  const submit = (event: React.FormEvent) => {
+    event.preventDefault();
+    setError(undefined);
+    create.mutate(
+      { amount: Number(amount), description },
+      {
+        onSuccess: () => { setAmount(''); setDescription(''); },
+        onError: (err) => setError(err instanceof RepositoryError ? err.message : 'Could not create the request.'),
+      },
+    );
+  };
+
+  return (
+    <>
+      <PageHeader title="Expense Requests" description="Simple expense requests for your company" />
+      <Card className="mb-6 max-w-2xl">
+        <CardContent className="pt-6">
+          {error && <div role="alert" className="mb-4 rounded-md border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">{error}</div>}
+          <form onSubmit={submit} className="space-y-4" noValidate>
+            <Field label="Amount">
+              <Input required type="number" min="0" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} />
+            </Field>
+            <Field label="Description">
+              <textarea className="min-h-24 w-full rounded-md border border-border bg-surface px-3 py-2 text-sm" value={description} onChange={(e) => setDescription(e.target.value)} />
+            </Field>
+            <SubmitButton pending={create.isPending} pendingLabel="Submitting…">Create Request</SubmitButton>
+          </form>
+        </CardContent>
+      </Card>
+      {query.isPending ? (
+        <PageLoadingState label="Loading requests…" />
+      ) : rows.length === 0 ? (
+        <EmptyState title="No expense requests yet" description="Create your first request above." />
+      ) : (
+        <DataTable>
+          <THead>
+            <TH>Amount</TH>
+            <TH>Description</TH>
+            <TH>Status</TH>
+          </THead>
+          <TBody>
+            {rows.map((r) => (
+              <TR key={r.id}>
+                <TD className="font-medium">{r.amount.toFixed(2)}</TD>
+                <TD className="text-content-variant">{r.description}</TD>
+                <TD><Badge tone="neutral">{r.status}</Badge></TD>
+              </TR>
+            ))}
+          </TBody>
+        </DataTable>
+      )}
+    </>
+  );
+}
+
+export function VisitorRegisterPage() {
+  return (
+    <PackageGuard packageCode={PACKAGE_CODES.visitorRegister} packageName="Custom Visitor Register">
+      <VisitorRegisterContent />
+    </PackageGuard>
+  );
+}
+
+function VisitorRegisterContent() {
+  const query = useVisitorEntries();
+  const create = useCreateVisitor();
+  const [visitorName, setVisitorName] = useState('');
+  const [visitPurpose, setVisitPurpose] = useState('');
+  const [error, setError] = useState<string>();
+  const rows = query.data ?? [];
+
+  const submit = (event: React.FormEvent) => {
+    event.preventDefault();
+    setError(undefined);
+    create.mutate(
+      { visitorName, visitPurpose },
+      {
+        onSuccess: () => { setVisitorName(''); setVisitPurpose(''); },
+        onError: (err) => setError(err instanceof RepositoryError ? err.message : 'Could not add the visitor.'),
+      },
+    );
+  };
+
+  return (
+    <>
+      <PageHeader title="Visitor Register" description="Simple visitor register for your company" />
+      <Card className="mb-6 max-w-2xl">
+        <CardContent className="pt-6">
+          {error && <div role="alert" className="mb-4 rounded-md border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">{error}</div>}
+          <form onSubmit={submit} className="space-y-4" noValidate>
+            <Field label="Visitor name">
+              <Input required value={visitorName} onChange={(e) => setVisitorName(e.target.value)} />
+            </Field>
+            <Field label="Visit purpose">
+              <Input value={visitPurpose} onChange={(e) => setVisitPurpose(e.target.value)} />
+            </Field>
+            <SubmitButton pending={create.isPending} pendingLabel="Adding…">Add Visitor</SubmitButton>
+          </form>
+        </CardContent>
+      </Card>
+      {query.isPending ? (
+        <PageLoadingState label="Loading visitors…" />
+      ) : rows.length === 0 ? (
+        <EmptyState title="No visitors yet" description="Add your first visitor above." />
+      ) : (
+        <DataTable>
+          <THead>
+            <TH>Visitor</TH>
+            <TH>Purpose</TH>
+          </THead>
+          <TBody>
+            {rows.map((v) => (
+              <TR key={v.id}>
+                <TD className="font-medium">{v.visitorName}</TD>
+                <TD className="text-content-variant">{v.visitPurpose}</TD>
+              </TR>
+            ))}
+          </TBody>
+        </DataTable>
+      )}
     </>
   );
 }

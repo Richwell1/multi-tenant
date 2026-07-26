@@ -8,13 +8,13 @@
 | | |
 |---|---|
 | Product | Multi-Tenants HR |
-| Current branch | `feat/minimal-package-version-demo` |
-| Current phase | Minimal package-version feasibility demo (version-gated features) |
-| Current increment | HR Core 1.0.0→1.1.0 (Departments→+Employees), Attendance 1.0.0, version-gated nav, dashboard version display |
+| Current branch | `feat/marketplace-and-private-packages` |
+| Current phase | Marketplace extensions + private extensions + private standalone |
+| Current increment | Category/visibility model, company self-install, private assignment, adoption, 5 minimal packages |
 | Default data source | `mock` (`VITE_DATA_SOURCE`), Supabase path behind lazy adapters |
 | Local Supabase ports | API/Functions 54331 · DB 54332 · Studio 54333 (project-local +10 offset) |
-| Hosted Supabase | Linked (`uezvaqoqqqgblpcbkujq`); all 18 migrations deployed (demo package workflows pushed 2026-07-27); local↔remote history aligned |
-| Test count | 235 application tests |
+| Hosted Supabase | Linked (`uezvaqoqqqgblpcbkujq`); 18 migrations deployed through 2026-07-27; branch adds 4 local migrations (not yet pushed) |
+| Test count | 273 application tests |
 
 > `main` carries everything through 5.6 and the hosted Supabase baseline is deployed. The hosted CI quality gate passed the full
 > SQL/RLS matrix and application checks. RLS suites under `supabase/tests/`:
@@ -238,6 +238,38 @@
 - Hosted status: seed migration is **branch-local**; hosted push + browser demo
   dry-run remain a deploy step after review.
 
+### Marketplace + private packages — 2026-07-29
+
+- Branch: `feat/marketplace-and-private-packages` (stacked on the version-gating
+  work). Realizes the deferred `docs/PACKAGE_MARKETPLACE_ROADMAP.md`, scoped to
+  five minimal packages. Built in verified phases (foundation → marketplace →
+  private extensions → private standalone → docs).
+- **Distribution axis**: `packages.category` {standard_package, marketplace_extension,
+  private_standalone, private_extension} + `min_base_version`;
+  `company_packages.installation_source` {platform_push, company_marketplace,
+  private_assignment, registration_default}. `packages` RLS tightened so a company
+  discovers only marketplace + its entitled packages (private packages hidden).
+- **Company self-install** `install_marketplace_extension` (active company_admin,
+  marketplace-only, latest released+PASS, deps, not-already-installed →
+  company_marketplace). `publish_update_to_installers` pushes an update to current
+  adopters only. `marketplace_adoption` (platform-admin) powers the Adoption page.
+- **Private assignment**: `create_package_release` sets installation_source by
+  category and enforces `min_base_version` for private extensions (Employee
+  Approval needs HR Core ≥ 1.1.0). Employee Approval card + optional Department
+  Code field render for the assigned company only; `departments.code` is now
+  nullable (extension-provided). Custom Visitor Register is a hidden private
+  standalone.
+- **Update matrix** (none changes `APP_VERSION`): standard → all active companies;
+  marketplace install → installing company; marketplace update → current adopters;
+  private extension/standalone update → the assigned company.
+- Migrations `20260729010000`–`20260729040000`. SQL suites:
+  `marketplace_foundation` (10), `marketplace_packages` (8),
+  `private_extensions` (7), `private_standalone` (6) = 31 new scenarios.
+- Local verification: Supabase reset (23 migrations) ✅ · 15 SQL/RLS suites ✅ ·
+  typecheck ✅ · lint ✅ · 273 application tests ✅ · build ✅ (APP_VERSION `v0.1.0`).
+- Hosted status: the 4 branch migrations are **not yet pushed**; hosted push +
+  browser smoke remain a deploy step after review.
+
 ## Verification history
 
 | Increment | db reset | typecheck | lint | tests | build | RLS/JWT | notes |
@@ -261,6 +293,7 @@
 | Admin package management | ✅ | ✅ | ✅ | 231 | ✅ (485.23 kB / 147.30 kB gzip) | ✅ 9 SQL/RLS suites (112 scenarios, including 18 new package-management scenarios) | migration is local only; hosted push and browser release smoke remain |
 | Demo package workflows | ✅ | ✅ | ✅ | 235 | ✅ (485.24 kB / 147.30 kB gzip) | ✅ 10 SQL/RLS suites (incl. 23-scenario demo suite) | branch-local migrations; hosted push + browser demo dry-run remain |
 | Minimal package-version demo | ✅ | ✅ | ✅ | 251 | ✅ (486.56 kB / 147.73 kB gzip) | ✅ 11 SQL/RLS suites (incl. 9-scenario minimal suite) | version-gated features; seed branch-local; hosted push + browser dry-run remain |
+| Marketplace + private packages | ✅ | ✅ | ✅ | 273 | ✅ | ✅ 15 SQL/RLS suites (+31 marketplace/private scenarios) | 4 branch-local migrations; hosted push + browser smoke remain |
 
 ## Current risks
 - Mock is default; Supabase HR-Core path verified at DB/RLS level, **not yet exercised end-to-end in the browser**.

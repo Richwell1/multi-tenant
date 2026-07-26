@@ -9,7 +9,7 @@ interface Row {
   id: string;
   company_id: string;
   name: string;
-  code: string;
+  code: string | null;
   head: string | null;
   status: 'active' | 'disabled';
 }
@@ -18,7 +18,7 @@ const toDomain = (r: Row): Department => ({
   id: r.id,
   tenantId: r.company_id,
   name: r.name,
-  code: r.code,
+  code: r.code ?? '',
   head: r.head ?? '',
   status: r.status,
 });
@@ -49,7 +49,7 @@ export class SupabaseDepartmentRepository implements DepartmentRepository {
   async create(companyId: string, input: CreateDepartmentInput): Promise<Department> {
     const { data, error } = await getSupabaseClient()
       .from('departments')
-      .insert({ company_id: companyId, name: input.name, code: input.code, head: input.head ?? null })
+      .insert({ company_id: companyId, name: input.name, code: input.code || null, head: input.head ?? null })
       .select(COLS)
       .single();
     if (error) throw mapSupabaseError(error);

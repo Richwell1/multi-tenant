@@ -13,6 +13,11 @@ export const PACKAGE_CODES = {
   hrCore: 'hr-core',
   leave: 'leave-management',
   attendance: 'attendance-management',
+  documentNotes: 'document-notes',
+  expenseRequests: 'expense-requests',
+  employeeApproval: 'custom-employee-approval',
+  departmentCode: 'custom-department-code',
+  visitorRegister: 'custom-visitor-register',
 } as const satisfies Record<string, PackageKey>;
 
 /** Whether a package is entitled given a company's enabled+active codes. */

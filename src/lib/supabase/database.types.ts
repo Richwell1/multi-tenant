@@ -211,6 +211,7 @@ export type Database = {
           created_at: string
           enabled: boolean
           id: string
+          installation_source: Database["public"]["Enums"]["install_source"]
           package_key: string
           package_version: string | null
           status: Database["public"]["Enums"]["company_package_status"]
@@ -223,6 +224,7 @@ export type Database = {
           created_at?: string
           enabled?: boolean
           id?: string
+          installation_source?: Database["public"]["Enums"]["install_source"]
           package_key: string
           package_version?: string | null
           status?: Database["public"]["Enums"]["company_package_status"]
@@ -235,6 +237,7 @@ export type Database = {
           created_at?: string
           enabled?: boolean
           id?: string
+          installation_source?: Database["public"]["Enums"]["install_source"]
           package_key?: string
           package_version?: string | null
           status?: Database["public"]["Enums"]["company_package_status"]
@@ -300,7 +303,7 @@ export type Database = {
       }
       departments: {
         Row: {
-          code: string
+          code: string | null
           company_id: string
           created_at: string
           head: string | null
@@ -310,7 +313,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          code: string
+          code?: string | null
           company_id: string
           created_at?: string
           head?: string | null
@@ -320,7 +323,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          code?: string
+          code?: string | null
           company_id?: string
           created_at?: string
           head?: string | null
@@ -418,6 +421,44 @@ export type Database = {
           },
         ]
       }
+      document_notes: {
+        Row: {
+          category: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          description: string
+          id: string
+          title: string
+        }
+        Insert: {
+          category?: string | null
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          id?: string
+          title: string
+        }
+        Update: {
+          category?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_notes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employees: {
         Row: {
           company_id: string
@@ -488,6 +529,44 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "positions"
             referencedColumns: ["company_id", "id"]
+          },
+        ]
+      }
+      expense_requests: {
+        Row: {
+          amount: number
+          company_id: string
+          created_at: string
+          created_by: string | null
+          description: string
+          id: string
+          status: string
+        }
+        Insert: {
+          amount?: number
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          id?: string
+          status?: string
+        }
+        Update: {
+          amount?: number
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_requests_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -569,7 +648,7 @@ export type Database = {
           last_error_code: string | null
           last_error_message: string | null
           package_key: string
-          release_id: string
+          release_id: string | null
           started_at: string
           status: Database["public"]["Enums"]["installation_status"]
           version: string
@@ -585,7 +664,7 @@ export type Database = {
           last_error_code?: string | null
           last_error_message?: string | null
           package_key: string
-          release_id: string
+          release_id?: string | null
           started_at?: string
           status?: Database["public"]["Enums"]["installation_status"]
           version: string
@@ -601,7 +680,7 @@ export type Database = {
           last_error_code?: string | null
           last_error_message?: string | null
           package_key?: string
-          release_id?: string
+          release_id?: string | null
           started_at?: string
           status?: Database["public"]["Enums"]["installation_status"]
           version?: string
@@ -676,6 +755,7 @@ export type Database = {
           released_by: string | null
           status: Database["public"]["Enums"]["release_status"]
           target_mode: Database["public"]["Enums"]["release_target_mode"]
+          update_policy: Database["public"]["Enums"]["update_policy"]
         }
         Insert: {
           automatic_install?: boolean
@@ -686,6 +766,7 @@ export type Database = {
           released_by?: string | null
           status?: Database["public"]["Enums"]["release_status"]
           target_mode: Database["public"]["Enums"]["release_target_mode"]
+          update_policy?: Database["public"]["Enums"]["update_policy"]
         }
         Update: {
           automatic_install?: boolean
@@ -696,6 +777,7 @@ export type Database = {
           released_by?: string | null
           status?: Database["public"]["Enums"]["release_status"]
           target_mode?: Database["public"]["Enums"]["release_target_mode"]
+          update_policy?: Database["public"]["Enums"]["update_policy"]
         }
         Relationships: [
           {
@@ -751,30 +833,36 @@ export type Database = {
       packages: {
         Row: {
           base_package_key: string | null
+          category: Database["public"]["Enums"]["package_category"]
           created_at: string
           description: string | null
           is_active: boolean
           key: string
+          min_base_version: string | null
           name: string
           type: Database["public"]["Enums"]["package_type"]
           updated_at: string
         }
         Insert: {
           base_package_key?: string | null
+          category?: Database["public"]["Enums"]["package_category"]
           created_at?: string
           description?: string | null
           is_active?: boolean
           key: string
+          min_base_version?: string | null
           name: string
           type: Database["public"]["Enums"]["package_type"]
           updated_at?: string
         }
         Update: {
           base_package_key?: string | null
+          category?: Database["public"]["Enums"]["package_category"]
           created_at?: string
           description?: string | null
           is_active?: boolean
           key?: string
+          min_base_version?: string | null
           name?: string
           type?: Database["public"]["Enums"]["package_type"]
           updated_at?: string
@@ -931,6 +1019,41 @@ export type Database = {
           },
         ]
       }
+      visitor_register: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          visit_purpose: string
+          visitor_name: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          visit_purpose?: string
+          visitor_name: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          visit_purpose?: string
+          visitor_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visitor_register_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -982,6 +1105,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      install_marketplace_extension: {
+        Args: { p_package_key: string }
+        Returns: Json
+      }
       installation_can_transition: {
         Args: {
           from_status: Database["public"]["Enums"]["installation_status"]
@@ -994,6 +1121,15 @@ export type Database = {
         Returns: boolean
       }
       is_platform_admin: { Args: { uid?: string }; Returns: boolean }
+      marketplace_adoption: {
+        Args: never
+        Returns: {
+          distinct_companies: number
+          install_count: number
+          package_key: string
+          package_name: string
+        }[]
+      }
       onboard_company: {
         Args: {
           p_company_email?: string
@@ -1027,6 +1163,10 @@ export type Database = {
           p_target_mode: Database["public"]["Enums"]["release_target_mode"]
           p_version_id: string
         }
+        Returns: Json
+      }
+      publish_update_to_installers: {
+        Args: { p_version_id: string }
         Returns: Json
       }
       recompute_diagnostic_result: {
@@ -1088,6 +1228,11 @@ export type Database = {
       employee_status: "active" | "on_leave" | "terminated"
       employment_type: "full_time" | "part_time" | "contract"
       hr_record_status: "active" | "disabled"
+      install_source:
+        | "platform_push"
+        | "company_marketplace"
+        | "private_assignment"
+        | "registration_default"
       installation_status:
         | "pending"
         | "installing"
@@ -1098,6 +1243,11 @@ export type Database = {
       leave_request_status: "pending" | "approved" | "rejected" | "cancelled"
       leave_type: "annual" | "sick" | "unpaid"
       membership_status: "active" | "inactive" | "suspended"
+      package_category:
+        | "standard_package"
+        | "marketplace_extension"
+        | "private_standalone"
+        | "private_extension"
       package_type:
         | "standard_update"
         | "private_customization"
@@ -1123,6 +1273,7 @@ export type Database = {
         | "released"
         | "installed"
         | "closed"
+      update_policy: "platform_managed" | "company_managed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1271,6 +1422,12 @@ export const Constants = {
       employee_status: ["active", "on_leave", "terminated"],
       employment_type: ["full_time", "part_time", "contract"],
       hr_record_status: ["active", "disabled"],
+      install_source: [
+        "platform_push",
+        "company_marketplace",
+        "private_assignment",
+        "registration_default",
+      ],
       installation_status: [
         "pending",
         "installing",
@@ -1282,6 +1439,12 @@ export const Constants = {
       leave_request_status: ["pending", "approved", "rejected", "cancelled"],
       leave_type: ["annual", "sick", "unpaid"],
       membership_status: ["active", "inactive", "suspended"],
+      package_category: [
+        "standard_package",
+        "marketplace_extension",
+        "private_standalone",
+        "private_extension",
+      ],
       package_type: [
         "standard_update",
         "private_customization",
@@ -1310,6 +1473,7 @@ export const Constants = {
         "installed",
         "closed",
       ],
+      update_policy: ["platform_managed", "company_managed"],
     },
   },
 } as const

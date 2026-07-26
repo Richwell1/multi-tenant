@@ -4,7 +4,8 @@ export type { Department };
 
 export interface CreateDepartmentInput {
   name: string;
-  code: string;
+  /** Optional — provided by the Custom Department Code Field extension. */
+  code?: string;
   head?: string;
 }
 

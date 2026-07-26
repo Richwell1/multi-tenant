@@ -20,9 +20,9 @@ export const departmentService = {
 
   create: async (companyId: string, input: CreateDepartmentInput) => {
     const name = normName(input.name);
-    const code = normCode(input.code);
+    // Code is optional (provided by the Custom Department Code Field extension).
+    const code = input.code ? normCode(input.code) : undefined;
     if (name.length < 2) throw new RepositoryError('Department name is required.', 'validation');
-    if (!code) throw new RepositoryError('Department code is required.', 'validation');
     return departmentRepository.create(companyId, { name, code, head: input.head?.trim() || undefined });
   },
 

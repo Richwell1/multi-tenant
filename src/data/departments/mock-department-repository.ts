@@ -23,7 +23,7 @@ export class MockDepartmentRepository implements DepartmentRepository {
       id: `d-${Date.now()}`,
       tenantId: companyId,
       name: input.name,
-      code: input.code,
+      code: input.code ?? '',
       head: input.head ?? '',
       status: 'active',
     };

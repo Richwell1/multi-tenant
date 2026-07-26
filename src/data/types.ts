@@ -5,7 +5,14 @@
 export type PackageKey =
   | 'hr-core'
   | 'leave-management'
-  | 'attendance-management';
+  | 'attendance-management'
+  // Marketplace extensions
+  | 'document-notes'
+  | 'expense-requests'
+  // Private extensions / standalone
+  | 'custom-employee-approval'
+  | 'custom-department-code'
+  | 'custom-visitor-register';
 
 export type CompanyStatus = 'active' | 'suspended';
 

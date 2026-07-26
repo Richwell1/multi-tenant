@@ -1,5 +1,33 @@
 # Changelog
 
+## Unreleased — Marketplace + private packages (branch `feat/marketplace-and-private-packages`)
+
+Adds company self-service and Platform-Admin private assignment. `APP_VERSION`
+stays `v0.1.0`; package versions are independent.
+
+- **Distribution model**: `packages.category` (standard_package / marketplace_extension /
+  private_standalone / private_extension) + `company_packages.installation_source`
+  (platform_push / company_marketplace / private_assignment / registration_default).
+  `packages` discovery tightened so companies see only marketplace + entitled packages.
+- **Marketplace extensions** (Document Notes, Expense Requests): company_admin
+  self-install via `install_marketplace_extension` (gated: active company_admin,
+  marketplace-only, latest released+PASS, deps, not-already-installed; private
+  keys hard-blocked). Extensions Marketplace / Installed / feature pages; admin
+  Marketplace Adoption page. Document Notes 1.1.0 update pushed to installers only
+  (`publish_update_to_installers`).
+- **Private extensions** (Custom Employee Approval Card, Custom Department Code
+  Field): Admin-assigned to one company, hidden, base + base-version gated
+  (Approval needs HR Core ≥ 1.1.0); render inside Employees/Departments for the
+  assigned company only. `departments.code` is now an optional extension field.
+- **Private standalone** (Custom Visitor Register): Admin-assigned to one company,
+  hidden, no base.
+- **Update matrix**: standard update → all active companies; marketplace install →
+  installing company only; marketplace update → current adopters only; private
+  extension/standalone update → the assigned company only. None changes `APP_VERSION`.
+- Tests: `marketplace_foundation` (10), `marketplace_packages` (8),
+  `private_extensions` (7), `private_standalone` (6) SQL suites + unit tests
+  (install gate, feature gating, logout cache clear, no-hardcoded-company).
+
 ## Unreleased
 
 Minimal package-version demo (branch `feat/minimal-package-version-demo`).

@@ -60,9 +60,29 @@ It does not claim that hosted browser smoke testing has been completed.
 
 ## Evidence and remaining work
 
-- Local verification: typecheck, lint, build, and 219 application tests pass.
+- Local verification: typecheck, lint, build, and 220 application tests pass.
 - CI includes eight SQL/RLS suites with 94 scenarios.
 - Supabase mode has repository/adapters and real UUID scoping; no mock IDs are
   intended to reach Supabase requests.
 - Full browser smoke testing at 320/375/768/1024/1440 pixels, hosted Auth
   seed verification, and visual regression automation remain deployment tasks.
+
+## Code-quality audit
+
+The focused audit found and addressed these proven issues:
+
+- `LazySupabaseRepository` public methods are callback-safe; aggregate method
+  coverage and detached-call behavior are tested.
+- Supabase repository errors now log safe development diagnostics and avoid
+  exposing provider-internal schema/SQL messages to user-facing toasts.
+- Supabase-mode company context is used for hosted workspace names and
+  subdomains instead of relying on mock company metadata.
+- Normal mutations use centralized, scoped invalidation targets. Full query
+  cache clearing is reserved for logout/security transitions.
+- No page imports or calls Supabase directly; no browser service-role variable
+  is supported.
+
+The audit did not find a proven need for a broad component rewrite, a new
+error-boundary hierarchy, or a schema/RLS/grant change. Existing non-null
+assertions occur behind query `enabled` guards or static app-root mounting and
+remain covered by the current type/test boundaries.

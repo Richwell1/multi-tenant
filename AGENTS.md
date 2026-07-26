@@ -84,6 +84,14 @@ Do not add:
 
 ## Engineering quality rules
 
+- Apply single responsibility and separation of concerns across routes,
+  components, hooks, services, repositories, and adapters.
+- Prefer dependency inversion, DRY, KISS, YAGNI, and composition over
+  duplicated components or rules.
+- Use explicit TypeScript types, centralized validation, and centralized error
+  mapping.
+- Use behavior-based tests for user-visible behavior, transitions, repository
+  boundaries, and tenant isolation.
 - Keep the supported roles limited to `platform_super_admin`, `company_admin`,
   and `company_user` unless the product scope is deliberately changed.
 - Use real `company_id` UUIDs in Supabase mode; slugs are for resolution and
@@ -97,8 +105,15 @@ Do not add:
   session and authorization failures may remain page-blocking.
 - Route all user-facing mutation feedback through the central notification
   utility and invalidate tenant-scoped query keys after writes.
+- Use targeted invalidation for normal mutations. Broad cache clearing is
+  reserved for logout or an explicit security transition.
+- Never call Supabase directly from pages, hardcode company-specific behavior,
+  or create permanent customer-specific branches.
 - Destructive actions require confirmation, keyboard-accessible focus handling,
   and visible retry/error states.
+- Do not silently swallow errors; provide a safe UI state, retry action, or
+  structured development diagnostic.
+- Accessibility and responsive design are defaults for every new surface.
 - The platform version comes from `package.json` through
   `src/lib/app-version.ts`; package release versions are a separate domain
   concept.

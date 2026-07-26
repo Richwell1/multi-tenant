@@ -23,8 +23,14 @@ describe('mapSupabaseError', () => {
     expect(mapSupabaseError(original)).toBe(original);
   });
 
-  it('preserves a provider message when no code matches', () => {
+  it('preserves a safe provider message when no code matches', () => {
     expect(mapSupabaseError({ message: 'weird thing' }).message).toBe('weird thing');
+  });
+
+  it('does not expose provider internals to the UI', () => {
+    expect(mapSupabaseError({ message: 'column secret_table.internal_id does not exist' }).message).toBe(
+      'An unexpected error occurred. Please try again.',
+    );
   });
 
   it('falls back to a generic message for unknown shapes', () => {

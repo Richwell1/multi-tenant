@@ -54,7 +54,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       .catch(() => {
         // A failed restore must release guards; otherwise a transient auth
         // error leaves the application on an infinite loading screen.
-        if (active) setSession(null);
+        if (active) {
+          setSession(null);
+          notify.networkFailure('Your session could not be restored. Please sign in again.');
+        }
       })
       .finally(() => {
         if (active) setAuthLoading(false);

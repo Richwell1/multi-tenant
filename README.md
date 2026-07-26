@@ -42,6 +42,8 @@ service-role credentials never enter browser code.
 - React 18 and TypeScript
 - Vite and Tailwind CSS
 - shadcn/ui-style hand-authored primitives using CVA and `tailwind-merge`
+  (the primitives are maintained in `src/components/ui`; there is no separate
+  shadcn package to install)
 - TanStack Router and TanStack Query
 - React Hook Form and Zod
 - Sonner notifications
@@ -52,7 +54,7 @@ service-role credentials never enter browser code.
 ## Prerequisites
 
 - Node.js 20 or newer
-- npm
+- npm 10 or newer (the npm bundled with supported Node.js is suitable)
 - Docker, for local Supabase and SQL/RLS suites
 - Supabase CLI 2.105.0 or a compatible current CLI
 - Git
@@ -70,8 +72,10 @@ npm ci
 cp .env.example .env
 ```
 
-`.env` is ignored. Never commit service-role keys, database passwords, access
-tokens, or real production credentials.
+`.env`, `.env.local`, and other local environment variants are ignored by
+`.gitignore`. Never commit service-role keys, database passwords, access
+tokens, or real production credentials; production secrets belong in the
+hosting/provider secret stores, not in Vite source variables.
 
 ## Environment
 
@@ -129,16 +133,17 @@ VITE_DATA_SOURCE=supabase npm run dev
 `supabase db reset` is safe for the local stack. Do not use
 `npx supabase db reset --linked`; that targets the hosted project.
 
-Use `npx supabase status` to retrieve local URLs and keys. Studio is available
-at the configured Studio URL. The local stack applies all committed migrations
-and `supabase/seed.sql`.
+Use `npx supabase status` to retrieve the local API URL and publishable/anon
+key. Studio is available at the configured Studio URL. The local stack applies
+all committed migrations and `supabase/seed.sql`.
 
 ## Hosted Supabase
 
-The hosted project must be linked before deployment. Inspect migration state,
-review the dry run, and only then push:
+The hosted project must be linked before deployment. Use the project reference
+provided by Supabase; do not commit it as a browser secret:
 
 ```bash
+npx supabase link --project-ref <project-ref>
 npx supabase migration list
 npx supabase db push --dry-run
 npx supabase db push
@@ -146,7 +151,15 @@ npx supabase functions deploy register-company
 ```
 
 Never run `db reset --linked`. Configure Auth URL settings for the deployed
-Vercel URL and retain localhost redirects for local work. Set
+Vercel URL under Supabase Authentication → URL Configuration. Keep the local
+redirect during development, for example:
+
+```text
+https://<your-vercel-domain>/**
+http://localhost:5173/**
+```
+
+Set
 `VITE_DATA_SOURCE=supabase`, `VITE_SUPABASE_URL`, and
 `VITE_SUPABASE_PUBLISHABLE_KEY` in Vercel. Do not put function secrets in
 frontend variables; use `npx supabase secrets set NAME=value`.
@@ -205,6 +218,50 @@ package release changes that package's installation/entitlement version. It
 does not change `APP_VERSION` unless the shared frontend is intentionally
 released too.
 
+### Package classification and targeting
+
+Classification describes what kind of change a release contains:
+
+- `standard_update`: a normal shared product update
+- `shared_extension`: an extension intended for multiple companies
+- `private_customization`: a customer-specific extension
+- `configuration_update`: a configuration change
+- `bug_fix`: a defect correction
+- `security_update`: a security correction
+
+Targeting describes who receives the release and is validated separately from
+classification: all active companies, selected companies, or one company.
+Private customizations are limited to one company; shared extensions may target
+selected or all companies. The database release RPC is the final authority for
+these rules.
+
+### Release lifecycle
+
+The package model separates package definition, package version, release,
+release targets, company assignments, installations, diagnostics, audit, and
+usage. A diagnostic release gate runs before publishing; an installation can
+be pending, installing, installed, failed, retrying, or rolled back. Rollback
+disables the affected assignment so entitlement checks change with the
+installation state.
+
+## UI state, deletes, and notifications
+
+Pages use shared loading, refreshing, empty, no-results, success, warning,
+error, access-denied, suspended, package-unavailable, retry, and installation
+state components. Zero rows are valid data, not failures. Forms show inline
+validation; mutation errors have useful inline or state-panel explanations;
+toasts supplement, rather than replace, important content.
+
+The product does not expose general hard-delete actions. Supported destructive
+or irreversible actions use the domain transition intended for that record:
+disable, terminate, cancel, rollback, or status change. They require a
+confirmation dialog, disable duplicate submission while pending, show success
+or failure feedback, and invalidate only affected query-key scopes.
+
+Sonner messages are centralized in `src/lib/notify.ts`. Success messages are
+emitted only from mutation success callbacks, errors are mapped to safe user
+messages, and logout clears cached tenant data even when remote sign-out fails.
+
 ## Branch and contribution workflow
 
 - Start from an updated `main`.
@@ -215,12 +272,17 @@ released too.
 - Open a pull request; do not push directly to `main`.
 - Merge only after review and the hosted CI quality gate pass.
 
-Engineering principles are documented in `AGENTS.md` and
-`docs/ARCHITECTURE.md`: single responsibility, separation of concerns,
-dependency inversion, DRY, KISS, YAGNI, explicit types, centralized
-validation/error mapping, tenant-scoped keys, targeted invalidation,
-behavior-based tests, accessibility by default, and responsive design by
-default.
+Engineering principles are mandatory: single responsibility, separation of
+concerns, dependency inversion, DRY, KISS, YAGNI, composition over duplication,
+explicit TypeScript types, centralized validation and error mapping,
+tenant-scoped query keys, targeted invalidation, behavior-based tests,
+accessibility by default, and responsive design by default. Do not hardcode
+company behavior, create permanent customer branches, silently swallow errors,
+use broad cache invalidation for ordinary mutations, or call Supabase directly
+from pages.
+
+The full mandatory rules are documented in `AGENTS.md` and
+`docs/ARCHITECTURE.md`.
 
 ## Troubleshooting
 
@@ -241,6 +303,18 @@ The Auth user must also have a matching row in `platform_admins` or
 `company_memberships`. Check that the membership is active and the company is
 active; then sign out and back in to refresh the session context.
 
+### Platform Admin is missing
+
+Confirm the authenticated user's UUID exactly matches `platform_admins.user_id`.
+An email address alone does not authorize the platform portal. Inspect the
+authenticated request and database row before changing RLS or grants.
+
+### Company user is missing
+
+Confirm the authenticated user's UUID exactly matches an active
+`company_memberships.user_id`, with the correct `company_id`, role, and active
+company status. Do not create an unrelated membership UUID.
+
 ### Slug passed where UUID is required
 
 Tenant slugs are routing identifiers. Supabase table queries use the real
@@ -257,6 +331,20 @@ exposure configuration before changing policies.
 
 Mock mode still runs without Docker. SQL/RLS verification requires Docker and
 the local Supabase stack.
+
+### Stale Vercel deployment or cache
+
+Verify the deployment commit, production environment scope, and all three
+`VITE_*` variables. Redeploy after changing build-time variables, then use a
+hard refresh or a fresh browser session. Do not debug a stale bundle by adding
+secrets to source code.
+
+### RLS versus Data API access
+
+RLS decides which rows an exposed table returns. Data API exposure and grants
+decide whether the authenticated role can access the table at all. A 403 or
+404 must be identified from the request response before either policy or grant
+is changed.
 
 ### Lazy repository callback binding
 

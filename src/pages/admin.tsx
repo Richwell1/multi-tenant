@@ -218,12 +218,23 @@ export function AdminDashboard() {
 
 // --- Companies ----------------------------------------------------------------
 
+const COMPANY_STATUS_FILTERS: Array<{ value: 'all' | CompanyStatus; label: string }> = [
+  { value: 'all', label: 'All' },
+  { value: 'active', label: 'Active' },
+  { value: 'suspended', label: 'Suspended' },
+];
+
 export function CompaniesList() {
   const [q, setQ] = useState('');
+  const [status, setStatus] = useState<'all' | CompanyStatus>('all');
   const query = useCompanies();
-  const filtered = (query.data ?? []).filter((c) =>
-    c.name.toLowerCase().includes(q.toLowerCase()),
-  );
+  const all = query.data ?? [];
+  const activeCount = all.filter((c) => c.status === 'active').length;
+  const filtered = all.filter((c) => {
+    if (status !== 'all' && c.status !== status) return false;
+    const haystack = `${c.name} ${c.subdomain}`.toLowerCase();
+    return haystack.includes(q.toLowerCase());
+  });
   return (
     <>
       <PageHeader
@@ -237,13 +248,26 @@ export function CompaniesList() {
           </>
         }
       />
+      {all.length > 0 && (
+        <p className="mb-4 text-sm text-content-variant">
+          <span className="font-medium tabular-nums text-content">{all.length}</span> companies ·{' '}
+          <span className="font-medium tabular-nums text-content">{activeCount}</span> active
+        </p>
+      )}
+      <div className="mb-4 flex flex-wrap gap-2">
+        {COMPANY_STATUS_FILTERS.map((f) => (
+          <Button key={f.value} size="sm" variant={status === f.value ? undefined : 'outline'} onClick={() => setStatus(f.value)}>
+            {f.label}
+          </Button>
+        ))}
+      </div>
       <TableBoundary
         query={query}
         filtered={filtered}
         searchTerm={q}
         cols={6}
-        emptyTitle="No companies yet"
-        emptyDescription="Registered tenant companies will appear here after the first company completes registration."
+        emptyTitle="No companies registered"
+        emptyDescription="New companies will appear here after registration."
       >
         <DataTable>
           <THead>
@@ -258,17 +282,24 @@ export function CompaniesList() {
             {filtered.map((c) => (
               <TR key={c.id}>
                 <TD>
-                  <Link
-                    to="/admin/companies/$companyId"
-                    params={{ companyId: c.id }}
-                    className="font-medium text-platform hover:underline"
-                  >
-                    {c.name}
-                  </Link>
+                  <div className="flex items-center gap-3">
+                    <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-platform/10 text-xs font-semibold uppercase text-platform" aria-hidden>
+                      {c.name.trim().charAt(0) || '?'}
+                    </span>
+                    <Link
+                      to="/admin/companies/$companyId"
+                      params={{ companyId: c.id }}
+                      className="font-medium text-platform hover:underline"
+                    >
+                      {c.name}
+                    </Link>
+                  </div>
                 </TD>
                 <TD className="text-content-variant">{c.subdomain}</TD>
-                <TD>{c.employeeCount}</TD>
-                <TD>{c.packages.length}</TD>
+                <TD className="tabular-nums">{c.employeeCount}</TD>
+                <TD>
+                  <Badge tone="neutral">{c.packages.length}</Badge>
+                </TD>
                 <TD>
                   <Badge tone={companyTone(c.status)}>{c.status}</Badge>
                 </TD>
@@ -365,7 +396,7 @@ export function RequestsList() {
         searchTerm={q}
         cols={5}
         emptyTitle="No request records yet"
-        emptyDescription="Requests logged by the platform team will appear here."
+        emptyDescription="Log a request to begin tracking feature demand."
       >
         <DataTable>
           <THead>
@@ -631,8 +662,8 @@ export function DiagnosticsList() {
         query={query}
         filtered={rows}
         cols={4}
-        emptyTitle="No diagnostics yet"
-        emptyDescription="Diagnostic reports will appear here when package versions are evaluated."
+        emptyTitle="No diagnostics available"
+        emptyDescription="Run package diagnostics before publishing a release."
       >
         <DataTable>
           <THead>

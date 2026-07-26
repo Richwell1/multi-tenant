@@ -14,6 +14,7 @@ Branch: `feat/ui-ux-polish`
 | Admin page-header icons | Complete (phase 1) | Shared `PageHeader` optional portal-tinted `icon`; applied to all top-level Admin pages | build/visual |
 | Admin sidebar grouping | Complete (phase 2) | `NavItem.section` groups the Admin sidebar into Platform / Packages / Operations with section labels (hidden when collapsed; collapsed tooltips already present) | AppShell section test |
 | Admin top-bar profile menu | Complete (phase 2) | Accessible account dropdown (identity, role/context, app version, logout) replacing the plain email + logout link; Escape + outside-click close, `aria-haspopup`/`aria-expanded` | AppShell profile-menu test |
+| Admin Companies page | Complete (phase 3) | Avatar initials, status filter (All/Active/Suspended), total/active summary, package-count badge, tabular numerals, search across name+subdomain | CompaniesList test |
 | Admin dashboard metrics | Complete (phase 2) | `StatCard` optional portal-tinted icon + tabular numerals; dashboard metric cards now carry icons | StatCard test |
 | Admin UI polish — remaining | Planned | Per-page card/table/filter polish; login/logout feedback + one-toast sequencing; dialog focus/return sweep; responsive + a11y audit; design-token centralization; optional Framer Motion (deferred — dependency/bundle) | Phased on `feat/platform-admin-ui-polish` |
 | Shared buttons, badges, cards | Complete | Added outline/icon sizing, richer status tones, calmer borders/shadows, responsive padding | Typecheck/lint/tests/build pass |

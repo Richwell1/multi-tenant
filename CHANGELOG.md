@@ -31,8 +31,15 @@ items. No business logic, RLS, or migrations changed.
   tabular numerals; dashboard cards now carry icons.
 - Tests: AppShell section + profile-menu, StatCard. 322 tests. Bundle +~2.2 KB.
 
-_Remaining phases (per-page card/table/filter polish, login/logout feedback,
-dialog focus sweep, responsive/accessibility audit, design tokens) are scoped in
+**Phase 3 (per-page polish):**
+- **Companies page** — avatar initials, a status filter (All / Active /
+  Suspended), a total/active summary line, package count as a badge, tabular
+  numerals, and search across name + subdomain.
+- More consistent, actionable empty-state copy (Requests, Diagnostics).
+- Tests: CompaniesList (avatars, summary, status filter). 324 tests.
+
+_Remaining phases (further per-page table polish, login/logout feedback, dialog
+focus sweep, responsive/accessibility audit, design tokens) are scoped in
 `docs/UI_UX_PROGRESS.md`._
 
 ## Unreleased — Company update notifications (branch `feat/company-update-notifications`)

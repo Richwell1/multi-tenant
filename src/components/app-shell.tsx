@@ -11,6 +11,8 @@ export interface NavItem {
   to: string;
   label: string;
   icon: ReactNode;
+  /** Optional pending count shown as a pulsing badge (e.g. Available Updates). */
+  badgeCount?: number;
 }
 
 interface AppShellProps {
@@ -89,7 +91,7 @@ export function AppShell({ portal, brandLine, portalBadge, nav, children }: AppS
                 key={item.to}
                 to={item.to}
                 className={cn(
-                  'flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors',
+                  'relative flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors',
                   active
                     ? 'bg-[var(--portal-color)]/10 font-medium text-[var(--portal-color)]'
                     : 'text-content-variant hover:bg-surface-subtle hover:text-content',
@@ -101,6 +103,18 @@ export function AppShell({ portal, brandLine, portalBadge, nav, children }: AppS
               >
                 <span className="shrink-0">{item.icon}</span>
                 {(!collapsed || mobileOpen) && <span className="truncate">{item.label}</span>}
+                {item.badgeCount ? (
+                  <span
+                    className={cn('flex items-center gap-1.5', collapsed && !mobileOpen ? 'absolute right-1 top-1' : 'ml-auto')}
+                    aria-label={`${item.badgeCount} pending`}
+                  >
+                    {/* Subtle pulse only while there are pending items; respects reduced-motion. */}
+                    <span className="size-1.5 rounded-full bg-[var(--portal-color)] motion-safe:animate-pulse" aria-hidden />
+                    <span className="rounded-full bg-[var(--portal-color)]/15 px-1.5 text-xs font-medium leading-5 text-[var(--portal-color)]">
+                      {item.badgeCount > 9 ? '9+' : item.badgeCount}
+                    </span>
+                  </span>
+                ) : null}
               </Link>
             );
           })}

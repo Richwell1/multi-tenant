@@ -3,7 +3,7 @@ import { Link, useParams, useNavigate } from '@tanstack/react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { CheckCircle2, Circle } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import { APP_VERSION } from '@/lib/app-version';
 import { PACKAGE_MANIFEST, availableFeatures, hasFeature } from '@/lib/packages/manifest';
@@ -12,6 +12,9 @@ import { useMarketplacePackages, useInstallMarketplaceExtension } from '@/hooks/
 import { useDocumentNotes, useCreateDocumentNote } from '@/hooks/document-notes';
 import { useExpenseRequests, useCreateExpenseRequest } from '@/hooks/expense-requests';
 import { useVisitorEntries, useCreateVisitor } from '@/hooks/visitor-register';
+import { useAvailableUpdates, useInstallCompanyUpdate } from '@/hooks/company-updates';
+import { packageCategoryLabel, type PackageCategory } from '@/lib/packages/category';
+import { formatDate } from '@/lib/utils';
 import { RepositoryError } from '@/data/errors';
 import { StatCard } from '@/components/stat-card';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,10 +30,6 @@ import {
   ErrorState,
   EmptyState,
   ConfirmDialog,
-  InstallationProgress,
-  InstallationSuccess,
-  InstallationFailure,
-  type InstallationPhase,
 } from '@/components/states';
 import { useSession } from '@/lib/session';
 import { useCompanyId } from '@/hooks/use-company-id';
@@ -39,10 +38,8 @@ import { PackageGuard } from '@/components/guards';
 import { useHasPackage, usePackageEntitlements } from '@/hooks/entitlements';
 import { PACKAGE_CODES } from '@/lib/entitlements';
 import { notify } from '@/lib/notify';
-import { forceNextFailure } from '@/data/api';
 import {
   useCompanyUsers,
-  useInstallPackage,
   useSaveSettings,
 } from '@/hooks/queries';
 import { useDepartments, useCreateDepartment, useDisableDepartment } from '@/hooks/departments';
@@ -598,127 +595,72 @@ export function PositionsPage() {
 
 // --- Updates: full installation state machine --------------------------------
 
-const WIZARD_STEPS = ['Review', 'Impact', 'Confirm', 'Install'] as const;
+/** Category badge tones for the workspace update cards. */
+const UPDATE_CATEGORY_TONE: Record<PackageCategory, 'platform' | 'company' | 'warning' | 'role'> = {
+  standard_package: 'platform',
+  marketplace_extension: 'company',
+  private_extension: 'warning',
+  private_standalone: 'role',
+};
 
 export function UpdatesPage() {
-  const { company } = useSession();
-  const companyContext = useCompanyContext();
-  const companyName = company?.name ?? companyContext.data?.companyName ?? 'this workspace';
-  const tid = useTenantId();
-  const install = useInstallPackage();
-  const [phase, setPhase] = useState<InstallationPhase>('available');
-  const [step, setStep] = useState(0);
-  const [forceFail, setForceFail] = useState(false);
-
-  // Candidate package for this workspace demo (all-company standard update).
-  const target = 'attendance-management' as const;
-  const packageName = 'Attendance Management 1.0.0';
-
-  const runInstall = () => {
-    if (!tid) return;
-    setPhase('installing');
-    notify.updateStarted(packageName);
-    if (forceFail) forceNextFailure('install');
-    install.mutate(
-      { packageKey: target, companyId: tid },
-      {
-        onSuccess: () => {
-          setPhase('installed');
-          notify.updateInstalled(packageName);
-        },
-        onError: () => {
-          setPhase('failed');
-          notify.updateFailed(packageName);
-        },
-      },
-    );
-  };
-
-  const reset = () => {
-    setPhase('available');
-    setStep(0);
-  };
+  const query = useAvailableUpdates();
+  const install = useInstallCompanyUpdate();
+  // Per-card pending state: only the update being installed shows "Installing…".
+  const installingId = install.isPending ? install.variables : undefined;
+  const updates = query.data ?? [];
 
   return (
     <>
-      <PageHeader title="Available Updates" description="Review and activate assigned packages" />
-
-      {(phase === 'available' || phase === 'pending_confirmation') && (
-        <Card>
-          <CardContent className="pt-6">
-            <ol className="flex flex-wrap gap-6">
-              {WIZARD_STEPS.map((label, i) => (
-                <li key={label} className="flex items-center gap-2 text-sm">
-                  {i < step ? (
-                    <CheckCircle2 className="size-5 text-company" />
-                  ) : (
-                    <Circle className={i === step ? 'size-5 text-company' : 'size-5 text-content-variant/40'} />
-                  )}
-                  <span className={i === step ? 'font-medium text-content' : 'text-content-variant'}>{label}</span>
-                </li>
-              ))}
-            </ol>
-
-            <div className="mt-6 text-sm">
-              {step === 0 && (
-                <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">
-                  <span>{packageName}</span>
-                  <Badge tone="company">standard update</Badge>
-                </div>
-              )}
-              {step === 1 && (
-                <ul className="space-y-1 text-content-variant">
-                  <li>• Adds an Attendance entry to the sidebar</li>
-                  <li>• Creates the attendance_records table</li>
-                  <li>• Requires the packages.activate permission</li>
-                </ul>
-              )}
-              {step === 2 && (
-                <div className="space-y-3">
-                  <p className="text-content-variant">Confirm activation for {companyName}. This applies the package to your workspace.</p>
-                  <label className="flex items-center gap-2 text-xs text-content-variant">
-                    <input type="checkbox" checked={forceFail} onChange={(e) => setForceFail(e.target.checked)} />
-                    Simulate a failed installation (demo)
-                  </label>
-                </div>
-              )}
-            </div>
-
-            <div className="mt-6 flex gap-2">
-              {step > 0 && (
-                <Button variant="secondary" onClick={() => setStep((s) => s - 1)}>
-                  Back
-                </Button>
-              )}
-              {step < 2 && <Button onClick={() => setStep((s) => s + 1)}>Next</Button>}
-              {step === 2 && (
-                <Button onClick={() => setPhase('pending_confirmation')}>Activate Update</Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {phase === 'installing' && <InstallationProgress packageName={packageName} />}
-      {phase === 'installed' && <InstallationSuccess packageName={packageName} onDone={reset} />}
-      {phase === 'failed' && (
-        <InstallationFailure
-          packageName={packageName}
-          reason="A network error interrupted the installation. No changes were applied."
-          onRetry={runInstall}
-          retrying={install.isPending}
+      <PageHeader title="Available Updates" description="Review and install updates assigned to your company" />
+      {query.isPending ? (
+        <PageLoadingState label="Loading updates…" />
+      ) : query.isError ? (
+        <ErrorState onRetry={() => query.refetch()} retrying={query.isFetching} />
+      ) : updates.length === 0 ? (
+        <EmptyState
+          title="Your packages are up to date"
+          description="There are no pending system, marketplace, or private package updates."
+          action={
+            <Link to="/packages">
+              <Button variant="outline">View Installed Packages</Button>
+            </Link>
+          }
         />
+      ) : (
+        <div className="space-y-4">
+          {updates.map((u) => {
+            const isInstalling = installingId === u.installationId;
+            const failed = u.installationState === 'failed';
+            return (
+              <Card key={u.installationId}>
+                <CardContent className="flex flex-wrap items-start justify-between gap-4 pt-6">
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="font-medium text-content">{u.packageName}</h3>
+                      <Badge tone={UPDATE_CATEGORY_TONE[u.category]}>{packageCategoryLabel(u.category)}</Badge>
+                    </div>
+                    {u.basePackageName && <p className="text-sm text-content-variant">Extends {u.basePackageName}</p>}
+                    <p className="text-sm text-content-variant">
+                      Installed: {u.installedVersion ?? '—'} · Available: {u.availableVersion}
+                    </p>
+                    {u.releaseNotes && <p className="text-sm">{u.releaseNotes}</p>}
+                    {u.releasedAt && <p className="text-xs text-content-variant">Released {formatDate(u.releasedAt)}</p>}
+                    {failed && <p className="text-sm text-danger">The previous attempt failed. You can retry.</p>}
+                  </div>
+                  <Button
+                    onClick={() => install.mutate(u.installationId)}
+                    disabled={isInstalling}
+                    aria-label={`Install update for ${u.packageName}`}
+                  >
+                    {isInstalling ? 'Installing…' : failed ? 'Retry' : 'Install Update'}
+                  </Button>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
       )}
-
-      <ConfirmDialog
-        open={phase === 'pending_confirmation'}
-        title="Install update?"
-        description={`${packageName} will be installed into ${companyName}.`}
-        confirmLabel="Install now"
-        pending={install.isPending}
-        onCancel={() => setPhase('available')}
-        onConfirm={runInstall}
-      />
     </>
   );
 }

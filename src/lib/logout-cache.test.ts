@@ -16,9 +16,11 @@ describe('logout clears marketplace and private entitlement cache', () => {
     });
     qc.setQueryData(queryKeys.documentNotes.list('c1'), [{ id: 'n1' }]);
     qc.setQueryData(queryKeys.visitorRegister.list('c1'), [{ id: 'v1' }]);
+    qc.setQueryData(queryKeys.updates.list('c1'), [{ installationId: 'i1' }]);
 
     expect(qc.getQueryData(queryKeys.marketplace.all)).toBeDefined();
     expect(qc.getQueryData(queryKeys.context.company('u1'))).toBeDefined();
+    expect(qc.getQueryData(queryKeys.updates.list('c1'))).toBeDefined();
 
     qc.clear();
 
@@ -27,5 +29,7 @@ describe('logout clears marketplace and private entitlement cache', () => {
     expect(qc.getQueryData(queryKeys.context.company('u1'))).toBeUndefined();
     expect(qc.getQueryData(queryKeys.documentNotes.list('c1'))).toBeUndefined();
     expect(qc.getQueryData(queryKeys.visitorRegister.list('c1'))).toBeUndefined();
+    // The pending-update count shares this key — cleared on logout (no tenant leak).
+    expect(qc.getQueryData(queryKeys.updates.list('c1'))).toBeUndefined();
   });
 });

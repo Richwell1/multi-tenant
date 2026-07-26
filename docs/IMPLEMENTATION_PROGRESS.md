@@ -8,12 +8,12 @@
 | | |
 |---|---|
 | Product | Multi-Tenants HR |
-| Current branch | `feat/marketplace-and-private-packages` |
-| Current phase | Marketplace extensions + private extensions + private standalone |
+| Current branch | `main` |
+| Current phase | Marketplace extensions + private extensions + private standalone (merged) |
 | Current increment | Category/visibility model, company self-install, private assignment, adoption, 5 minimal packages |
 | Default data source | `mock` (`VITE_DATA_SOURCE`), Supabase path behind lazy adapters |
 | Local Supabase ports | API/Functions 54331 · DB 54332 · Studio 54333 (project-local +10 offset) |
-| Hosted Supabase | Linked (`uezvaqoqqqgblpcbkujq`); 18 migrations deployed through 2026-07-27; branch adds 4 local migrations (not yet pushed) |
+| Hosted Supabase | Linked (`uezvaqoqqqgblpcbkujq`); all 23 migrations deployed (marketplace + private packages pushed 2026-07-29); local↔remote aligned |
 | Test count | 273 application tests |
 
 > `main` carries everything through 5.6 and the hosted Supabase baseline is deployed. The hosted CI quality gate passed the full
@@ -267,8 +267,10 @@
   `private_extensions` (7), `private_standalone` (6) = 31 new scenarios.
 - Local verification: Supabase reset (23 migrations) ✅ · 15 SQL/RLS suites ✅ ·
   typecheck ✅ · lint ✅ · 273 application tests ✅ · build ✅ (APP_VERSION `v0.1.0`).
-- Hosted status: the 4 branch migrations are **not yet pushed**; hosted push +
-  browser smoke remain a deploy step after review.
+- Hosted status: merged to `main` and deployed; the 5 pending migrations (this
+  branch's 4 plus the minimal-demo seed) were pushed to hosted Supabase on
+  2026-07-29 and local↔remote history is aligned (23/23). Hosted browser smoke
+  remains.
 
 ## Verification history
 

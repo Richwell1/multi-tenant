@@ -12,8 +12,8 @@ interface Row {
 export class SupabaseHealthRepository implements HealthRepository {
   async list(): Promise<HealthSignal[]> {
     const { data, error } = await getSupabaseClient().rpc('system_health');
-    if (error) throw mapSupabaseError(error);
-    return (data as unknown as Row[]).map((r) => ({
+    if (error) throw mapSupabaseError(error, 'admin.health.list');
+    return ((data ?? []) as unknown as Row[]).map((r) => ({
       label: r.label,
       value: r.value,
       status: r.status,

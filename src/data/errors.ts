@@ -31,6 +31,23 @@ interface SupabaseLikeError {
   hint?: string;
 }
 
+const safeMessage = (message: string | undefined) =>
+  (message ?? 'Unknown Supabase error')
+    .replace(/eyJ[a-zA-Z0-9._-]+/g, '[redacted-token]')
+    .slice(0, 300);
+
+/** Development-only, structured Supabase diagnostics without credentials. */
+export function logSupabaseError(operation: string, error: unknown): void {
+  if (!import.meta.env.DEV) return;
+  const candidate = isSupabaseLike(error) ? error : undefined;
+  console.error('[supabase]', {
+    operation,
+    code: candidate?.code ?? 'UNKNOWN',
+    status: candidate?.status ?? null,
+    message: safeMessage(candidate?.message ?? (error instanceof Error ? error.message : undefined)),
+  });
+}
+
 function isSupabaseLike(e: unknown): e is SupabaseLikeError {
   return typeof e === 'object' && e !== null && ('message' in e || 'code' in e || 'status' in e);
 }
@@ -40,8 +57,10 @@ function isSupabaseLike(e: unknown): e is SupabaseLikeError {
  * Pure and provider-agnostic so it can be unit-tested and reused by every
  * Supabase adapter.
  */
-export function mapSupabaseError(error: unknown): RepositoryError {
+export function mapSupabaseError(error: unknown, operation?: string): RepositoryError {
   if (error instanceof RepositoryError) return error;
+
+  if (operation) logSupabaseError(operation, error);
 
   if (isSupabaseLike(error)) {
     const { code, status, message } = error;

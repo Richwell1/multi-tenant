@@ -18,8 +18,8 @@ export class SupabaseAuditRepository implements AuditRepository {
       p_company_ids: filters.companyIds ?? undefined,
       p_limit: filters.limit ?? 200,
     });
-    if (error) throw mapSupabaseError(error);
-    return (data as unknown as Row[]).map((r) => ({
+    if (error) throw mapSupabaseError(error, 'admin.audit.list');
+    return ((data ?? []) as unknown as Row[]).map((r) => ({
       id: r.id,
       timestamp: r.created_at,
       actor: r.actor,

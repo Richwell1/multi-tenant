@@ -21,6 +21,7 @@ import { useCompanies, useCompany } from '@/hooks/queries';
 import { useUsage } from '@/hooks/usage';
 import { useAudit } from '@/hooks/audit';
 import { useHealth } from '@/hooks/health';
+import { resolveOptionalWidget } from '@/lib/admin-dashboard';
 import { useDiagnostic, useDiagnostics } from '@/hooks/diagnostics';
 import { DIAGNOSTIC_DIMENSIONS, type DiagnosticCheck } from '@/data/diagnostics';
 import {
@@ -108,6 +109,8 @@ export function AdminDashboard() {
   const companies = useCompanies();
   const health = useHealth();
   const audit = useAudit(emptyCompanyTarget('all_companies'));
+  const healthWidget = resolveOptionalWidget(health);
+  const auditWidget = resolveOptionalWidget(audit);
 
   if (companies.isPending) return <PageLoadingState label="Loading platform overview…" />;
   if (companies.isError)
@@ -149,7 +152,12 @@ export function AdminDashboard() {
             <CardTitle>Recent Activity</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            {audit.data?.slice(0, 3).map((a) => (
+            {auditWidget.state === 'loading' && <p className="text-content-variant">Loading activity…</p>}
+            {auditWidget.state === 'unavailable' && (
+              <p className="text-content-variant">Activity is temporarily unavailable.</p>
+            )}
+            {auditWidget.state === 'empty' && <p className="text-content-variant">No activity yet.</p>}
+            {auditWidget.rows.slice(0, 3).map((a) => (
               <div key={a.id} className="flex justify-between">
                 <span className="text-content">{a.action}</span>
                 <span className="text-content-variant">{a.target}</span>
@@ -162,7 +170,12 @@ export function AdminDashboard() {
             <CardTitle>System Health</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            {health.data?.map((h) => (
+            {healthWidget.state === 'loading' && <p className="text-content-variant">Checking health…</p>}
+            {healthWidget.state === 'unavailable' && (
+              <p className="text-content-variant">Health signals are temporarily unavailable.</p>
+            )}
+            {healthWidget.state === 'empty' && <p className="text-content-variant">No health signals yet.</p>}
+            {healthWidget.rows.map((h) => (
               <div key={h.label} className="flex items-center justify-between">
                 <span className="text-content-variant">{h.label}</span>
                 <Badge tone={h.status}>{h.value}</Badge>

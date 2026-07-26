@@ -1,5 +1,5 @@
 import { getSupabaseClient } from '@/lib/supabase';
-import { mapSupabaseError, RepositoryError } from './errors';
+import { logSupabaseError, mapSupabaseError, RepositoryError } from './errors';
 import type {
   AttendanceRecord,
   AuditLogEntry,
@@ -40,7 +40,6 @@ type CompanyRow = {
   subdomain: string | null;
   status: Company['status'];
   created_at: string;
-  company_settings: { company_email: string | null } | null;
 };
 
 type AssignmentRow = {
@@ -52,6 +51,23 @@ type PackageStatusRow = { key: string; is_active: boolean };
 type CompanySettingRow = { company_id: string; company_email: string | null };
 
 type EmployeeCountRow = { company_id: string };
+
+type QueryResult<T> = { data: T | null; error: unknown | null };
+
+function optionalQueryData<T>(
+  result: PromiseSettledResult<QueryResult<T>>,
+  operation: string,
+): T | null {
+  if (result.status === 'rejected') {
+    logSupabaseError(operation, result.reason);
+    return null;
+  }
+  if (result.value.error) {
+    logSupabaseError(operation, result.value.error);
+    return null;
+  }
+  return result.value.data;
+}
 
 const asPackageKey = (key: string): PackageKey => key as PackageKey;
 
@@ -77,39 +93,30 @@ export class SupabaseRepository implements Repository {
       .from('companies')
       .select('id,name,slug,subdomain,status,created_at')
       .order('name');
-    if (error) throw mapSupabaseError(error);
+    if (error) throw mapSupabaseError(error, 'admin.companies.list');
 
     const rows = (data ?? []) as unknown as CompanyRow[];
     if (!rows.length) return [];
     const ids = rows.map((row) => row.id);
 
-    const [
-      { data: assignments, error: assignmentError },
-      { data: employees, error: employeeError },
-      { data: settings, error: settingsError },
-      { data: packageStatuses, error: packageStatusError },
-    ] =
-      await Promise.all([
-        client
-          .from('company_packages')
-          .select('company_id,package_key,enabled')
-          .in('company_id', ids),
-        client.from('employees').select('company_id').in('company_id', ids),
-        client.from('company_settings').select('company_id,company_email').in('company_id', ids),
-        client.from('packages').select('key,is_active'),
-      ]);
-    if (assignmentError) throw mapSupabaseError(assignmentError);
-    if (employeeError) throw mapSupabaseError(employeeError);
-    if (settingsError) throw mapSupabaseError(settingsError);
-    if (packageStatusError) throw mapSupabaseError(packageStatusError);
+    const [assignmentResult, employeeResult, settingsResult, packageStatusResult] = await Promise.allSettled([
+      client.from('company_packages').select('company_id,package_key,enabled').in('company_id', ids),
+      client.from('employees').select('company_id').in('company_id', ids),
+      client.from('company_settings').select('company_id,company_email').in('company_id', ids),
+      client.from('packages').select('key,is_active'),
+    ]);
+    const assignments = optionalQueryData<AssignmentRow[]>(assignmentResult, 'admin.companies.package_assignments');
+    const employees = optionalQueryData<EmployeeCountRow[]>(employeeResult, 'admin.companies.employee_counts');
+    const settings = optionalQueryData<CompanySettingRow[]>(settingsResult, 'admin.companies.settings');
+    const packageStatuses = optionalQueryData<PackageStatusRow[]>(packageStatusResult, 'admin.companies.package_catalog');
 
     const activePackages = new Set(
-      ((packageStatuses ?? []) as unknown as PackageStatusRow[])
+      (packageStatuses ?? [])
         .filter((pkg) => pkg.is_active)
         .map((pkg) => pkg.key),
     );
     const packageMap = new Map<string, PackageKey[]>();
-    for (const row of (assignments ?? []) as unknown as AssignmentRow[]) {
+    for (const row of assignments ?? []) {
       if (!row.enabled || !activePackages.has(row.package_key)) continue;
       const current = packageMap.get(row.company_id) ?? [];
       current.push(asPackageKey(row.package_key));
@@ -117,10 +124,10 @@ export class SupabaseRepository implements Repository {
     }
 
     const settingsMap = new Map(
-      ((settings ?? []) as unknown as CompanySettingRow[]).map((row) => [row.company_id, row.company_email]),
+      (settings ?? []).map((row) => [row.company_id, row.company_email]),
     );
     const employeeCounts = new Map<string, number>();
-    for (const row of (employees ?? []) as unknown as EmployeeCountRow[]) {
+    for (const row of employees ?? []) {
       employeeCounts.set(row.company_id, (employeeCounts.get(row.company_id) ?? 0) + 1);
     }
 
@@ -153,19 +160,34 @@ export class SupabaseRepository implements Repository {
     const client = getSupabaseClient();
     const { data, error } = await client
       .from('packages')
-      .select('key,name,type,is_active,package_versions(version,notes,released_at)')
+      .select('key,name,type,is_active')
       .order('name');
-    if (error) throw mapSupabaseError(error);
+    if (error) throw mapSupabaseError(error, 'admin.packages.list');
 
-    return (data ?? []).map((row) => {
-      const r = row as unknown as {
-        key: string;
-        name: string;
-        type: Package['type'];
-        is_active: boolean;
-        package_versions: { version: string; notes: string; released_at: string | null }[];
-      };
-      const history = [...(r.package_versions ?? [])].sort((a, b) =>
+    const packageRows = (data ?? []) as unknown as Array<{
+      key: string;
+      name: string;
+      type: Package['type'];
+      is_active: boolean;
+    }>;
+    const versionsResult = await Promise.allSettled([
+      client.from('package_versions').select('package_key,version,notes,released_at'),
+    ]);
+    const versions = optionalQueryData<
+      Array<{ package_key: string; version: string; notes: string; released_at: string | null }>
+    >(versionsResult[0], 'admin.packages.versions');
+    const versionsByPackage = new Map<
+      string,
+      Array<{ version: string; notes: string; released_at: string | null }>
+    >();
+    for (const version of versions ?? []) {
+      const current = versionsByPackage.get(version.package_key) ?? [];
+      current.push(version);
+      versionsByPackage.set(version.package_key, current);
+    }
+
+    return packageRows.map((r) => {
+      const history = [...(versionsByPackage.get(r.key) ?? [])].sort((a, b) =>
         (b.released_at ?? '').localeCompare(a.released_at ?? ''),
       );
       const latest = history[0];
@@ -250,7 +272,7 @@ export class SupabaseRepository implements Repository {
       .select('user_id,company_id,role,status')
       .eq('company_id', tenantId)
       .order('created_at');
-    if (error) throw mapSupabaseError(error);
+    if (error) throw mapSupabaseError(error, 'admin.company_users.list');
 
     // auth.users is intentionally not exposed through PostgREST. The current
     // schema stores membership identity, role, and status only; profile fields

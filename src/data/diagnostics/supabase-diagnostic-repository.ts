@@ -1,5 +1,5 @@
 import { getSupabaseClient } from '@/lib/supabase';
-import { mapSupabaseError } from '@/data/errors';
+import { logSupabaseError, mapSupabaseError } from '@/data/errors';
 import type { PackageKey } from '@/data/types';
 import { DIAGNOSTIC_DIMENSIONS } from './types';
 import type { DiagnosticRepository } from './diagnostic-repository';
@@ -12,6 +12,22 @@ import type {
 } from './types';
 
 const REPORT_COLS = 'id,package_version_id,summary,recommendation,result';
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function optionalData<T>(
+  result: PromiseSettledResult<{ data: T | null; error: unknown | null }>,
+  operation: string,
+): T | null {
+  if (result.status === 'rejected') {
+    logSupabaseError(operation, result.reason);
+    return null;
+  }
+  if (result.value.error) {
+    logSupabaseError(operation, result.value.error);
+    return null;
+  }
+  return result.value.data;
+}
 
 interface Row {
   id: string;
@@ -70,20 +86,20 @@ export class SupabaseDiagnosticRepository implements DiagnosticRepository {
       .from('diagnostic_reports')
       .select(REPORT_COLS)
       .order('created_at', { ascending: false });
-    if (error) throw mapSupabaseError(error);
+    if (error) throw mapSupabaseError(error, 'admin.diagnostics.list');
     const reports = (data ?? []) as unknown as Row[];
     if (!reports.length) return [];
 
-    const [{ data: versions, error: versionError }, { data: checks, error: checkError }] = await Promise.all([
+    const [versionResult, checkResult] = await Promise.allSettled([
       client.from('package_versions').select('id,package_key').in('id', reports.map((r) => r.package_version_id)),
       client.from('diagnostic_checks').select('report_id,dimension,status,required,detail').in('report_id', reports.map((r) => r.id)),
     ]);
-    if (versionError) throw mapSupabaseError(versionError);
-    if (checkError) throw mapSupabaseError(checkError);
+    const versions = optionalData<VersionRow[]>(versionResult, 'admin.diagnostics.versions');
+    const checks = optionalData<CheckRow[]>(checkResult, 'admin.diagnostics.checks');
 
-    const packageKeys = new Map(((versions ?? []) as unknown as VersionRow[]).map((v) => [v.id, v.package_key]));
+    const packageKeys = new Map((versions ?? []).map((v) => [v.id, v.package_key]));
     const checksByReport = new Map<string, DiagnosticCheck[]>();
-    for (const row of (checks ?? []) as unknown as CheckRow[]) {
+    for (const row of checks ?? []) {
       const current = checksByReport.get(row.report_id) ?? [];
       current.push(toCheck(row));
       checksByReport.set(row.report_id, current);
@@ -92,25 +108,26 @@ export class SupabaseDiagnosticRepository implements DiagnosticRepository {
   }
 
   async getById(id: string): Promise<DiagnosticReport | undefined> {
+    if (!UUID_PATTERN.test(id)) return undefined;
     const client = getSupabaseClient();
     const { data, error } = await client
       .from('diagnostic_reports')
       .select(REPORT_COLS)
       .eq('id', id)
       .maybeSingle();
-    if (error) throw mapSupabaseError(error);
+    if (error) throw mapSupabaseError(error, 'admin.diagnostics.detail');
     if (!data) return undefined;
     const report = data as unknown as Row;
-    const [{ data: version, error: versionError }, { data: checks, error: checkError }] = await Promise.all([
+    const [versionResult, checkResult] = await Promise.allSettled([
       client.from('package_versions').select('id,package_key').eq('id', report.package_version_id).maybeSingle(),
       client.from('diagnostic_checks').select('report_id,dimension,status,required,detail').eq('report_id', report.id),
     ]);
-    if (versionError) throw mapSupabaseError(versionError);
-    if (checkError) throw mapSupabaseError(checkError);
+    const version = optionalData<VersionRow | null>(versionResult, 'admin.diagnostics.detail.version');
+    const checks = optionalData<CheckRow[]>(checkResult, 'admin.diagnostics.detail.checks');
     return toDomain(
       report,
-      (version as unknown as VersionRow | null)?.package_key,
-      ((checks ?? []) as unknown as CheckRow[]).map(toCheck),
+      version?.package_key,
+      (checks ?? []).map(toCheck),
     );
   }
 
@@ -125,7 +142,7 @@ export class SupabaseDiagnosticRepository implements DiagnosticRepository {
       })
       .select('id')
       .single();
-    if (reportError) throw mapSupabaseError(reportError);
+    if (reportError) throw mapSupabaseError(reportError, 'admin.diagnostics.create');
 
     const reportId = (report as { id: string }).id;
     const { error: checksError } = await client.from('diagnostic_checks').insert(
@@ -136,10 +153,10 @@ export class SupabaseDiagnosticRepository implements DiagnosticRepository {
         detail: 'No issues detected.',
       })),
     );
-    if (checksError) throw mapSupabaseError(checksError);
+    if (checksError) throw mapSupabaseError(checksError, 'admin.diagnostics.create_checks');
 
     const created = await this.getById(reportId);
-    if (!created) throw mapSupabaseError({ message: 'Diagnostic not found after creation' });
+    if (!created) throw mapSupabaseError({ message: 'Diagnostic not found after creation' }, 'admin.diagnostics.verify_create');
     return created;
   }
 }

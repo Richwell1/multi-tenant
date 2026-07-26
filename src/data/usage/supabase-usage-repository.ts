@@ -14,8 +14,8 @@ export class SupabaseUsageRepository implements UsageRepository {
     const { data, error } = await getSupabaseClient().rpc('usage_metrics', {
       p_company_ids: filters.companyIds ?? undefined,
     });
-    if (error) throw mapSupabaseError(error);
-    return (data as unknown as Row[]).map((r) => ({
+    if (error) throw mapSupabaseError(error, 'admin.usage.list');
+    return ((data ?? []) as unknown as Row[]).map((r) => ({
       module: r.module,
       actionCount: Number(r.action_count),
       companiesUsing: Number(r.companies_using),

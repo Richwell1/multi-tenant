@@ -42,7 +42,7 @@ insert into public.packages (key, name, type, is_active) values
 on conflict (key) do update set is_active = excluded.is_active;
 
 insert into public.package_versions (id, package_key, version, notes, released_at) values
-  ('99999999-0000-0000-0000-0000000000a0', 'attendance-management', '1.0.0', 'seed', now())
+  ('99999999-0000-0000-0000-0000000000a0', 'attendance-management', '2.0.0', 'seed', now())
 on conflict (package_key, version) do nothing;
 
 insert into public.company_packages (company_id, package_key, enabled) values

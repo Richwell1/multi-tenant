@@ -13,7 +13,7 @@
 | Current increment | Package creation, versioning, release planning, per-company processing, retry, and release details |
 | Default data source | `mock` (`VITE_DATA_SOURCE`), Supabase path behind lazy adapters |
 | Local Supabase ports | API/Functions 54331 · DB 54332 · Studio 54333 (project-local +10 offset) |
-| Hosted Supabase | Linked (`uezvaqoqqqgblpcbkujq`); 15 migrations and required API grants deployed |
+| Hosted Supabase | Linked (`uezvaqoqqqgblpcbkujq`); all 16 migrations deployed (admin package management pushed 2026-07-26); local↔remote history aligned |
 | Test count | 231 application tests |
 
 > `main` carries everything through 5.6 and the hosted Supabase baseline is deployed. The hosted CI quality gate passed the full
@@ -159,12 +159,12 @@
   vocabulary is preserved (`standard_update`, `shared_extension`, and
   `private_customization`).
 - Added migration `20260726020000_admin_package_management.sql` and SQL suite
-  `admin_package_management_rls.sql` with 18 scenarios. These changes are
-  local to this branch and are not yet deployed to hosted Supabase.
+  `admin_package_management_rls.sql` with 18 scenarios. The migration was pushed
+  to hosted Supabase on 2026-07-26; local↔remote history is aligned (16/16).
 - Local verification: Supabase reset ✅ · 9 SQL/RLS suites / 112 scenarios ✅ ·
   typecheck ✅ · lint ✅ · 231 application tests ✅ · build ✅.
-- Hosted status: previous 15-migration baseline remains deployed; this feature
-  requires a migration push and hosted browser smoke before release.
+- Hosted status: all 16 migrations deployed (the admin package management
+  migration was pushed 2026-07-26); hosted browser smoke remains before release.
 - Remaining risks: automatic processing is currently client-orchestrated with
   `Promise.allSettled` (each company is isolated, but no background worker is
   introduced); hosted deployment and browser verification remain pending.

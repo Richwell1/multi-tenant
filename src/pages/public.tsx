@@ -18,6 +18,7 @@ import { RepositoryError } from '@/data/errors';
 import { companyContextRepository, platformAdminRepository } from '@/data/context';
 import { notify } from '@/lib/notify';
 import { cn } from '@/lib/utils';
+import { AppVersion } from '@/components/app-version';
 
 // --- Auth: email + password only (no reset, MFA, invitations, social) ---------
 
@@ -66,7 +67,9 @@ function AuthLayout({ children, portalClass }: { children: React.ReactNode; port
               </div>
             </div>
             {children}
-            <p className="mt-5 text-center text-xs text-content-variant">One shared platform. Clear tenant boundaries.</p>
+            <p className="mt-5 text-center text-xs text-content-variant">
+              One shared platform. Clear tenant boundaries. <AppVersion className="ml-1" />
+            </p>
           </div>
         </div>
       </div>

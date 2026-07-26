@@ -384,3 +384,34 @@ This data may be seeded or generated from simple usage events.
 8. A FAIL diagnostic disables the publish action.
 9. Company users cannot access the Platform Super Admin portal.
 10. The demonstration can be completed without email delivery, password reset, MFA, invitations, or in-app chat.
+
+## 8. Implementation consistency and deferred scope
+
+The current implementation uses one React/Vite application, one Supabase
+project, Supabase Auth, PostgreSQL RLS, domain services, repository adapters,
+and TanStack Query. The approved roles are `platform_super_admin`,
+`company_admin`, and `company_user`; an `hr_manager` role is not part of this
+product version.
+
+The implemented platform surfaces include company registration and shared
+login, tenant resolution, HR Core, Leave, Attendance, Request Records,
+package releases and targeting, diagnostics, installation monitoring, usage,
+audit, and system health. Hosted and local runtime selection is controlled by
+`VITE_DATA_SOURCE`; the publishable Supabase key is the only browser key.
+
+The application version is displayed from `package.json` through the shared
+version module. Package release versions remain separate from the platform
+version. Session restoration has an explicit failure state, and logout clears
+the local session and tenant-scoped query cache even if remote sign-out fails.
+Loading, empty, success, warning, error, retry, suspended, and confirmation
+states are shared UI concerns rather than page-specific ad hoc behavior.
+
+The following remain deferred and are not implied by the acceptance criteria:
+
+- employee self-service identity linkage
+- configurable leave types
+- advanced attendance workflows
+- automated browser visual/E2E coverage
+- wildcard custom domains and tenant subdomain deployment
+- time-series analytics
+- diagnostic authoring beyond the current release gate

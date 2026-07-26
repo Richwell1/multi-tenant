@@ -231,3 +231,21 @@ The demo succeeds when the supervisor can clearly see:
 6. A standard update visible to both Alpha and Beta.
 7. A simple diagnostic result before a package is released.
 8. Role-based differences between Platform Super Admin and company users.
+
+## 13. Current implementation notes
+
+The running application is a React/Vite SPA with a Supabase-backed runtime and
+a seeded mock runtime for local demonstration work. Repository factories keep
+those data sources behind the same domain interfaces. Supabase mode uses real
+company UUIDs, authenticated RLS, package entitlements, and server-authorized
+RPCs; the browser never uses a service-role key.
+
+The shared shell and public authentication screens display platform version
+`v0.1.0`, sourced from `package.json`. This is independent from package release
+versions such as Leave Management `1.0.0`. Session restoration and logout have
+explicit failure-safe behavior, and zero-row results are presented as valid
+empty states.
+
+Local CI covers typecheck, lint, application tests, production build, and the
+94-scenario SQL/RLS matrix. Full hosted browser smoke testing and wildcard
+custom domains remain deployment work rather than completed automated coverage.

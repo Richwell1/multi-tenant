@@ -11,6 +11,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import type { Company, Portal } from '@/data/types';
 import { authRepository } from '@/data/auth';
 import type { AuthSession, SignInInput } from '@/data/auth';
+import { notify } from './notify';
 import { getCompany, resolveContext, type ResolvedContext } from './tenant';
 
 interface SessionState {
@@ -45,13 +46,23 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   // Restore any existing session on load and stay in sync with auth changes.
   useEffect(() => {
     let active = true;
-    authRepository.getSession().then((s) => {
-      if (active) {
-        setSession(s);
-        setAuthLoading(false);
-      }
+    authRepository
+      .getSession()
+      .then((s) => {
+        if (active) setSession(s);
+      })
+      .catch(() => {
+        // A failed restore must release guards; otherwise a transient auth
+        // error leaves the application on an infinite loading screen.
+        if (active) setSession(null);
+      })
+      .finally(() => {
+        if (active) setAuthLoading(false);
+      });
+    const unsubscribe = authRepository.onAuthStateChange((s) => {
+      setSession(s);
+      setAuthLoading(false);
     });
-    const unsubscribe = authRepository.onAuthStateChange((s) => setSession(s));
     return () => {
       active = false;
       unsubscribe();
@@ -65,10 +76,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
-    await authRepository.signOut();
+    let signOutFailed = false;
+    try {
+      await authRepository.signOut();
+    } catch {
+      signOutFailed = true;
+    }
     setSession(null);
     // Clear cached tenant-scoped data so nothing leaks between sessions.
     queryClient.clear();
+    if (signOutFailed) notify.networkFailure('Sign out could not be confirmed. Local data was cleared.');
   }, [queryClient]);
 
   const value = useMemo<SessionState>(

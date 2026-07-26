@@ -66,7 +66,10 @@ describe('UI-state components', () => {
     trigger.focus();
     fireEvent.click(trigger);
 
-    expect(screen.getByRole('dialog')).toHaveAttribute('aria-describedby', 'confirm-description');
+    const dialog = screen.getByRole('dialog');
+    const descriptionId = dialog.getAttribute('aria-describedby');
+    expect(descriptionId).toBeTruthy();
+    expect(document.getElementById(descriptionId ?? '')).toHaveTextContent('This action cannot be undone.');
     expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus();
     const confirm = screen.getByRole('button', { name: 'Confirm' });
     confirm.focus();

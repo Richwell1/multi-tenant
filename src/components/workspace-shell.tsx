@@ -14,11 +14,14 @@ import {
 import { AppShell, type NavItem } from './app-shell';
 import { useSession } from '@/lib/session';
 import { usePackageEntitlements } from '@/hooks/entitlements';
+import { useCompanyContext } from '@/hooks/context';
 import { hasPackage, PACKAGE_CODES } from '@/lib/entitlements';
 
 export function WorkspaceShell({ children }: { children: ReactNode }) {
   const { company } = useSession();
+  const companyContext = useCompanyContext();
   const { codes } = usePackageEntitlements();
+  const companyName = company?.name ?? companyContext.data?.companyName ?? 'Company Workspace';
 
   const nav: NavItem[] = [
     { to: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="size-4" /> },
@@ -47,7 +50,7 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
   return (
     <AppShell
       portal="company"
-      brandLine={company?.name ?? 'Company Workspace'}
+      brandLine={companyName}
       portalBadge="Active Workspace"
       nav={nav}
     >

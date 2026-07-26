@@ -3,6 +3,7 @@ import { Link, useRouterState } from '@tanstack/react-router';
 import { PanelLeftClose, PanelLeftOpen, LogOut, Menu, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { AppVersion } from '@/components/app-version';
 import { useSession } from '@/lib/session';
 import { isNavItemActive } from './app-shell-nav';
 
@@ -61,6 +62,7 @@ export function AppShell({ portal, brandLine, portalBadge, nav, children }: AppS
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-content">Multi-Tenants HR</p>
               <p className="truncate text-xs text-content-variant">{brandLine}</p>
+              <AppVersion className="text-[11px] text-content-variant" />
             </div>
           )}
           <button
@@ -105,6 +107,9 @@ export function AppShell({ portal, brandLine, portalBadge, nav, children }: AppS
         </nav>
 
         <div className="border-t border-border p-2">
+          <div className="px-3 pb-2 text-[11px] text-content-variant">
+            <AppVersion />
+          </div>
           <button
             type="button"
             onClick={() => setCollapsed((c) => !c)}

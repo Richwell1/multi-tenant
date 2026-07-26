@@ -3,7 +3,7 @@ import { Navigate } from '@tanstack/react-router';
 import { useSession } from '@/lib/session';
 import { useCompanyContext } from '@/hooks/context';
 import { validateMembershipForTenant, type MembershipInfo } from '@/lib/guards';
-import { PageLoadingState } from '@/components/states';
+import { ErrorState, PageLoadingState } from '@/components/states';
 
 /**
  * Guards company routes: requires an authenticated session, an active membership
@@ -21,6 +21,16 @@ export function CompanyGuard({ children }: { children: ReactNode }) {
     return <Navigate to="/login" search={{ tenant: tenantId ?? undefined }} />;
   }
   if (contextQuery.isPending) return <PageLoadingState label="Loading workspace…" />;
+  if (contextQuery.isError) {
+    return (
+      <ErrorState
+        title="Couldn’t load workspace access"
+        description="We could not verify your company membership."
+        onRetry={() => contextQuery.refetch()}
+        retrying={contextQuery.isFetching}
+      />
+    );
+  }
 
   const ctx = contextQuery.data;
   const membership: MembershipInfo | null = ctx

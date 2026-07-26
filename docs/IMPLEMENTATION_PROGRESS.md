@@ -8,15 +8,15 @@
 | | |
 |---|---|
 | Product | Multi-Tenants HR |
-| Current branch | `feat/hosted-supabase-deployment` |
-| Current phase | Phase 6 — Hosted deployment (6.1 Hosted Supabase deployment) |
-| Current increment | 6.1 — Hosted Supabase deployment |
+| Current branch | `chore/engineering-quality-hardening` |
+| Current phase | Engineering quality, documentation, UX state, session, and versioning hardening |
+| Current increment | Cross-cutting quality hardening after Phase 6.1 |
 | Default data source | `mock` (`VITE_DATA_SOURCE`), Supabase path behind lazy adapters |
 | Local Supabase ports | API/Functions 54331 · DB 54332 · Studio 54333 (project-local +10 offset) |
-| Hosted Supabase | Linked (`uezvaqoqqqgblpcbkujq`); **no migrations pushed** |
-| Test count | 201 |
+| Hosted Supabase | Linked (`uezvaqoqqqgblpcbkujq`); 15 migrations and required API grants deployed |
+| Test count | 219 application tests |
 
-> `main` carries everything through 5.6. The hosted CI quality gate passed the full
+> `main` carries everything through 5.6 and the hosted Supabase baseline is deployed. The hosted CI quality gate passed the full
 > SQL/RLS matrix and application checks. RLS suites under `supabase/tests/`:
 > `package_release_rls.sql` (10), `leave_rls.sql` (14), `attendance_rls.sql` (18),
 > `request_records_rls.sql` (10), `diagnostics_rls.sql` (14),
@@ -44,7 +44,7 @@
 | 5.4 | Usage Analytics | Complete | 2026-07-25 | feat/usage-analytics | merged (PR #12) | 197 tests + 7 JWT/RLS ✅ | audit-derived; time-series deferred |
 | 5.5 | Audit Surfaces & System Health | Complete | 2026-07-25 | feat/audit-health-surfaces | (this branch) | 201 tests + 9 JWT/RLS ✅ | enriched audit view; derived health |
 | 5.6 | CI automation | Complete | 2026-07-25 | feat/ci-security-suites | merged (PR #14) | hosted CI: 8 SQL/RLS suites (94 scenarios) + typecheck/lint/201 tests/build ✅ | browser E2E and hosted deployment remain |
-| 6.1 | Hosted Supabase deployment | In progress | 2026-07-25 | feat/hosted-supabase-deployment | — | hosted: 15 migrations, RLS grants, 8 SQL suites, 94 scenarios, 201 tests ✅ | Auth, Vercel variables, and production seed not deployed |
+| 6.1 | Hosted Supabase deployment | In progress | 2026-07-25 | feat/hosted-supabase-deployment | merged to main | hosted schema: 15 migrations, API grants, Edge Function, 8 SQL suites, 94 scenarios ✅ | hosted Auth users/seed, final Vercel env verification, and browser isolation smoke remain |
 | 6 | Deployment / security hardening / subdomains | Not started | — | — | — | — | wildcard DNS, hosted deploy |
 
 ## Milestone checklists
@@ -105,7 +105,8 @@
 ### Hosted deployment
 - [x] Push all 15 migrations to hosted Supabase (14 schema migrations + API grants); remote history matches local
 - [x] Deploy `register-company` Edge Function (active, version 1)
-- [ ] Vercel frontend deploy + env
+- [x] Vercel frontend deploy is available
+- [ ] Verify production Vercel Supabase variables and hosted Auth redirect configuration
 
 ### Wildcard subdomains
 - [ ] Wildcard DNS + custom-domain tenant resolution
@@ -120,6 +121,17 @@
 - **Roles:** `company_admin` may write and review; `company_user` is read-only. Employee self-service deferred until reliable auth-user-to-employee identity linkage exists. `hr_manager` is **not** introduced (do not add it indirectly until the role model is deliberately expanded).
 - **Browser E2E:** Deferred; manual checklist documented (see Next actions).
 - **Integration:** This branch must be merged **after** `feat/package-release-management` and verified against the combined migration + test baseline (both share the package-assignment infrastructure).
+
+### Engineering quality hardening — 2026-07-26
+
+- Branch: `chore/engineering-quality-hardening`
+- Updated onboarding, architecture, PRD consistency, overview, changelog, UI/UX
+  progress, and this tracker without changing the approved product scope.
+- Added a shared `v0.1.0` display sourced from `package.json`.
+- Made session restore and logout failure-safe, added retryable guard context
+  errors, strengthened dialog focus/IDs, and corrected error-state semantics.
+- Local verification: typecheck ✅ · lint ✅ · 219 application tests ✅ · build ✅.
+- Hosted browser visual, keyboard, and tenant-isolation smoke remains pending.
 
 ## Verification history
 
@@ -140,6 +152,7 @@
 | 5.4 Usage Analytics | ✅ | ✅ | ✅ | 197 | ✅ | ✅ usage 7 (audit-derived aggregation, self-gate, company filter, distinct companies) + 78 prior = 85 | usage adapter lazy chunk (0.4 KB); main 476 KB |
 | 5.5 Audit & Health | ✅ | ✅ | ✅ | 201 | ✅ | ✅ audit/health 9 (enriched actor/company, self-gate, company filter, failed→degraded) + 85 prior = 94 | audit + health adapters lazy chunks; main 476 KB |
 | 5.6 CI automation | ✅ | ✅ | ✅ | 201 | ✅ | hosted CI + local reset: 8 SQL/RLS suites (94 scenarios), typecheck, lint, tests, build | browser E2E and hosted deployment remain |
+| Engineering quality hardening | N/A | ✅ | ✅ | 219 | ✅ | docs/state/session/version checks plus existing SQL baseline | hosted browser QA remains |
 
 ## Current risks
 - Mock is default; Supabase HR-Core path verified at DB/RLS level, **not yet exercised end-to-end in the browser**.
@@ -147,7 +160,7 @@
 - `feat/hr-core-persistence` is based on `feat/live-route-guards` (unmerged) — rebases when the guard PR lands.
 - Mock create/update/disable/terminate are simulated (no persistence) — expected pattern.
 - Hosted Supabase schema is deployed and migration history is aligned; the API-grants migration fixed authenticated REST access to RLS-protected tables. Hosted companies, memberships, and platform admins are still empty.
-- Hosted Auth URL configuration, demo users/seed data, and Vercel environment variables remain pending. The stated `multi-tenant-hr.vercel.app` URL returned HTTP 404 during verification; confirm the actual Vercel project URL before adding variables.
+- Hosted Auth URL configuration, demo users/seed data, and final Vercel environment verification remain deployment checks. Confirm the production URL and environment scope before changing hosted settings.
 - The deployment checklist names `usage_events` and `system_health_checks`, but this repository intentionally derives usage from `audit_logs` (`usage_metrics()`) and health from `system_health()`; those tables should not be added without a product/schema decision.
 - **Fixed (4.1):** package gating previously read mock `company.packages`, which is `undefined` for real Supabase tenants (would have hidden Leave for everyone on the Supabase path). Gating now uses `enabledPackageCodes` from the membership context — one source for mock and Supabase, guard + nav aligned.
 - Request Records are now persisted (platform-plane). Remaining mock-backed platform surfaces: diagnostics, installations monitor, usage, health — Phase 5.2–5.5.

@@ -32,7 +32,10 @@ const toneColor = {
 /** Shared inline state panel used by all message-style states. */
 export function StateShell({ icon, title, description, tone = 'neutral', action, className }: StateShellProps) {
   return (
-    <Card className={cn('flex flex-col items-center px-6 py-12 text-center', className)} role="status">
+    <Card
+      className={cn('flex flex-col items-center px-6 py-12 text-center', className)}
+      role={tone === 'danger' || tone === 'suspended' ? 'alert' : 'status'}
+    >
       <div className={cn('mb-3', toneColor[tone])}>{icon}</div>
       <p className="text-base font-semibold text-content">{title}</p>
       {description && <p className="mt-1 max-w-md text-sm text-content-variant">{description}</p>}

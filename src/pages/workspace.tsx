@@ -26,6 +26,7 @@ import {
 } from '@/components/states';
 import { useSession } from '@/lib/session';
 import { useCompanyId } from '@/hooks/use-company-id';
+import { useCompanyContext } from '@/hooks/context';
 import { PackageGuard } from '@/components/guards';
 import { useHasPackage } from '@/hooks/entitlements';
 import { PACKAGE_CODES } from '@/lib/entitlements';
@@ -59,19 +60,21 @@ function useTenantId() {
 
 export function WorkspaceDashboard() {
   const { company } = useSession();
+  const companyContext = useCompanyContext();
+  const companyName = company?.name ?? companyContext.data?.companyName ?? 'Company';
   const hasLeave = useHasPackage(PACKAGE_CODES.leave);
   const employees = useEmployees();
   const departments = useDepartments();
   const positions = usePositions();
 
-  if (employees.isPending) return <PageLoadingState label={`Loading ${company?.name ?? 'workspace'}…`} />;
+  if (employees.isPending) return <PageLoadingState label={`Loading ${companyName}…`} />;
   if (employees.isError)
     return <ErrorState onRetry={() => employees.refetch()} retrying={employees.isFetching} />;
 
   return (
     <>
       <PageHeader
-        title={`${company?.name ?? 'Company'} Dashboard`}
+        title={`${companyName} Dashboard`}
         description={hasLeave ? 'HR Core + Leave Management' : 'HR Core'}
         actions={<Badge tone="company">{hasLeave ? 'Leave enabled' : 'Core only'}</Badge>}
       />
@@ -554,6 +557,8 @@ const WIZARD_STEPS = ['Review', 'Impact', 'Confirm', 'Install'] as const;
 
 export function UpdatesPage() {
   const { company } = useSession();
+  const companyContext = useCompanyContext();
+  const companyName = company?.name ?? companyContext.data?.companyName ?? 'this workspace';
   const tid = useTenantId();
   const install = useInstallPackage();
   const [phase, setPhase] = useState<InstallationPhase>('available');
@@ -625,7 +630,7 @@ export function UpdatesPage() {
               )}
               {step === 2 && (
                 <div className="space-y-3">
-                  <p className="text-content-variant">Confirm activation for {company?.name}. This applies the package to your workspace.</p>
+                  <p className="text-content-variant">Confirm activation for {companyName}. This applies the package to your workspace.</p>
                   <label className="flex items-center gap-2 text-xs text-content-variant">
                     <input type="checkbox" checked={forceFail} onChange={(e) => setForceFail(e.target.checked)} />
                     Simulate a failed installation (demo)
@@ -663,7 +668,7 @@ export function UpdatesPage() {
       <ConfirmDialog
         open={phase === 'pending_confirmation'}
         title="Install update?"
-        description={`${packageName} will be installed into ${company?.name ?? 'this workspace'}.`}
+        description={`${packageName} will be installed into ${companyName}.`}
         confirmLabel="Install now"
         pending={install.isPending}
         onCancel={() => setPhase('available')}
@@ -748,11 +753,14 @@ type SettingsForm = z.infer<typeof settingsSchema>;
 
 export function SettingsPage() {
   const { company } = useSession();
+  const companyContext = useCompanyContext();
   const tid = useTenantId();
   const mutation = useSaveSettings(tid);
+  const companyName = company?.name ?? companyContext.data?.companyName ?? '';
+  const companySubdomain = company?.subdomain ?? companyContext.data?.companySlug ?? '';
   const defaults = useMemo<SettingsForm>(
-    () => ({ companyName: company?.name ?? '', email: company?.adminEmail ?? '', phone: '+1 555 0100' }),
-    [company],
+    () => ({ companyName, email: company?.adminEmail ?? '', phone: '+1 555 0100' }),
+    [companyName, company?.adminEmail],
   );
   const {
     register,
@@ -786,7 +794,7 @@ export function SettingsPage() {
               <Input id="phone" aria-invalid={!!errors.phone} {...register('phone')} />
             </Field>
             <Field label="Subdomain" htmlFor="subdomain">
-              <Input id="subdomain" value={company?.subdomain ?? ''} readOnly disabled />
+              <Input id="subdomain" value={companySubdomain} readOnly disabled />
             </Field>
             <SubmitButton pending={mutation.isPending} pendingLabel="Saving…">
               Save

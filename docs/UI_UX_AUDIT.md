@@ -75,3 +75,25 @@ Priority: Critical, High, Medium, Low.
 - Stitch-specific visual comparison and browser screenshots require the Stitch/visual inspection connector, which was not available in this session.
 - Backend contract changes are intentionally deferred. This UI increment does not modify Supabase migrations, repositories, auth adapters, entitlement logic, query keys, or services.
 - Full viewport browser smoke testing at 320/375/768/1024/1440 remains a follow-up if a browser runner becomes available; the implementation will include responsive CSS and component tests for the shared interaction changes.
+
+## Engineering quality hardening addendum — 2026-07-26
+
+The current hardening branch preserves the historical visual audit above and
+adds the following cross-cutting improvements:
+
+- Platform version `v0.1.0` is visible in the shared shell and public auth
+  footer, sourced from `package.json` rather than duplicated text.
+- Platform and company guards now distinguish a context/authorization query
+  failure from an intentional access denial and provide a retry action.
+- Confirm dialogs use unique accessible title/description IDs and stable focus
+  handling while retaining Escape, backdrop, and focus-return behavior.
+- Error and suspended state panels use alert semantics; ordinary loading/status
+  panels remain status announcements.
+- Session restoration cannot remain indefinitely in loading after an Auth
+  failure, and logout clears local data even when remote sign-out fails.
+- No backend, RLS, entitlement, package release, or migration behavior was
+  changed by this hardening increment.
+
+Full browser visual and keyboard QA remains pending at 320, 375, 768, 1024,
+and 1440 pixels. It must be performed against the hosted URL before declaring
+the visual audit fully closed.

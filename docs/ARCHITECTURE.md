@@ -1,475 +1,222 @@
-# Architecture — Lightweight Multi-Tenant HR Package Demo
+# Architecture — Multi-Tenants HR
 
-## 1. Architecture Goal
+## Purpose and boundaries
 
-Build the smallest architecture that can prove:
+Multi-Tenants HR is a lightweight multi-tenant HR ERP demonstration. It proves
+company registration, email/password authentication, tenant isolation, role
+boundaries, HR Core, optional packages, release targeting, diagnostics, and
+basic platform operations. It is one shared web application backed by one
+Supabase project; it is not a collection of company-specific deployments.
 
-- Company self-registration
-- Email/password login
-- Company subdomains
-- Tenant-isolated data
-- Role-based access
-- Automatic HR Core assignment
-- All-company package updates
-- One-company private packages
-- Simple package diagnostics
+The product deliberately does not include MFA, OTP, password reset, invitation
+onboarding, chat, payroll, recruitment, billing, microservices, Kubernetes, or
+advanced incident management.
 
-This is a demo architecture, not a full production ERP architecture.
+## Runtime stack
 
-## 2. Technology
+- React 18, TypeScript, Vite, TanStack Router, TanStack Query, Tailwind CSS
+- Supabase Auth and PostgreSQL through the Supabase JavaScript client
+- Supabase Edge Function for atomic company registration
+- Vitest and React Testing Library for application tests
+- Supabase CLI SQL suites for authenticated RLS and RPC scenarios
+- Vercel for the SPA deployment; `vercel.json` rewrites application routes to
+  `index.html`
 
-- Frontend: React, TypeScript, Vite
-- Backend: NestJS on Node.js
-- Database: PostgreSQL
-- ORM: Prisma or Drizzle
-- Authentication: email/password with JWT or secure cookie sessions
-- Deployment: one frontend, one API, one PostgreSQL database
+The application supports two data sources. `VITE_DATA_SOURCE=mock` is the safe
+default for the seeded demonstration and local UI work. `VITE_DATA_SOURCE=supabase`
+selects the hosted/local Supabase adapters. The browser only receives the
+publishable Supabase key; a service-role key is never a frontend variable.
 
-No WebSocket infrastructure is required for the MVP. Update availability may refresh on login, page refresh, or a small polling interval.
-
-## 3. High-Level Architecture
+## Layering
 
 ```text
-/register and company subdomains
+Routes and page components
         |
-        v
-Shared React Application
+Shared shells, guards, states, dialogs, notifications
         |
-        v
-Shared NestJS API
-- Authentication
-- Company registration
-- Tenant resolution
-- Roles and permissions
-- HR Core
-- Request records
-- Packages and assignments
-- Diagnostics
-- Basic usage and health
+TanStack Query hooks and query-key factory
         |
-        v
-PostgreSQL
-- tenant_id isolation
-- Row-Level Security
+Domain services (validation, transitions, entitlement rules)
+        |
+Repository interfaces
+        |
+Mock adapters                 Lazy Supabase adapters
+        |                       |
+Seeded in-memory data          Supabase Auth, Data API, RPCs
+                                |
+                         PostgreSQL + RLS
 ```
 
-## 4. One Repository and One Deployment
+Pages should remain small. They select data, render states, and call services;
+they should not embed tenant authorization or raw Supabase queries. Services
+own business validation and state transitions. Repositories own persistence
+and map transport errors into application errors. `repository.ts` is the
+factory boundary and `LazySupabaseRepository` binds Supabase methods to the
+aggregate interface only when the Supabase source is selected.
 
-Use:
+## Authentication and session lifecycle
 
-- One repository
-- Temporary feature branches
-- One shared application deployment
-- Database package assignments to control availability
-
-Do not use:
-
-- Repository per company
-- Permanent branch per company
-- Deployment per company
-
-## 5. Minimal Backend Modules
+Supabase Auth owns email/password identity. `SessionProvider` restores the
+session once, subscribes to auth changes, and exposes the current user and a
+logout action. The restore path always leaves the loading state, including when
+the initial Auth request fails. Logout clears the local session and TanStack
+Query cache even if remote sign-out cannot be confirmed, preventing stale tenant
+data from surviving a failed network request.
 
 ```text
-src/
-  common/
-    auth/
-    tenancy/
-    permissions/
-    database/
-
-  modules/
-    registration/
-    companies/
-    users/
-    roles/
-    hr-core/
-      employees/
-      departments/
-      positions/
-    request-records/
-    packages/
-    diagnostics/
-    usage-health/
-
-  extensions/
-    leave-management/
-    attendance-management/
+Auth restore
+  -> SessionProvider
+  -> platform-admin or company context query
+  -> route guard
+  -> shell and page queries
 ```
 
-Do not add chat, invitation, email-delivery, password-reset, workflow-engine, billing, or incident-management modules.
+Platform authorization is checked against `platform_admins`, not a client
+metadata flag. Company access is resolved from the authenticated user,
+company slug/tenant query state, `company_memberships`, company status, and
+package entitlements. A failed authorization/context query is shown as a
+retryable error; it is not silently treated as an empty company.
 
-## 6. Authentication
+## Tenant resolution and isolation
 
-### Company registration
+The shared login route is `/login`. A `tenant` query parameter can select a
+company slug for the demonstration, while a session may also resolve the
+company from membership. Tenant-owned operations use the real `companies.id`
+UUID, never a slug or mock identifier. Slugs are for display and resolution;
+UUIDs are the persistence key.
 
-`POST /auth/register-company`
-
-Creates in one transaction:
-
-1. Company tenant
-2. Company slug
-3. First Company Admin user
-4. Company membership
-5. Default roles
-6. HR Core assignment
-
-### Login
-
-`POST /auth/login`
-
-Inputs:
-
-- Email
-- Password
-- Tenant resolved from subdomain or selected registration context
-
-### Logout
-
-`POST /auth/logout`
-
-The demo does not include:
-
-- Password reset
-- MFA
-- Email verification
-- Invitations
-- Social login
-
-A Platform Super Admin account may be seeded directly in the database.
-
-## 7. Subdomain and Tenant Resolution
-
-Example hosts:
+Every tenant-owned table carries `company_id`. Repositories include the
+company scope, and PostgreSQL RLS is the authoritative boundary. The browser
+does not use a service-role key and frontend hiding is not security.
 
 ```text
-alpha-trading.exampleerp.com
-beta-manufacturing.exampleerp.com
-admin.exampleerp.com
+authenticated request
+  -> Supabase JWT auth.uid()
+  -> membership/company/package helper functions
+  -> RLS policy checks company_id and role/entitlement
+  -> row or RPC result
 ```
 
-Request flow:
+The platform plane contains platform-admin-only records such as request
+records, package authoring, enriched audit views, usage aggregation, health,
+and diagnostics. The tenant plane contains company memberships, HR Core,
+optional package data, assignments, installations, and tenant events. Any
+new table must declare which plane owns it, include `company_id` when it is
+tenant-owned, enable RLS, and have tests for same-company and cross-company
+access.
 
-1. Validate hostname.
-2. Extract company slug.
-3. Load active company.
-4. Authenticate user.
-5. Verify user membership in that company.
-6. Create tenant context.
-7. Load role and package assignments.
+RLS and Data API exposure are separate concerns. RLS controls rows after a
+table is exposed; grants/API exposure control whether a role can access the
+table at all. This project does not change either casually. A 403 must first
+be reproduced and identified as a grant/exposure problem or an RLS policy
+problem before a migration is added.
 
-```ts
-interface TenantContext {
-  tenantId: string;
-  tenantSlug: string;
-  userId: string;
-  role: 'company_admin' | 'company_user';
-  enabledPackages: string[];
-}
-```
+## Roles and route guards
 
-The Platform Super Admin portal uses a separate platform context and does not derive a company tenant from the URL.
+The supported roles are:
 
-## 8. Tenant Isolation
+- `platform_super_admin`: platform control-plane access
+- `company_admin`: company administration and eligible package actions
+- `company_user`: company read access within the permitted scope
 
-Every company-owned table contains:
+`PlatformGuard`, `CompanyGuard`, and `PackageGuard` protect routes. Guards
+distinguish pending, denied, suspended, and query-error states. A suspended
+company is routed to the suspended state; a user without the required role or
+entitlement is routed to access denied; a transient context failure offers
+retry. No `hr_manager` role is implied by the UI or repository layer.
 
-```sql
-tenant_id UUID NOT NULL
-```
+## Package and release model
 
-Use both:
+HR Core is assigned automatically to each registered company and contains
+Employees, Departments, and Positions. Leave Management and Attendance
+Management are optional packages. `enabledPackageCodes` from the resolved
+company context is the shared entitlement input for route and action guards.
 
-- Tenant-scoped repository queries
-- PostgreSQL Row-Level Security
+Package classification and release targeting are distinct:
 
-Minimum tenant-owned tables:
+- Standard updates may target all active companies.
+- Private customizations may target one selected company.
+- Selected-company targeting is represented explicitly by release targets.
 
-- company_users
-- employees
-- departments
-- positions
-- company_packages
-- package_installations
-- usage_events
+Publishing is authorized and validated by the database RPC. The release gate
+uses diagnostic results, then creates release targets, installations, and
+assignment changes atomically. Installation recovery is a state machine:
+retry can recover a failed installation and rollback disables the corresponding
+assignment. The UI mirrors valid transitions, but the database remains the
+authority.
 
-The backend must reject a request when the authenticated company does not match the company subdomain.
+Package versions (`package_versions`) describe a package release. The platform
+application version is separate: `package.json` is the source of truth and
+`src/lib/app-version.ts` exposes the `v0.1.0` display value. A package release
+must not be mistaken for a platform deployment.
 
-## 9. Roles and Permissions
-
-Minimum roles:
+## Domain modules
 
 ```text
-platform_super_admin
-company_admin
-company_user
+auth / registration
+companies / memberships
+departments / positions / employees
+packages / releases / assignments / installations
+leave / attendance
+request records
+diagnostics
+usage analytics / audit logs / system health
 ```
 
-Minimum permission groups:
+The registration Edge Function performs the server-side atomic onboarding
+workflow: Auth user, company, membership, and automatic HR Core assignment.
+The browser calls the function; it does not receive or store the service-role
+credential.
 
-```text
-platform.companies.manage
-platform.requests.manage
-platform.packages.manage
-platform.diagnostics.view
-employees.manage
-employees.view
-departments.manage
-positions.manage
-packages.view
-packages.activate
-```
+## UI state and interaction rules
 
-## 10. HR Core
+Shared `TableBoundary`, `StateShell`, `ErrorState`, `EmptyState`, and
+`ConfirmDialog` components provide consistent states. List pages treat zero
+rows as valid data: empty companies, installations, audit events, diagnostics,
+and usage values render empty/zero states rather than exceptions. Optional
+dashboard widgets are isolated where practical so one optional failure does
+not blank the entire dashboard. Critical session and authorization failures
+remain page-level failures.
 
-HR Core is assigned automatically during company registration.
+Mutations use the central notification utility and invalidate the relevant
+tenant-scoped query keys. Destructive actions use a confirmation dialog. Dialog
+titles/descriptions have unique IDs, Escape/backdrop cancellation is available,
+focus is trapped while open, and focus returns to the trigger. Error and
+suspended states use alert semantics; ordinary loading/status states use
+status semantics.
 
-It includes:
+All shells expose active navigation, mobile navigation, keyboard-visible focus,
+responsive layouts, and the shared application version. Full browser visual
+smoke testing at 320, 375, 768, 1024, and 1440 pixels remains a deployment
+check, not a claim of automated coverage.
 
-- Employees
-- Departments
-- Positions
+## Testing and CI
 
-It does not include Leave or Attendance.
+Application tests cover repository/service behavior, route guards, package
+targeting, transitions, tenant scoping, notifications/states, and the lazy
+repository boundary. CI runs typecheck, lint, 219 application tests, and a
+production build. The Supabase job starts a local project, resets it, and runs
+eight SQL/RLS suites containing 94 authenticated scenarios before cleanup.
 
-## 11. Package Model
+Any schema or RLS change must add/update a migration and its security tests.
+The local reset is safe for local development; `supabase db reset --linked` is
+not an accepted workflow because it targets the hosted project.
 
-### Code manifest
+## Engineering principles
 
-Each package has a version-controlled manifest:
+1. Keep one repository, one application, and one shared backend.
+2. Keep pages thin and put business rules in services or database constraints.
+3. Treat RLS and server-side entitlement checks as security boundaries.
+4. Use real tenant UUIDs in Supabase mode; never leak mock IDs into requests.
+5. Prefer independently recoverable queries for optional dashboard data.
+6. Add comments only for non-obvious business, security, state, cache, session,
+   accessibility, versioning, or intentional-debt decisions.
+7. Preserve the approved role, package, and feature scope.
 
-```ts
-interface PackageManifest {
-  key: string;
-  name: string;
-  version: string;
-  type: 'standard_update' | 'private_customization' | 'shared_extension' | 'bug_fix';
-  dependencies: string[];
-  affectedFrontend: string[];
-  affectedBackend: string[];
-  affectedTables: string[];
-  permissions: string[];
-  estimatedDataImpact: 'none' | 'create' | 'modify' | 'delete';
-}
-```
+## Deferred work
 
-### Database assignment
-
-```text
-company_packages
-- id
-- company_id
-- package_key
-- package_version
-- enabled
-- status
-- assigned_at
-- activated_at
-```
-
-The manifest defines what the package contains. The assignment defines which company receives it.
-
-## 12. Package Targeting
-
-### All companies
-
-Used for standard updates.
-
-Example:
-
-```text
-Attendance Management 1.0.0
-```
-
-The backend creates assignments for every active company.
-
-### One company
-
-Used for private customization.
-
-Example:
-
-```text
-Leave Management 1.0.0
-Target: Alpha Trading
-```
-
-Only Alpha receives an assignment.
-
-## 13. Request Records
-
-Requests arrive by email outside the app.
-
-The application stores only:
-
-```text
-request_records
-- id
-- company_id
-- source_email_reference
-- title
-- request_type
-- description
-- priority
-- status
-- internal_note
-- diagnostic_id
-- linked_package_key
-- created_at
-- updated_at
-```
-
-No company request form, chat, messages, attachments, or email integration is required.
-
-## 14. Lightweight Diagnostics
-
-Diagnostics are manifest-based.
-
-Inputs:
-
-- Package manifest
-- Target company
-- Existing package assignments
-- Seeded table counts
-
-Outputs:
-
-- Frontend impact
-- Backend impact
-- Database impact
-- Permissions
-- Dependencies
-- Estimated data impact
-- Compatibility
-- PASS, WARN, or FAIL
-
-For the demo:
-
-- PASS permits publishing.
-- WARN permits publishing after confirmation.
-- FAIL disables publishing.
-
-No source parser, shadow database, or real migration simulator is required.
-
-## 15. Basic Usage and Health
-
-Store simple usage events:
-
-```ts
-interface UsageEvent {
-  tenantId: string;
-  module: 'employees' | 'departments' | 'positions' | 'leave' | 'attendance';
-  action: string;
-  createdAt: Date;
-}
-```
-
-The Platform Super Admin dashboard may show:
-
-- Page/action counts per module
-- Companies using each package
-- Last active time
-- API status
-- Database status
-- Seeded uptime percentage
-
-Do not collect confidential HR values in analytics.
-
-## 16. Minimal Database Tables
-
-```text
-platform_admins
-companies
-users
-company_users
-roles
-user_roles
-employees
-departments
-positions
-packages
-package_versions
-company_packages
-package_installations
-request_records
-diagnostic_reports
-usage_events
-```
-
-## 17. Minimal Frontend Routes
-
-### Public
-
-```text
-/login
-/register
-/access-denied
-/company-suspended
-```
-
-### Platform
-
-```text
-/platform
-/platform/companies
-/platform/companies/:companyId
-/platform/requests
-/platform/requests/new
-/platform/requests/:requestId
-/platform/packages
-/platform/packages/new
-/platform/packages/:packageId
-/platform/diagnostics/:diagnosticId
-/platform/usage-health
-```
-
-### Company
-
-```text
-/dashboard
-/employees
-/employees/new
-/employees/:employeeId
-/departments
-/positions
-/updates
-/packages
-/users
-/settings
-```
-
-Optional routes:
-
-```text
-/leave
-/attendance
-```
-
-## 18. Demo Security Checks
-
-Automated tests shall verify:
-
-1. Alpha cannot read Beta employees.
-2. Beta cannot read Alpha departments.
-3. Beta cannot access Leave APIs when Leave is assigned only to Alpha.
-4. Company users cannot access `/platform` routes.
-5. HR Core is assigned automatically during registration.
-6. Attendance assigned to all companies becomes available to Alpha and Beta.
-7. A FAIL diagnostic prevents package publication.
-
-## 19. Deployment
-
-For the demo, deployment may use:
-
-- Vercel or similar hosting for React
-- Railway, Render, or similar hosting for NestJS
-- Managed PostgreSQL
-- Wildcard DNS or locally simulated subdomains
-
-The demonstration may also use local hostnames such as:
-
-```text
-alpha.localhost
-beta.localhost
-admin.localhost
-```
+Employee self-service identity linkage, configurable leave types, full browser
+E2E/visual automation, hosted auth seed automation, wildcard custom domains,
+advanced attendance, time-series analytics, and enriched diagnostic authoring
+remain explicitly deferred. They require a product or deployment decision and
+must not be smuggled into a quality-hardening increment.

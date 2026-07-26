@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -30,6 +30,12 @@ export function ConfirmDialog({
   const dialogRef = useRef<HTMLDivElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
+  const pendingRef = useRef(pending);
+  const onCancelRef = useRef(onCancel);
+  const titleId = useId();
+  const descriptionId = useId();
+  pendingRef.current = pending;
+  onCancelRef.current = onCancel;
 
   useEffect(() => {
     if (!open) return;
@@ -37,7 +43,7 @@ export function ConfirmDialog({
     cancelRef.current?.focus();
 
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !pending) onCancel();
+      if (e.key === 'Escape' && !pendingRef.current) onCancelRef.current();
       if (e.key !== 'Tab' || !dialogRef.current) return;
 
       const focusable = Array.from(
@@ -61,7 +67,7 @@ export function ConfirmDialog({
       document.removeEventListener('keydown', onKey);
       previouslyFocused.current?.focus();
     };
-  }, [open, pending, onCancel]);
+  }, [open]);
 
   if (!open) return null;
 
@@ -70,19 +76,19 @@ export function ConfirmDialog({
       className="fixed inset-0 z-50 flex items-center justify-center bg-content/40 p-4"
       role="dialog"
       aria-modal="true"
-      aria-labelledby="confirm-title"
-      aria-describedby={description ? 'confirm-description' : undefined}
-      onClick={() => !pending && onCancel()}
+      aria-labelledby={titleId}
+      aria-describedby={description ? descriptionId : undefined}
+      onClick={() => !pending && onCancelRef.current()}
     >
       <div
         ref={dialogRef}
         className={cn('w-full max-w-md rounded-lg border border-border bg-surface p-5 shadow-xl sm:p-6')}
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 id="confirm-title" className="text-lg font-semibold text-content">
+        <h2 id={titleId} className="text-lg font-semibold text-content">
           {title}
         </h2>
-        {description && <div id="confirm-description" className="mt-2 text-sm leading-6 text-content-variant">{description}</div>}
+        {description && <div id={descriptionId} className="mt-2 text-sm leading-6 text-content-variant">{description}</div>}
         <div className="mt-6 flex justify-end gap-2">
           <Button ref={cancelRef} variant="secondary" onClick={onCancel} disabled={pending}>
             {cancelLabel}

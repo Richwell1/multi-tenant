@@ -22,3 +22,17 @@ Branch: `feat/ui-ux-polish`
 ## Deferred backend requirements
 
 None introduced by this increment. Supabase adapters, RLS, entitlements, repositories, services, query keys, and mutation invalidation rules were not changed.
+
+## Engineering quality hardening addendum — 2026-07-26
+
+Branch: `chore/engineering-quality-hardening`
+
+| Area | Status | Improvements | Verification / remaining |
+|---|---|---|---|
+| Application version | Complete | Shared `APP_VERSION` reads `package.json` and is shown in auth and shell UI | 2 focused tests pass |
+| Session lifecycle | Complete | Restore failures exit loading; logout clears local session/cache on remote failure | Typecheck/lint/tests/build pass |
+| Guard states | Complete | Platform/company context failures show retryable errors instead of ambiguous denial | Route guard suite passes |
+| Dialog accessibility | Complete | Stable focus lifecycle and unique title/description IDs | Shared state tests pass |
+| State semantics | Complete | Error/suspended panels use `alert`; loading/status panels use `status` | Shared state tests pass |
+| Documentation | Complete | README, architecture, PRD, overview, changelog, progress, and quality audit aligned | Browser-only claims remain deferred |
+| Hosted visual QA | Deferred | No browser automation claim added | Manual checks still required |

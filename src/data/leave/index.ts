@@ -4,18 +4,18 @@ import type { LeaveRepository } from './leave-repository';
 import type { CreateLeaveRequestInput, DecideLeaveRequestInput } from './types';
 
 class LazySupabaseLeaveRepository implements LeaveRepository {
-  private impl() {
+  private impl = () => {
     return import('./supabase-leave-repository').then((m) => new m.SupabaseLeaveRepository());
-  }
-  list(companyId: string) {
+  };
+  list = (companyId: string) => {
     return this.impl().then((r) => r.list(companyId));
-  }
-  create(companyId: string, input: CreateLeaveRequestInput) {
+  };
+  create = (companyId: string, input: CreateLeaveRequestInput) => {
     return this.impl().then((r) => r.create(companyId, input));
-  }
-  decide(companyId: string, id: string, input: DecideLeaveRequestInput) {
+  };
+  decide = (companyId: string, id: string, input: DecideLeaveRequestInput) => {
     return this.impl().then((r) => r.decide(companyId, id, input));
-  }
+  };
 }
 
 export function createLeaveRepository(source = resolveDataSource()): LeaveRepository {

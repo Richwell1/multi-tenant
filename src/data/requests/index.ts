@@ -4,21 +4,21 @@ import type { RequestRepository } from './request-repository';
 import type { CreateRequestInput, RequestStatus } from './types';
 
 class LazySupabaseRequestRepository implements RequestRepository {
-  private impl() {
+  private impl = () => {
     return import('./supabase-request-repository').then((m) => new m.SupabaseRequestRepository());
-  }
-  list() {
+  };
+  list = () => {
     return this.impl().then((r) => r.list());
-  }
-  getById(id: string) {
+  };
+  getById = (id: string) => {
     return this.impl().then((r) => r.getById(id));
-  }
-  create(input: CreateRequestInput) {
+  };
+  create = (input: CreateRequestInput) => {
     return this.impl().then((r) => r.create(input));
-  }
-  changeStatus(id: string, status: RequestStatus) {
+  };
+  changeStatus = (id: string, status: RequestStatus) => {
     return this.impl().then((r) => r.changeStatus(id, status));
-  }
+  };
 }
 
 export function createRequestRepository(source = resolveDataSource()): RequestRepository {

@@ -4,24 +4,24 @@ import type { PositionRepository } from './position-repository';
 import type { CreatePositionInput, UpdatePositionInput } from './types';
 
 class LazySupabasePositionRepository implements PositionRepository {
-  private impl() {
+  private impl = () => {
     return import('./supabase-position-repository').then((m) => new m.SupabasePositionRepository());
-  }
-  list(companyId: string) {
+  };
+  list = (companyId: string) => {
     return this.impl().then((r) => r.list(companyId));
-  }
-  getById(companyId: string, id: string) {
+  };
+  getById = (companyId: string, id: string) => {
     return this.impl().then((r) => r.getById(companyId, id));
-  }
-  create(companyId: string, input: CreatePositionInput) {
+  };
+  create = (companyId: string, input: CreatePositionInput) => {
     return this.impl().then((r) => r.create(companyId, input));
-  }
-  update(companyId: string, id: string, input: UpdatePositionInput) {
+  };
+  update = (companyId: string, id: string, input: UpdatePositionInput) => {
     return this.impl().then((r) => r.update(companyId, id, input));
-  }
-  disable(companyId: string, id: string) {
+  };
+  disable = (companyId: string, id: string) => {
     return this.impl().then((r) => r.disable(companyId, id));
-  }
+  };
 }
 
 export function createPositionRepository(source = resolveDataSource()): PositionRepository {

@@ -18,24 +18,18 @@ import type { AuthSession, SignInInput, Unsubscribe } from './types';
 class LazySupabaseAuthRepository implements AuthRepository {
   private realP: Promise<AuthRepository> | null = null;
 
-  private real(): Promise<AuthRepository> {
+  private real = (): Promise<AuthRepository> => {
     this.realP ??= import('./supabase-auth-repository').then((m) => new m.SupabaseAuthRepository());
     return this.realP;
-  }
+  };
 
-  signIn(input: SignInInput): Promise<AuthSession> {
-    return this.real().then((r) => r.signIn(input));
-  }
+  signIn = (input: SignInInput): Promise<AuthSession> => this.real().then((r) => r.signIn(input));
 
-  signOut(): Promise<void> {
-    return this.real().then((r) => r.signOut());
-  }
+  signOut = (): Promise<void> => this.real().then((r) => r.signOut());
 
-  getSession(): Promise<AuthSession | null> {
-    return this.real().then((r) => r.getSession());
-  }
+  getSession = (): Promise<AuthSession | null> => this.real().then((r) => r.getSession());
 
-  onAuthStateChange(callback: (session: AuthSession | null) => void): Unsubscribe {
+  onAuthStateChange = (callback: (session: AuthSession | null) => void): Unsubscribe => {
     let unsubscribe: Unsubscribe = () => {};
     let cancelled = false;
     this.real().then((r) => {
@@ -45,7 +39,7 @@ class LazySupabaseAuthRepository implements AuthRepository {
       cancelled = true;
       unsubscribe();
     };
-  }
+  };
 }
 
 export function createAuthRepository(source = resolveDataSource()): AuthRepository {

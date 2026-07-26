@@ -44,7 +44,7 @@
 | 5.4 | Usage Analytics | Complete | 2026-07-25 | feat/usage-analytics | merged (PR #12) | 197 tests + 7 JWT/RLS ✅ | audit-derived; time-series deferred |
 | 5.5 | Audit Surfaces & System Health | Complete | 2026-07-25 | feat/audit-health-surfaces | (this branch) | 201 tests + 9 JWT/RLS ✅ | enriched audit view; derived health |
 | 5.6 | CI automation | Complete | 2026-07-25 | feat/ci-security-suites | merged (PR #14) | hosted CI: 8 SQL/RLS suites (94 scenarios) + typecheck/lint/201 tests/build ✅ | browser E2E and hosted deployment remain |
-| 6.1 | Hosted Supabase deployment | In progress | 2026-07-25 | feat/hosted-supabase-deployment | merged to main | hosted schema: 15 migrations, API grants, Edge Function, 8 SQL suites, 94 scenarios ✅ | hosted Auth users/seed, final Vercel env verification, and browser isolation smoke remain |
+| 6.1 | Hosted Supabase deployment | In progress | 2026-07-26 | feat/hosted-supabase-deployment | merged to main (`c161f6d`) | hosted schema: 16 migrations, API grants, Edge Function, 9 SQL suites, 112 scenarios ✅; production deploy green with Supabase env set | hosted browser tenant-isolation smoke remains |
 | 6 | Deployment / security hardening / subdomains | Not started | — | — | — | — | wildcard DNS, hosted deploy |
 
 ## Milestone checklists
@@ -103,10 +103,12 @@
 - [ ] Per-company `leave_types` table + composite FK — deferred (no leave-type UI; enum used)
 
 ### Hosted deployment
-- [x] Push all 15 migrations to hosted Supabase (14 schema migrations + API grants); remote history matches local
+- [x] Push all 16 migrations to hosted Supabase (incl. admin package management `20260726020000`, pushed 2026-07-26); remote history matches local
 - [x] Deploy `register-company` Edge Function (active, version 1)
 - [x] Vercel frontend deploy is available
-- [ ] Verify production Vercel Supabase variables and hosted Auth redirect configuration
+- [x] `feat/admin-package-management` merged to `main` (`c161f6d`) and deployed to production (build green 2026-07-26)
+- [x] Production Vercel Supabase variables set (`VITE_DATA_SOURCE=supabase`, URL, publishable key)
+- [ ] Full hosted browser tenant-isolation smoke under `VITE_DATA_SOURCE=supabase` (per-plane checklists below)
 
 ### Wildcard subdomains
 - [ ] Wildcard DNS + custom-domain tenant resolution

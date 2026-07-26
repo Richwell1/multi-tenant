@@ -12,7 +12,7 @@
 // For local dev the same context can be forced via query params:
 //   /login?portal=admin
 //   /login?tenant=alpha
-//   /login?tenant=beta
+//   /login?tenant=your-company-slug
 // ---------------------------------------------------------------------------
 
 import type { Company, Portal } from '@/data/types';
@@ -40,9 +40,11 @@ export function resolveContext(hostname: string, search = ''): ResolvedContext {
   const portalParam = params.get('portal');
   if (portalParam === 'admin') return { portal: 'admin', tenantId: null };
 
-  const tenantParam = params.get('tenant');
-  if (tenantParam && SUBDOMAIN_TO_TENANT[tenantParam]) {
-    return { portal: 'company', tenantId: SUBDOMAIN_TO_TENANT[tenantParam] };
+  const tenantParam = params.get('tenant')?.trim().toLowerCase();
+  if (tenantParam) {
+    // Query-based tenant resolution is also used by the Vercel deployment, so
+    // it must support production-created company slugs, not only mock tenants.
+    return { portal: 'company', tenantId: tenantParam };
   }
 
   const sub = hostname.split('.')[0]?.toLowerCase() ?? '';

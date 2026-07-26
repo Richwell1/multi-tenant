@@ -58,6 +58,11 @@ describe('route guards', () => {
     await waitFor(() => expect(at(router)).toBe('/dashboard'));
   });
 
+  it('shared login allows a company member without a tenant query', async () => {
+    const router = await renderGuarded({ path: '/dashboard', url: '/login', email: 'admin@beta.test' });
+    await waitFor(() => expect(at(router)).toBe('/dashboard'));
+  });
+
   it('Alpha tenant + Beta member → /access-denied (tenant mismatch)', async () => {
     const router = await renderGuarded({ path: '/dashboard', url: '/login?tenant=alpha', email: 'admin@beta.test' });
     await waitFor(() => expect(at(router)).toBe('/access-denied'));

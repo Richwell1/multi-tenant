@@ -34,7 +34,9 @@ export function CompanyGuard({ children }: { children: ReactNode }) {
 
   const outcome = validateMembershipForTenant({
     authenticated: true,
-    requestedTenantSlug: tenantId ?? '',
+    // Bare /login is tenant-neutral. Once authenticated, the membership is
+    // the source of truth for the user's workspace when no tenant was chosen.
+    requestedTenantSlug: tenantId ?? membership?.companySlug ?? '',
     membership,
   });
 

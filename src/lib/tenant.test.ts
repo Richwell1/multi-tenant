@@ -20,6 +20,13 @@ describe('context resolution', () => {
   it('supports local dev ?tenant=beta', () => {
     expect(resolveContext('localhost', '?tenant=beta')).toEqual({ portal: 'company', tenantId: 'beta' });
   });
+
+  it('supports production-created tenant slugs', () => {
+    expect(resolveContext('multi-tenant-hr.vercel.app', '?tenant=rich')).toEqual({
+      portal: 'company',
+      tenantId: 'rich',
+    });
+  });
   it('defaults bare localhost to admin', () => {
     expect(resolveContext('localhost')).toEqual({ portal: 'admin', tenantId: null });
   });

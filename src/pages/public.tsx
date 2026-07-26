@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link, useNavigate } from '@tanstack/react-router';
-import { AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { AlertCircle, Building2, CheckCircle2, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +15,7 @@ import { useSession } from '@/lib/session';
 import { useLoginPortalContext } from '@/hooks/use-login-portal-context';
 import { useRegisterCompany } from '@/hooks/use-register-company';
 import { RepositoryError } from '@/data/errors';
+import { companyContextRepository, platformAdminRepository } from '@/data/context';
 import { notify } from '@/lib/notify';
 import { cn } from '@/lib/utils';
 
@@ -28,29 +29,64 @@ type LoginForm = z.infer<typeof loginSchema>;
 
 function AuthLayout({ children, portalClass }: { children: React.ReactNode; portalClass: string }) {
   return (
-    <div className={cn('flex min-h-screen items-center justify-center bg-background px-4 py-8 sm:px-6', portalClass)}>
-      <div className="w-full max-w-md">
-        <div className="mb-6 flex items-center justify-center gap-3">
-          <div className="flex size-10 items-center justify-center rounded-xl bg-[var(--portal-color)] text-lg font-bold text-white shadow-sm">
-            M
+    <div className={cn('min-h-screen bg-background px-4 py-8 sm:px-6 lg:px-8', portalClass)}>
+      <div className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-6xl items-center justify-center">
+        <div className="grid w-full items-stretch gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(360px,440px)]">
+          <div className="hidden flex-col justify-center rounded-2xl border border-border bg-surface-subtle p-10 lg:flex">
+            <div className="mb-10 flex items-center gap-3">
+              <div className="flex size-10 items-center justify-center rounded-xl bg-[var(--portal-color)] text-lg font-bold text-white shadow-sm">
+                M
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-content">Multi-Tenants HR</p>
+                <p className="text-xs text-content-variant">Secure workspace operations</p>
+              </div>
+            </div>
+            <p className="text-label-bold uppercase tracking-[0.14em] text-[var(--portal-color)]">One shared platform</p>
+            <h1 className="mt-4 max-w-xl text-4xl font-bold tracking-tight text-content xl:text-5xl">
+              Your team’s HR workspace, ready when you are.
+            </h1>
+            <p className="mt-5 max-w-xl text-base leading-7 text-content-variant">
+              Sign in once with your work email and continue to the company workspace your account belongs to.
+            </p>
+            <div className="mt-8 space-y-4 text-sm text-content-variant">
+              <div className="flex items-center gap-3"><ShieldCheck className="size-5 text-[var(--portal-color)]" /> Tenant-aware access controls</div>
+              <div className="flex items-center gap-3"><Building2 className="size-5 text-[var(--portal-color)]" /> Separate company workspaces</div>
+              <div className="flex items-center gap-3"><CheckCircle2 className="size-5 text-[var(--portal-color)]" /> HR Core available from day one</div>
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-semibold text-content">Multi-Tenants HR</p>
-            <p className="text-xs text-content-variant">Secure workspace operations</p>
+          <div className="w-full">
+            <div className="mb-6 flex items-center justify-center gap-3 lg:hidden">
+              <div className="flex size-10 items-center justify-center rounded-xl bg-[var(--portal-color)] text-lg font-bold text-white shadow-sm">
+                M
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-content">Multi-Tenants HR</p>
+                <p className="text-xs text-content-variant">Secure workspace operations</p>
+              </div>
+            </div>
+            {children}
+            <p className="mt-5 text-center text-xs text-content-variant">One shared platform. Clear tenant boundaries.</p>
           </div>
         </div>
-        {children}
-        <p className="mt-5 text-center text-xs text-content-variant">One shared platform. Clear tenant boundaries.</p>
       </div>
     </div>
   );
 }
 
 export function LoginPage() {
-  const { signIn } = useSession();
+  const { signIn, logout } = useSession();
   const ctx = useLoginPortalContext();
   const navigate = useNavigate();
-  const isAdmin = ctx.type === 'platform_admin';
+  const search = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
+  const isAdmin = search.get('portal') === 'admin';
+  const requestedTenant = search.get('tenant')?.trim().toLowerCase() || null;
+  const tenantLabel =
+    ctx.type === 'company' && ctx.companyName !== 'Company Workspace'
+      ? ctx.companyName
+      : requestedTenant
+        ? `${requestedTenant} workspace`
+        : 'Company Workspace';
 
   const [showPassword, setShowPassword] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -66,8 +102,37 @@ export function LoginPage() {
   const onSubmit = async (values: LoginForm) => {
     setAuthError(null);
     try {
-      await signIn({ email: values.email, password: values.password });
-      navigate({ to: isAdmin ? '/admin' : '/dashboard' });
+      const session = await signIn({ email: values.email, password: values.password });
+      const isPlatformAdmin = await platformAdminRepository.isPlatformAdmin(session.user);
+
+      if (isAdmin) {
+        if (!isPlatformAdmin) {
+          await logout();
+          setAuthError('This account is not a Platform Super Admin account. Use the company login instead.');
+          return;
+        }
+        navigate({ to: '/admin' });
+        return;
+      }
+
+      if (isPlatformAdmin) {
+        await logout();
+        setAuthError('Platform administrators must use the admin sign-in link.');
+        return;
+      }
+
+      const company = await companyContextRepository.getCompanyContext(session.user);
+      if (!company) {
+        await logout();
+        setAuthError('No active company workspace is linked to this account.');
+        return;
+      }
+      if (requestedTenant && company.companySlug !== requestedTenant) {
+        await logout();
+        setAuthError(`This account belongs to ${company.companyName}, not the ${requestedTenant} workspace.`);
+        return;
+      }
+      navigate({ to: '/dashboard' });
     } catch (e) {
       setAuthError(e instanceof RepositoryError ? e.message : 'Sign-in failed. Please try again.');
     }
@@ -77,13 +142,15 @@ export function LoginPage() {
     <AuthLayout portalClass={isAdmin ? 'portal-admin' : 'portal-company'}>
       <Card className="p-5 sm:p-8">
         <div className="mb-6 text-center">
-          <Badge tone={isAdmin ? 'platform' : 'company'}>
-            {isAdmin ? ctx.name : ctx.companyName}
-          </Badge>
+          <Badge tone={isAdmin ? 'platform' : 'company'}>{isAdmin ? 'Platform Administration' : tenantLabel}</Badge>
           <h1 className="mt-4 text-2xl font-bold tracking-tight text-content">
-            {isAdmin ? 'Sign in to Admin Console' : 'Sign in to Company Workspace'}
+            {isAdmin ? 'Sign in to Admin Console' : 'Sign in to your workspace'}
           </h1>
-          <p className="mt-1 text-sm leading-6 text-content-variant">Sign in with your email and password</p>
+          <p className="mt-1 text-sm leading-6 text-content-variant">
+            {isAdmin
+              ? 'Use your Platform Super Admin credentials.'
+              : 'Use your work email. We’ll open the company workspace linked to your account.'}
+          </p>
         </div>
 
         {authError && (
@@ -135,7 +202,7 @@ export function LoginPage() {
           </SubmitButton>
         </form>
 
-        {ctx.showRegistration && (
+        {!isAdmin && (
           <p className="mt-6 text-center text-sm text-content-variant">
             New company?{' '}
             <Link to="/register" className="font-medium text-[var(--portal-color)] underline-offset-4 hover:underline">

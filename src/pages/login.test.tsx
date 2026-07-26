@@ -44,4 +44,11 @@ describe('reusable LoginPage — portal-derived registration', () => {
     expect(await screen.findByText('Beta Manufacturing')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /register company/i })).toBeInTheDocument();
   });
+
+  it('bare /login is a shared company login', async () => {
+    renderLoginAt('/login');
+    expect(await screen.findByText('Company Workspace')).toBeInTheDocument();
+    expect(screen.getByText(/open the company workspace linked to your account/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /register company/i })).toBeInTheDocument();
+  });
 });

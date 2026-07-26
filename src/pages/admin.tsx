@@ -21,7 +21,7 @@ import { useCompanies, useCompany } from '@/hooks/queries';
 import { useUsage } from '@/hooks/usage';
 import { useAudit } from '@/hooks/audit';
 import { useHealth } from '@/hooks/health';
-import { useDiagnostic } from '@/hooks/diagnostics';
+import { useDiagnostic, useDiagnostics } from '@/hooks/diagnostics';
 import { DIAGNOSTIC_DIMENSIONS, type DiagnosticCheck } from '@/data/diagnostics';
 import {
   useCompanyAssignments,
@@ -577,6 +577,50 @@ export function RequestDetails() {
 }
 
 // --- Packages -----------------------------------------------------------------
+
+export function DiagnosticsList() {
+  const query = useDiagnostics();
+  const rows = query.data ?? [];
+  return (
+    <>
+      <PageHeader title="Diagnostics" description="Package compatibility and release-readiness checks" />
+      <TableBoundary
+        query={query}
+        filtered={rows}
+        cols={4}
+        emptyTitle="No diagnostics yet"
+        emptyDescription="Diagnostic reports will appear here when package versions are evaluated."
+      >
+        <DataTable>
+          <THead>
+            <TH>Package</TH>
+            <TH>Result</TH>
+            <TH>Checks</TH>
+            <TH>Recommendation</TH>
+          </THead>
+          <TBody>
+            {rows.map((report) => (
+              <TR key={report.id}>
+                <TD>
+                  <Link
+                    to="/admin/diagnostics/$diagnosticId"
+                    params={{ diagnosticId: report.id }}
+                    className="font-medium text-platform hover:underline"
+                  >
+                    {report.packageKey}
+                  </Link>
+                </TD>
+                <TD><Badge tone={diagTone(report.result)}>{report.result}</Badge></TD>
+                <TD>{report.checks.length} / {DIAGNOSTIC_DIMENSIONS.length}</TD>
+                <TD className="text-content-variant">{report.recommendation || '—'}</TD>
+              </TR>
+            ))}
+          </TBody>
+        </DataTable>
+      </TableBoundary>
+    </>
+  );
+}
 
 export function PackagesList() {
   const [q, setQ] = useState('');

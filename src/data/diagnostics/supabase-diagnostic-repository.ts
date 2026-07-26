@@ -11,9 +11,7 @@ import type {
   RunDiagnosticInput,
 } from './types';
 
-const COLS =
-  'id,package_version_id,summary,recommendation,result,' +
-  'package_versions(package_key),diagnostic_checks(dimension,status,required,detail)';
+const REPORT_COLS = 'id,package_version_id,summary,recommendation,result';
 
 interface Row {
   id: string;
@@ -21,13 +19,19 @@ interface Row {
   summary: string;
   recommendation: string;
   result: DiagnosticResult;
-  package_versions: { package_key: string } | null;
-  diagnostic_checks: {
-    dimension: DiagnosticDimension;
-    status: DiagnosticResult;
-    required: boolean;
-    detail: string;
-  }[];
+}
+
+interface VersionRow {
+  id: string;
+  package_key: string;
+}
+
+interface CheckRow {
+  report_id: string;
+  dimension: DiagnosticDimension;
+  status: DiagnosticResult;
+  required: boolean;
+  detail: string;
 }
 
 const orderChecks = (checks: DiagnosticCheck[]): DiagnosticCheck[] =>
@@ -35,9 +39,9 @@ const orderChecks = (checks: DiagnosticCheck[]): DiagnosticCheck[] =>
     (a, b) => DIAGNOSTIC_DIMENSIONS.indexOf(a.dimension) - DIAGNOSTIC_DIMENSIONS.indexOf(b.dimension),
   );
 
-const toDomain = (r: Row): DiagnosticReport => ({
+const toDomain = (r: Row, packageKey: string | undefined, checks: DiagnosticCheck[]): DiagnosticReport => ({
   id: r.id,
-  packageKey: (r.package_versions?.package_key as PackageKey) ?? 'hr-core',
+  packageKey: (packageKey as PackageKey | undefined) ?? 'hr-core',
   packageVersionId: r.package_version_id,
   targetCompanyId: null,
   affectedFrontend: [],
@@ -49,34 +53,65 @@ const toDomain = (r: Row): DiagnosticReport => ({
   compatibility: '',
   result: r.result,
   recommendation: r.recommendation,
-  checks: orderChecks(
-    (r.diagnostic_checks ?? []).map((c) => ({
-      dimension: c.dimension,
-      status: c.status,
-      required: c.required,
-      detail: c.detail,
-    })),
-  ),
+  checks: orderChecks(checks),
+});
+
+const toCheck = (row: CheckRow): DiagnosticCheck => ({
+  dimension: row.dimension,
+  status: row.status,
+  required: row.required,
+  detail: row.detail,
 });
 
 export class SupabaseDiagnosticRepository implements DiagnosticRepository {
   async list(): Promise<DiagnosticReport[]> {
-    const { data, error } = await getSupabaseClient()
+    const client = getSupabaseClient();
+    const { data, error } = await client
       .from('diagnostic_reports')
-      .select(COLS)
+      .select(REPORT_COLS)
       .order('created_at', { ascending: false });
     if (error) throw mapSupabaseError(error);
-    return (data as unknown as Row[]).map(toDomain);
+    const reports = (data ?? []) as unknown as Row[];
+    if (!reports.length) return [];
+
+    const [{ data: versions, error: versionError }, { data: checks, error: checkError }] = await Promise.all([
+      client.from('package_versions').select('id,package_key').in('id', reports.map((r) => r.package_version_id)),
+      client.from('diagnostic_checks').select('report_id,dimension,status,required,detail').in('report_id', reports.map((r) => r.id)),
+    ]);
+    if (versionError) throw mapSupabaseError(versionError);
+    if (checkError) throw mapSupabaseError(checkError);
+
+    const packageKeys = new Map(((versions ?? []) as unknown as VersionRow[]).map((v) => [v.id, v.package_key]));
+    const checksByReport = new Map<string, DiagnosticCheck[]>();
+    for (const row of (checks ?? []) as unknown as CheckRow[]) {
+      const current = checksByReport.get(row.report_id) ?? [];
+      current.push(toCheck(row));
+      checksByReport.set(row.report_id, current);
+    }
+    return reports.map((report) => toDomain(report, packageKeys.get(report.package_version_id), checksByReport.get(report.id) ?? []));
   }
 
   async getById(id: string): Promise<DiagnosticReport | undefined> {
-    const { data, error } = await getSupabaseClient()
+    const client = getSupabaseClient();
+    const { data, error } = await client
       .from('diagnostic_reports')
-      .select(COLS)
+      .select(REPORT_COLS)
       .eq('id', id)
       .maybeSingle();
     if (error) throw mapSupabaseError(error);
-    return data ? toDomain(data as unknown as Row) : undefined;
+    if (!data) return undefined;
+    const report = data as unknown as Row;
+    const [{ data: version, error: versionError }, { data: checks, error: checkError }] = await Promise.all([
+      client.from('package_versions').select('id,package_key').eq('id', report.package_version_id).maybeSingle(),
+      client.from('diagnostic_checks').select('report_id,dimension,status,required,detail').eq('report_id', report.id),
+    ]);
+    if (versionError) throw mapSupabaseError(versionError);
+    if (checkError) throw mapSupabaseError(checkError);
+    return toDomain(
+      report,
+      (version as unknown as VersionRow | null)?.package_key,
+      ((checks ?? []) as unknown as CheckRow[]).map(toCheck),
+    );
   }
 
   async run(input: RunDiagnosticInput): Promise<DiagnosticReport> {

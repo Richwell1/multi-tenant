@@ -21,7 +21,7 @@ const nav: NavItem[] = [
   { to: '/admin/usage', label: 'Usage Analytics', icon: <BarChart3 className="size-4" /> },
   { to: '/admin/health', label: 'System Health', icon: <Activity className="size-4" /> },
   { to: '/admin/audit', label: 'Audit Logs', icon: <ScrollText className="size-4" /> },
-  { to: '/admin/diagnostics/diag-leave', label: 'Diagnostics', icon: <Stethoscope className="size-4" /> },
+  { to: '/admin/diagnostics', label: 'Diagnostics', icon: <Stethoscope className="size-4" /> },
 ];
 
 export function AdminShell({ children }: { children: ReactNode }) {

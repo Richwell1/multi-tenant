@@ -47,8 +47,9 @@ type AssignmentRow = {
   company_id: string;
   package_key: string;
   enabled: boolean;
-  packages: { is_active: boolean } | null;
 };
+type PackageStatusRow = { key: string; is_active: boolean };
+type CompanySettingRow = { company_id: string; company_email: string | null };
 
 type EmployeeCountRow = { company_id: string };
 
@@ -74,7 +75,7 @@ export class SupabaseRepository implements Repository {
     const client = getSupabaseClient();
     const { data, error } = await client
       .from('companies')
-      .select('id,name,slug,subdomain,status,created_at,company_settings(company_email)')
+      .select('id,name,slug,subdomain,status,created_at')
       .order('name');
     if (error) throw mapSupabaseError(error);
 
@@ -82,25 +83,42 @@ export class SupabaseRepository implements Repository {
     if (!rows.length) return [];
     const ids = rows.map((row) => row.id);
 
-    const [{ data: assignments, error: assignmentError }, { data: employees, error: employeeError }] =
+    const [
+      { data: assignments, error: assignmentError },
+      { data: employees, error: employeeError },
+      { data: settings, error: settingsError },
+      { data: packageStatuses, error: packageStatusError },
+    ] =
       await Promise.all([
         client
           .from('company_packages')
-          .select('company_id,package_key,enabled,packages!inner(is_active)')
+          .select('company_id,package_key,enabled')
           .in('company_id', ids),
         client.from('employees').select('company_id').in('company_id', ids),
+        client.from('company_settings').select('company_id,company_email').in('company_id', ids),
+        client.from('packages').select('key,is_active'),
       ]);
     if (assignmentError) throw mapSupabaseError(assignmentError);
     if (employeeError) throw mapSupabaseError(employeeError);
+    if (settingsError) throw mapSupabaseError(settingsError);
+    if (packageStatusError) throw mapSupabaseError(packageStatusError);
 
+    const activePackages = new Set(
+      ((packageStatuses ?? []) as unknown as PackageStatusRow[])
+        .filter((pkg) => pkg.is_active)
+        .map((pkg) => pkg.key),
+    );
     const packageMap = new Map<string, PackageKey[]>();
     for (const row of (assignments ?? []) as unknown as AssignmentRow[]) {
-      if (!row.enabled || !row.packages?.is_active) continue;
+      if (!row.enabled || !activePackages.has(row.package_key)) continue;
       const current = packageMap.get(row.company_id) ?? [];
       current.push(asPackageKey(row.package_key));
       packageMap.set(row.company_id, current);
     }
 
+    const settingsMap = new Map(
+      ((settings ?? []) as unknown as CompanySettingRow[]).map((row) => [row.company_id, row.company_email]),
+    );
     const employeeCounts = new Map<string, number>();
     for (const row of (employees ?? []) as unknown as EmployeeCountRow[]) {
       employeeCounts.set(row.company_id, (employeeCounts.get(row.company_id) ?? 0) + 1);
@@ -112,7 +130,7 @@ export class SupabaseRepository implements Repository {
       slug: row.slug,
       subdomain: row.subdomain ?? row.slug,
       status: row.status,
-      adminEmail: row.company_settings?.company_email ?? '',
+      adminEmail: settingsMap.get(row.id) ?? '',
       employeeCount: employeeCounts.get(row.id) ?? 0,
       createdAt: row.created_at.slice(0, 10),
       packages: packageMap.get(row.id) ?? [],

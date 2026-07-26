@@ -58,11 +58,90 @@ It does not claim that hosted browser smoke testing has been completed.
 | `/leave` | Entitlement-gated leave list | Empty/no-results/retry | Decision confirmation/toast | Complete |
 | `/attendance` | Entitlement-gated attendance list | Empty/no-results/retry | Check-in/out feedback | Complete |
 
+The route table records the data source, loading/empty/error/success behavior,
+destructive action, toast/dialog behavior, and completion status for every
+current route. The following cross-cutting audit records the remaining fields
+that apply to each route's shared shell and interaction primitives.
+
+## Dialog, modal, and drawer audit
+
+| Surface | Title/description | Focus/keyboard | Mobile/scroll | Pending/close behavior | Status |
+|---|---|---|---|---|---|
+| `ConfirmDialog` | Unique `useId` title and optional description | Focus trap, Escape, Tab loop, focus return | 90vh max height with internal scrolling | Cancel, backdrop, and Escape disabled while pending; buttons disabled | Complete |
+| Admin recovery confirmation | Shared `ConfirmDialog`, impact description | Same shared behavior | Same shared behavior | Rollback remains open until mutation resolves | Complete |
+| Workspace terminate/disable confirmations | Shared `ConfirmDialog`, destructive tone where appropriate | Same shared behavior | Same shared behavior | Values/actions remain controlled by page until success | Complete |
+| AppShell mobile drawer | Labeled open/close controls and overlay | Escape closes; focus remains keyboard reachable | 86vw max width; navigation scrolls | No repository call; route navigation closes drawer | Complete |
+
+No dialog calls a repository directly. Forms own their values, so mutation
+errors preserve entered values; success handlers close or navigate only after a
+successful mutation. The shared dialog prevents duplicate submissions and
+prevents dismissal during critical pending mutations.
+
+## Authentication and session matrix
+
+| Flow | Expected result | Evidence/status |
+|---|---|---|
+| Platform Admin login | Authenticates, verifies `platform_admins`, enters `/admin` | Route-guard tests; Complete |
+| Company login | Authenticates, resolves membership/company status/entitlements, enters workspace | Route-guard tests; Complete |
+| Alpha then logout then Beta | Logout clears session and all cached tenant data before Beta loads | Logout/session tests; Complete |
+| Platform logout then company login | Portal context is recomputed from the new URL/session and cannot reuse admin state | Guard/login tests; Complete |
+| Browser refresh while signed in | Supabase Auth restores session, then guards resolve context | Supabase adapter implementation; hosted browser smoke pending |
+| Expired/failed session restore | Loading ends and the user remains signed out with a safe retry/login path | Session restoration test; Complete |
+| Unauthorized tenant | Membership/slug mismatch routes to access denied | Route-guard test; Complete |
+| Suspended company | Active membership plus suspended company routes to suspended state | Route-guard test; Complete |
+| Inactive membership | Company access is denied | Route-guard test; Complete |
+
+Logout calls the Auth adapter first, then always clears the local session and
+TanStack Query cache. The context and entitlement hooks are keyed by the
+authenticated user, so they become disabled/recomputed after logout; no prior
+company data should remain available to the next session.
+
+## Version audit
+
+- `package.json` is the only platform-version source.
+- `APP_VERSION` and `AppVersion` provide the shared display value.
+- AppShell displays the value for both Platform Admin and Company workspace;
+  public auth screens display it in the footer.
+- Package releases retain independent package versions and do not mutate
+  `APP_VERSION`; a focused test publishes a package version and asserts the
+  platform value is unchanged.
+- System health and shell metadata remain covered by the shared version display;
+  a separate hardcoded version is not permitted.
+
+## Responsive and accessibility audit fields
+
+Every route inherits responsive shell behavior, visible focus states, semantic
+loading/status/alert roles, keyboard-accessible controls, and mobile navigation.
+Tables use a bounded overflow surface, toolbars wrap, dialogs fit within the
+viewport and scroll internally, and long labels truncate safely. Full manual
+browser verification at 320, 375, 768, 1024, and 1440 pixels remains
+`Deferred` because the browser runner is unavailable.
+
 ## Evidence and remaining work
 
-- Local verification: typecheck, lint, build, and 219 application tests pass.
+- Local verification: typecheck, lint, build, and 227 application tests pass.
 - CI includes eight SQL/RLS suites with 94 scenarios.
 - Supabase mode has repository/adapters and real UUID scoping; no mock IDs are
   intended to reach Supabase requests.
 - Full browser smoke testing at 320/375/768/1024/1440 pixels, hosted Auth
   seed verification, and visual regression automation remain deployment tasks.
+
+## Code-quality audit
+
+The focused audit found and addressed these proven issues:
+
+- `LazySupabaseRepository` public methods are callback-safe; aggregate method
+  coverage and detached-call behavior are tested.
+- Supabase repository errors now log safe development diagnostics and avoid
+  exposing provider-internal schema/SQL messages to user-facing toasts.
+- Supabase-mode company context is used for hosted workspace names and
+  subdomains instead of relying on mock company metadata.
+- Normal mutations use centralized, scoped invalidation targets. Full query
+  cache clearing is reserved for logout/security transitions.
+- No page imports or calls Supabase directly; no browser service-role variable
+  is supported.
+
+The audit did not find a proven need for a broad component rewrite, a new
+error-boundary hierarchy, or a schema/RLS/grant change. Existing non-null
+assertions occur behind query `enabled` guards or static app-root mounting and
+remain covered by the current type/test boundaries.

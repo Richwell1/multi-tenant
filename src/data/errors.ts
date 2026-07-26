@@ -36,6 +36,11 @@ const safeMessage = (message: string | undefined) =>
     .replace(/eyJ[a-zA-Z0-9._-]+/g, '[redacted-token]')
     .slice(0, 300);
 
+const isProviderInternalMessage = (message: string) =>
+  /\b(?:postgres(?:ql)?|postgrest|relation|schema|column .* does not exist|syntax error|violates .* constraint)\b/i.test(
+    message,
+  );
+
 /** Development-only, structured Supabase diagnostics without credentials. */
 export function logSupabaseError(operation: string, error: unknown): void {
   if (!import.meta.env.DEV) return;
@@ -71,13 +76,16 @@ export function mapSupabaseError(error: unknown, operation?: string): Repository
     if (code === 'PGRST116') return new RepositoryError('Record not found.', 'not_found', error);
 
     // Auth / RLS.
-    if (status === 401 || status === 403) {
+    if (status === 401 || status === 403 || code === '42501') {
       return new RepositoryError('You are not authorized to perform this action.', 'forbidden', error);
     }
     if (status === 404) return new RepositoryError('Record not found.', 'not_found', error);
     if (status === 409) return new RepositoryError('That value is already taken.', 'conflict', error);
 
-    if (message) return new RepositoryError(message, 'unknown', error);
+    const userMessage = safeMessage(message);
+    if (message && !isProviderInternalMessage(userMessage)) {
+      return new RepositoryError(userMessage, 'unknown', error);
+    }
   }
 
   return new RepositoryError('An unexpected error occurred. Please try again.', 'unknown', error);

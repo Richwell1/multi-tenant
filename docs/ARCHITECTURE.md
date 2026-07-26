@@ -150,6 +150,34 @@ application version is separate: `package.json` is the source of truth and
 `src/lib/app-version.ts` exposes the `v0.1.0` display value. A package release
 must not be mistaken for a platform deployment.
 
+### Classification versus targeting
+
+Classification answers “what kind of change is this?” The supported package
+classifications are standard update, shared extension, private customization,
+configuration update, bug fix, and security update. Targeting answers “which
+companies receive it?” and is independently represented as all companies,
+selected companies, or one company. A private customization can target only
+one company; a shared extension can target selected or all companies. The
+database RPC validates the combination, so the UI is not the final authority.
+
+### Release records
+
+The release model keeps these concepts distinct:
+
+1. Package definition — the stable package key and catalog metadata.
+2. Package version — version, notes, diagnostic status, and release metadata.
+3. Release — the publish operation for a package version.
+4. Release targets — all, selected, or one company recipients.
+5. Assignments — the company's enabled entitlement.
+6. Installations — the operational state of applying the release.
+7. Diagnostics — impact and required-check evidence for the release gate.
+8. Audit and usage — platform activity and derived operational analytics.
+
+An installation state transition is enforced in the database and mirrored in
+the service/UI. Recovery is explicit: retry can restore a failed installation;
+rollback disables its assignment. A package release does not increment the
+global platform version unless the shared application is also deployed.
+
 ## Domain modules
 
 ```text
@@ -194,7 +222,7 @@ check, not a claim of automated coverage.
 
 Application tests cover repository/service behavior, route guards, package
 targeting, transitions, tenant scoping, notifications/states, and the lazy
-repository boundary. CI runs typecheck, lint, 219 application tests, and a
+repository boundary. CI runs typecheck, lint, 227 application tests, and a
 production build. The Supabase job starts a local project, resets it, and runs
 eight SQL/RLS suites containing 94 authenticated scenarios before cleanup.
 
@@ -204,14 +232,54 @@ not an accepted workflow because it targets the hosted project.
 
 ## Engineering principles
 
-1. Keep one repository, one application, and one shared backend.
-2. Keep pages thin and put business rules in services or database constraints.
-3. Treat RLS and server-side entitlement checks as security boundaries.
-4. Use real tenant UUIDs in Supabase mode; never leak mock IDs into requests.
-5. Prefer independently recoverable queries for optional dashboard data.
-6. Add comments only for non-obvious business, security, state, cache, session,
-   accessibility, versioning, or intentional-debt decisions.
-7. Preserve the approved role, package, and feature scope.
+1. Apply single responsibility and separation of concerns across routes,
+   components, hooks, services, repositories, and adapters.
+2. Prefer dependency inversion: pages depend on hooks/services and interfaces,
+   not Supabase clients or concrete adapters.
+3. Use DRY, KISS, YAGNI, and composition over duplicated components or rules.
+4. Prefer explicit TypeScript types, centralized validation, and centralized
+   error mapping.
+5. Keep tenant-scoped query keys and targeted invalidation; broad cache clearing
+   is reserved for logout or a security transition, not normal mutations.
+6. Use behavior-based tests for user-visible rules, tenant isolation,
+   transitions, and repository boundaries.
+7. Treat RLS and server-side entitlement checks as final security boundaries;
+   frontend guards are UX protection only.
+8. Use real tenant UUIDs in Supabase mode; never leak mock IDs into requests or
+   hardcode company-specific behavior.
+9. Do not create permanent customer branches. Use short-lived feature branches
+   and one shared deployment.
+10. Do not silently swallow errors. Surface a safe state, retry action, or
+    structured development diagnostic.
+11. Add comments only for non-obvious business, security, state, cache, session,
+    accessibility, versioning, or intentional-debt decisions.
+12. Make accessibility and responsive behavior defaults, not late-stage extras.
+13. Preserve the approved role, package, and feature scope.
+
+## Global platform version
+
+The global platform version is the shared application release displayed in both
+the Company workspace and Platform Admin UI. It is sourced from `package.json`
+and rendered as `v0.1.0` by `src/lib/app-version.ts`. It changes only when a
+general platform release is deployed to the shared application. Shared
+navigation, global UI, authentication, security hardening, HR Core, and shared
+infrastructure changes may justify a platform version increment.
+
+Package versions change independently. For example, HR Core `1.1.0`,
+Attendance Management `1.0.0`, and Leave Management `1.2.0` may be released to
+one, selected, or all companies without changing the global version. A private
+extension does not change the global version merely because one company
+received it.
+
+## Quality audit rules
+
+Application pages must use shared state, dialog, notification, and query-key
+utilities. Hard delete is not a default operation: use disable, terminate,
+cancel, archive, or an explicit state transition where the domain supports it.
+Every destructive action needs confirmation, pending protection, scoped cache
+invalidation, and success/failure feedback. Important errors must also be
+visible inline and announced with appropriate semantics; a toast alone is not
+an error boundary.
 
 ## Deferred work
 

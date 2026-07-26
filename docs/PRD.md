@@ -415,3 +415,4 @@ The following remain deferred and are not implied by the acceptance criteria:
 - wildcard custom domains and tenant subdomain deployment
 - time-series analytics
 - diagnostic authoring beyond the current release gate
+- automatic visual browser testing while the browser runner remains unavailable

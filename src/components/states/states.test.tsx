@@ -80,4 +80,34 @@ describe('UI-state components', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(trigger).toHaveFocus();
   });
+
+  it('keeps a critical mutation open and prevents duplicate dismissal', () => {
+    const onCancel = vi.fn();
+    const onConfirm = vi.fn();
+    const { unmount } = render(
+      <ConfirmDialog
+        open
+        title="Install update"
+        description={<div>{Array.from({ length: 20 }, (_, i) => <p key={i}>Long impact detail {i}</p>)}</div>}
+        pending
+        onCancel={onCancel}
+        onConfirm={onConfirm}
+      />,
+    );
+
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveAttribute('aria-modal', 'true');
+    expect(dialog.firstElementChild).toHaveClass('max-h-[90vh]');
+    expect(document.body.style.overflow).toBe('hidden');
+
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    fireEvent.click(dialog);
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(onCancel).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Confirm' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
+
+    unmount();
+    expect(document.body.style.overflow).toBe('');
+  });
 });

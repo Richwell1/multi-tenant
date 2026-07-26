@@ -8,13 +8,13 @@
 | | |
 |---|---|
 | Product | Multi-Tenants HR |
-| Current branch | `refactor/package-categories` |
-| Current phase | Package category presentation clarity |
-| Current increment | Human-readable categories (System/Marketplace/Private Extension/Private Standalone), visibility, base package, filters — no raw enums in UI |
+| Current branch | `feat/company-update-notifications` |
+| Current phase | Company Available Updates + sidebar badge |
+| Current increment | Tenant-scoped pending-updates RPC + company-side install, per-card update UI, sidebar count badge with reduced-motion pulse |
 | Default data source | `mock` (`VITE_DATA_SOURCE`), Supabase path behind lazy adapters |
 | Local Supabase ports | API/Functions 54331 · DB 54332 · Studio 54333 (project-local +10 offset) |
 | Hosted Supabase | Linked (`uezvaqoqqqgblpcbkujq`); all 23 migrations deployed (marketplace + private packages pushed 2026-07-29); local↔remote aligned |
-| Test count | 305 application tests |
+| Test count | 312 application tests |
 
 > `main` carries everything through 5.6 and the hosted Supabase baseline is deployed. The hosted CI quality gate passed the full
 > SQL/RLS matrix and application checks. RLS suites under `supabase/tests/`:
@@ -299,6 +299,7 @@
 | Marketplace entitlement + UI fix | ✅ | ✅ | ✅ | 275 | ✅ (491.64 kB) | ✅ 16 SQL/RLS suites (+9 Document Notes authz scenarios) | grant migration `20260730010000` branch-local (hosted push needed to fix live insert) |
 | Tenant-fixture hygiene audit | ✅ | ✅ | ✅ | 297 | ✅ | ✅ 16 suites | production migrations create no demo companies (guard test); `tenant.ts` no longer hardcodes company slugs; SQL test fixtures renamed Alpha/Beta/Gamma → TestOne/TestTwo/TestThree (isolated, rolled back) |
 | Package category presentation | ✅ | ✅ | ✅ | 305 | ✅ | ✅ 16 suites | UI shows human categories/visibility/base package via `category.ts` mapper (no raw enums); no migration (data already correct) |
+| Company update notifications | ✅ | ✅ | ✅ | 312 | ✅ | ✅ 17 suites (+10 company-updates) | tenant-scoped `company_available_updates()` + `install_company_update()`; per-card UI; sidebar count badge + reduced-motion pulse; migration `20260731010000` branch-local |
 
 ## Current risks
 - Mock is default; Supabase HR-Core path verified at DB/RLS level, **not yet exercised end-to-end in the browser**.

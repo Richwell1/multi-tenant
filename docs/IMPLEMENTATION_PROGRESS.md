@@ -207,6 +207,11 @@
 - Hosted status: both migrations pushed to hosted Supabase on 2026-07-27
   (backward-compatible ahead of PR merge); local↔remote history aligned (18/18).
   Frontend ships when the branch merges to `main`; browser demo dry-run pending.
+- **Post-demo direction:** the richer package model (marketplace extensions +
+  company self-service install, update policies, `installation_source`, adoption
+  analytics) is designed in `docs/PACKAGE_MARKETPLACE_ROADMAP.md` and deliberately
+  **not** built for the demo. Three of its four categories already ship; the new
+  pillar is the company-facing marketplace.
 
 ## Verification history
 

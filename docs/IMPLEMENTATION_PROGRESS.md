@@ -44,7 +44,7 @@
 | 5.4 | Usage Analytics | Complete | 2026-07-25 | feat/usage-analytics | merged (PR #12) | 197 tests + 7 JWT/RLS ✅ | audit-derived; time-series deferred |
 | 5.5 | Audit Surfaces & System Health | Complete | 2026-07-25 | feat/audit-health-surfaces | (this branch) | 201 tests + 9 JWT/RLS ✅ | enriched audit view; derived health |
 | 5.6 | CI automation | Complete | 2026-07-25 | feat/ci-security-suites | merged (PR #14) | hosted CI: 8 SQL/RLS suites (94 scenarios) + typecheck/lint/201 tests/build ✅ | browser E2E and hosted deployment remain |
-| 6.1 | Hosted Supabase deployment | In progress | 2026-07-25 | feat/hosted-supabase-deployment | — | merged main reset: 14 migrations, 8 SQL suites, 94 scenarios, 201 tests ✅ | migrations, Auth, functions, and production seed not deployed |
+| 6.1 | Hosted Supabase deployment | In progress | 2026-07-25 | feat/hosted-supabase-deployment | — | hosted: 15 migrations, RLS grants, 8 SQL suites, 94 scenarios, 201 tests ✅ | Auth, Vercel variables, and production seed not deployed |
 | 6 | Deployment / security hardening / subdomains | Not started | — | — | — | — | wildcard DNS, hosted deploy |
 
 ## Milestone checklists
@@ -103,7 +103,7 @@
 - [ ] Per-company `leave_types` table + composite FK — deferred (no leave-type UI; enum used)
 
 ### Hosted deployment
-- [x] Push all 14 migrations to hosted Supabase; remote migration history matches local
+- [x] Push all 15 migrations to hosted Supabase (14 schema migrations + API grants); remote history matches local
 - [x] Deploy `register-company` Edge Function (active, version 1)
 - [ ] Vercel frontend deploy + env
 
@@ -146,7 +146,7 @@
 - Role model is `company_admin` / `company_user` only — no `hr_manager`; spec HR-Manager rules map to `company_admin`.
 - `feat/hr-core-persistence` is based on `feat/live-route-guards` (unmerged) — rebases when the guard PR lands.
 - Mock create/update/disable/terminate are simulated (no persistence) — expected pattern.
-- Hosted Supabase schema is deployed and migration history is aligned; hosted companies, memberships, and platform admins are still empty.
+- Hosted Supabase schema is deployed and migration history is aligned; the API-grants migration fixed authenticated REST access to RLS-protected tables. Hosted companies, memberships, and platform admins are still empty.
 - Hosted Auth URL configuration, demo users/seed data, and Vercel environment variables remain pending. The stated `multi-tenant-hr.vercel.app` URL returned HTTP 404 during verification; confirm the actual Vercel project URL before adding variables.
 - The deployment checklist names `usage_events` and `system_health_checks`, but this repository intentionally derives usage from `audit_logs` (`usage_metrics()`) and health from `system_health()`; those tables should not be added without a product/schema decision.
 - **Fixed (4.1):** package gating previously read mock `company.packages`, which is `undefined` for real Supabase tenants (would have hidden Leave for everyone on the Supabase path). Gating now uses `enabledPackageCodes` from the membership context — one source for mock and Supabase, guard + nav aligned.

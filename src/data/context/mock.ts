@@ -14,12 +14,25 @@ import type {
   MembershipRepository,
   PlatformAdminRepository,
 } from './repositories';
-import type { CompanyRole, CompanySessionContext, MembershipRecord, MembershipStatus } from './types';
+import type { CompanyRole, CompanySessionContext, EnabledPackage, MembershipRecord, MembershipStatus } from './types';
 
 const COMPANY_NAME: Record<string, string> = {
   alpha: 'Alpha Trading',
   beta: 'Beta Manufacturing',
   gamma: 'Gamma Logistics',
+};
+
+// Deterministic demo entitlements with installed versions. Alpha is on HR Core
+// 1.1.0 (Employees available) + Leave; Beta is still on HR Core 1.0.0 (Employees
+// hidden) to illustrate version gating locally. This is fixture data, not gating
+// logic — the gate itself never branches on company identity.
+const ENABLED_PACKAGES: Record<string, EnabledPackage[]> = {
+  alpha: [
+    { code: 'hr-core', version: '1.1.0' },
+    { code: 'leave-management', version: '1.0.0' },
+  ],
+  beta: [{ code: 'hr-core', version: '1.0.0' }],
+  gamma: [{ code: 'hr-core', version: '1.0.0' }],
 };
 
 function slugFromEmail(email: string): 'alpha' | 'beta' | 'gamma' {
@@ -60,6 +73,7 @@ export class MockMembershipRepository implements MembershipRepository {
 export class MockCompanyContextRepository implements CompanyContextRepository {
   async getCompanyContext(user: AuthUser): Promise<CompanySessionContext | null> {
     const slug = slugFromEmail(user.email);
+    const enabledPackages = ENABLED_PACKAGES[slug] ?? [];
     return {
       userId: user.id,
       companyId: `mock-${slug}`,
@@ -68,7 +82,8 @@ export class MockCompanyContextRepository implements CompanyContextRepository {
       companyStatus: slug === 'gamma' ? 'suspended' : 'active',
       membershipStatus: membershipStatusFromEmail(user.email),
       role: roleFromEmail(user.email),
-      enabledPackageCodes: slug === 'alpha' ? ['hr-core', 'leave-management'] : ['hr-core'],
+      enabledPackages,
+      enabledPackageCodes: enabledPackages.map((p) => p.code),
     };
   }
 }

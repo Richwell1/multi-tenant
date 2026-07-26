@@ -32,6 +32,27 @@ describe('PackageGuard', () => {
     expect(screen.getByText(/Leave Management is not enabled/i)).toBeInTheDocument();
   });
 
+  it('renders children when the installed version meets minVersion', () => {
+    ctxResult({ data: { enabledPackageCodes: ['hr-core'], enabledPackages: [{ code: 'hr-core', version: '1.1.0' }] }, isPending: false, isError: false });
+    render(
+      <PackageGuard packageCode="hr-core" minVersion="1.1.0" packageName="HR Core">
+        <div>EMPLOYEES</div>
+      </PackageGuard>,
+    );
+    expect(screen.getByText('EMPLOYEES')).toBeInTheDocument();
+  });
+
+  it('blocks when the installed version is below minVersion', () => {
+    ctxResult({ data: { enabledPackageCodes: ['hr-core'], enabledPackages: [{ code: 'hr-core', version: '1.0.0' }] }, isPending: false, isError: false });
+    render(
+      <PackageGuard packageCode="hr-core" minVersion="1.1.0" packageName="HR Core">
+        <div>EMPLOYEES</div>
+      </PackageGuard>,
+    );
+    expect(screen.queryByText('EMPLOYEES')).toBeNull();
+    expect(screen.getByText('Package not enabled')).toBeInTheDocument();
+  });
+
   it('shows a loading state while entitlements resolve', () => {
     ctxResult({ data: undefined, isPending: true, isError: false });
     render(

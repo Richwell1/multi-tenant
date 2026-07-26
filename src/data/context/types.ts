@@ -12,6 +12,12 @@ export interface MembershipRecord {
   status: MembershipStatus;
 }
 
+/** An enabled package plus the company's installed version (drives version gating). */
+export interface EnabledPackage {
+  code: string;
+  version: string | null;
+}
+
 /** Everything a company-scoped route guard / workspace needs after sign-in. */
 export interface CompanySessionContext {
   userId: string;
@@ -22,5 +28,8 @@ export interface CompanySessionContext {
   companyStatus: CompanyStatus;
   membershipStatus: MembershipStatus;
   role: CompanyRole;
+  /** Enabled packages with installed versions (single source for version gating). */
+  enabledPackages: EnabledPackage[];
+  /** Convenience: just the enabled package codes (derived from `enabledPackages`). */
   enabledPackageCodes: string[];
 }

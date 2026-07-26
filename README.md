@@ -249,6 +249,28 @@ newer all-company HR Core release becomes the default for future registrations.
 Only HR Core is assigned automatically — private packages and extensions are
 never auto-assigned during registration.
 
+### Package versions and feature gating
+
+Features are gated on the company's **installed package version**, not just the
+entitlement. A centralized manifest (`src/lib/packages/manifest.ts`) is the
+single source mapping each package version to the features it exposes and the
+minimum version that unlocks each:
+
+```text
+HR Core 1.0.0 → Departments
+HR Core 1.1.0 → Departments + Employees
+Attendance Management 1.0.0 → Attendance
+```
+
+Sidebar navigation, direct route access, and page rendering all check the
+installed version (Employees requires HR Core ≥ 1.1.0; Attendance requires
+Attendance ≥ 1.0.0). The company's Installed Packages page shows each package's
+name, installed version, and available features — kept separate from the
+platform `APP_VERSION` (`package.json`), which package releases never change.
+When the Platform Admin publishes HR Core 1.1.0 to all active companies,
+existing companies move to 1.1.0 (Employees appears) and newly registered
+companies start on the latest released version automatically.
+
 ### Release lifecycle
 
 Creating a package creates metadata and its initial version; it does not

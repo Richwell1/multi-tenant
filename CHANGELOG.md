@@ -2,8 +2,26 @@
 
 ## Unreleased
 
-Demo package workflows (branch `feat/demo-package-workflows`). Platform version
-remains `v0.1.0`; package versions change independently.
+Minimal package-version demo (branch `feat/minimal-package-version-demo`).
+Proves package versioning end-to-end. Platform `APP_VERSION` stays `v0.1.0`.
+
+- Version-gated features via a centralized package→feature manifest: HR Core
+  1.0.0 exposes Departments; 1.1.0 adds Employees; Attendance 1.0.0 exposes
+  Attendance. Nav, direct routes, and rendering all gate on the installed
+  version (Employees needs HR Core ≥ 1.1.0; Attendance needs ≥ 1.0.0).
+- Company context now carries installed package versions (`enabledPackages`);
+  the Installed Packages page shows each package name, installed version, and
+  available features from the manifest — separate from the platform version.
+- Seeded HR Core 1.1.0 and Attendance Management 1.0.0 (diagnostic PASS,
+  unreleased) so the Admin can publish them live; registration keeps assigning
+  the latest released, PASS, highest-semver HR Core (never hardcoded).
+- Added semver util, manifest, version-aware `PackageGuard`, and tests
+  (semver, manifest gating, no-hardcoded-company, version guard) plus the
+  `minimal_package_version_demo_rls.sql` suite.
+
+## Demo package workflows (branch `feat/demo-package-workflows`)
+
+Platform version remains `v0.1.0`; package versions change independently.
 
 - Added the `private_extension` package type (one company, requires an enabled
   base package) alongside `standard_update` and the standalone

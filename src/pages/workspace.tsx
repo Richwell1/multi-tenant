@@ -6,6 +6,8 @@ import { z } from 'zod';
 import { CheckCircle2, Circle } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import { APP_VERSION } from '@/lib/app-version';
+import { PACKAGE_MANIFEST, availableFeatures } from '@/lib/packages/manifest';
+import type { PackageKey } from '@/data/types';
 import { StatCard } from '@/components/stat-card';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,7 +31,7 @@ import { useSession } from '@/lib/session';
 import { useCompanyId } from '@/hooks/use-company-id';
 import { useCompanyContext } from '@/hooks/context';
 import { PackageGuard } from '@/components/guards';
-import { useHasPackage } from '@/hooks/entitlements';
+import { useHasPackage, usePackageEntitlements } from '@/hooks/entitlements';
 import { PACKAGE_CODES } from '@/lib/entitlements';
 import { notify } from '@/lib/notify';
 import { forceNextFailure } from '@/data/api';
@@ -37,7 +39,6 @@ import {
   useCompanyUsers,
   useInstallPackage,
   useSaveSettings,
-  useTenantInstallations,
 } from '@/hooks/queries';
 import { useDepartments, useCreateDepartment, useDisableDepartment } from '@/hooks/departments';
 import { usePositions, useCreatePosition, useDisablePosition } from '@/hooks/positions';
@@ -106,6 +107,15 @@ export function WorkspaceDashboard() {
 // --- Employees ----------------------------------------------------------------
 
 export function EmployeesList() {
+  // Employees is an HR Core 1.1.0 feature — gate the route on the installed version.
+  return (
+    <PackageGuard packageCode={PACKAGE_CODES.hrCore} minVersion="1.1.0" packageName="HR Core">
+      <EmployeesListContent />
+    </PackageGuard>
+  );
+}
+
+function EmployeesListContent() {
   const [q, setQ] = useState('');
   const query = useEmployees();
   const filtered = (query.data ?? []).filter((e) =>
@@ -315,6 +325,15 @@ const departmentSchema = z.object({
 type DepartmentForm = z.infer<typeof departmentSchema>;
 
 export function DepartmentsPage() {
+  // Departments is the HR Core 1.0.0 baseline feature — gate on the entitlement.
+  return (
+    <PackageGuard packageCode={PACKAGE_CODES.hrCore} packageName="HR Core">
+      <DepartmentsContent />
+    </PackageGuard>
+  );
+}
+
+function DepartmentsContent() {
   const query = useDepartments();
   const createMutation = useCreateDepartment();
   const disableMutation = useDisableDepartment();
@@ -680,9 +699,10 @@ export function UpdatesPage() {
 }
 
 export function InstalledPackagesPage() {
-  const tid = useTenantId();
-  const query = useTenantInstallations(tid);
-  const filtered = query.data ?? [];
+  // Single source: the resolved company context (enabled packages + installed
+  // versions). Feature lists come from the centralized package manifest — package
+  // versions are never hardcoded per component and stay separate from APP_VERSION.
+  const { packages, isPending, isError } = usePackageEntitlements();
   return (
     <>
       <PageHeader
@@ -690,26 +710,40 @@ export function InstalledPackagesPage() {
         description="Packages active in this workspace"
         actions={<Badge tone="neutral">Platform version: {APP_VERSION}</Badge>}
       />
-      <TableBoundary query={query} filtered={filtered} cols={3}>
-        <DataTable>
-          <THead>
-            <TH>Package</TH>
-            <TH>Version</TH>
-            <TH>State</TH>
-          </THead>
-          <TBody>
-            {filtered.map((i) => (
-              <TR key={i.id}>
-                <TD className="font-medium">{i.packageKey}</TD>
-                <TD>{i.packageVersion}</TD>
-                <TD>
-                  <Badge tone={i.state === 'installed' ? 'healthy' : 'degraded'}>{i.state}</Badge>
-                </TD>
-              </TR>
-            ))}
-          </TBody>
-        </DataTable>
-      </TableBoundary>
+      {isPending ? (
+        <PageLoadingState label="Loading installed packages…" />
+      ) : isError ? (
+        <ErrorState />
+      ) : packages.length === 0 ? (
+        <EmptyState title="No packages installed" description="Installed packages will appear here once a release reaches this company." />
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2">
+          {packages.map((p) => {
+            const entry = PACKAGE_MANIFEST[p.code as PackageKey];
+            const features = availableFeatures(packages, p.code as PackageKey);
+            return (
+              <Card key={p.code}>
+                <CardHeader>
+                  <CardTitle>{entry?.name ?? p.code}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Badge tone="neutral">Version {p.version ?? '—'}</Badge>
+                  {features.length > 0 && (
+                    <ul className="space-y-1 text-sm text-content-variant">
+                      {features.map((f) => (
+                        <li key={f.label} className="flex items-center gap-2">
+                          <CheckCircle2 className="size-4 text-status-healthy" />
+                          {f.label}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </>
   );
 }
@@ -976,7 +1010,7 @@ function LeaveContent() {
 
 export function AttendancePage() {
   return (
-    <PackageGuard packageCode={PACKAGE_CODES.attendance} packageName="Attendance Management">
+    <PackageGuard packageCode={PACKAGE_CODES.attendance} minVersion="1.0.0" packageName="Attendance Management">
       <AttendanceContent />
     </PackageGuard>
   );

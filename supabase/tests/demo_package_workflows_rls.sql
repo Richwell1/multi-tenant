@@ -64,7 +64,7 @@ language sql as $$
 $$;
 
 -- ============================================================================
--- Registration BEFORE HR Core 1.1.0 exists → new company gets the seeded 1.0.0.
+-- Registration BEFORE HR Core 1.2.0 exists → new company gets the seeded 1.0.0.
 -- (onboard_company is service_role-only; the suite runs as the DB owner.)
 -- ============================================================================
 reset role;
@@ -77,19 +77,19 @@ select (:'reg0'::jsonb)->>'company_id' as reg0_company \gset
 -- ============================================================================
 select pg_temp.actor('a1111111-1111-1111-1111-111111111111');
 set local role authenticated;
-select public.create_package_version('hr-core', '1.1.0', 'HR Core 1.1.0 — general update.') as v110 \gset
-select pg_temp.check(1, 'HR Core 1.1.0 version created',
-  (:'v110'::jsonb->>'version') = '1.1.0');
+select public.create_package_version('hr-core', '1.2.0', 'HR Core 1.2.0 — general update.') as v110 \gset
+select pg_temp.check(1, 'HR Core 1.2.0 version created',
+  (:'v110'::jsonb->>'version') = '1.2.0');
 
--- Mark 1.1.0 diagnostic PASS (in reality via a diagnostic report; here directly)
+-- Mark 1.2.0 diagnostic PASS (in reality via a diagnostic report; here directly)
 -- so it is eligible for release and future registrations.
 reset role;
-update public.package_versions set diagnostic_status = 'PASS' where package_key = 'hr-core' and version = '1.1.0';
+update public.package_versions set diagnostic_status = 'PASS' where package_key = 'hr-core' and version = '1.2.0';
 select pg_temp.actor('a1111111-1111-1111-1111-111111111111');
 set local role authenticated;
 
 select public.create_package_release(
-  (select id from public.package_versions where package_key = 'hr-core' and version = '1.1.0'),
+  (select id from public.package_versions where package_key = 'hr-core' and version = '1.2.0'),
   'all_companies', '{}', true) as rel1 \gset
 
 select pg_temp.check(2, 'publish targets every active company',
@@ -99,16 +99,16 @@ select pg_temp.check(3, 'suspended company excluded from the release',
               where pi.release_id = (:'rel1'::jsonb->>'release_id')::uuid
                 and pi.company_id = 'c1000000-0000-0000-0000-000000000003'));
 select pg_temp.check(4, 'automatic install enables entitlement with no company action',
-  (select enabled and status = 'installed' and package_version = '1.1.0'
+  (select enabled and status = 'installed' and package_version = '1.2.0'
      from public.company_packages where company_id = 'a1000000-0000-0000-0000-000000000001' and package_key = 'hr-core')
-  and (select enabled and package_version = '1.1.0'
+  and (select enabled and package_version = '1.2.0'
      from public.company_packages where company_id = 'b1000000-0000-0000-0000-000000000002' and package_key = 'hr-core'));
 select pg_temp.check(23, 'suspended company not moved to the new version',
   not exists (select 1 from public.company_packages
               where company_id = 'c1000000-0000-0000-0000-000000000003' and package_key = 'hr-core'));
 
 -- ============================================================================
--- Registration AFTER 1.1.0 → new company gets 1.1.0 (new default). Not hardcoded.
+-- Registration AFTER 1.2.0 → new company gets 1.2.0 (new default). Not hardcoded.
 -- ============================================================================
 reset role;
 select public.onboard_company('d2000000-0000-0000-0000-000000000002', 'Reg Two Co', 'reg-two', 'reg-two', 'reg2@x.com', null) as reg2 \gset
@@ -116,13 +116,13 @@ select (:'reg2'::jsonb)->'hr_core'->>'version' as reg2_version \gset
 select (:'reg2'::jsonb)->>'company_id' as reg2_company \gset
 
 select pg_temp.check(16, 'new company receives the latest released HR Core version',
-  :'reg2_version' = '1.1.0');
-select pg_temp.check(17, 'registration is not hardcoded (0 got 1.0.0, later got 1.1.0)',
-  :'reg0_version' = '1.0.0' and :'reg2_version' = '1.1.0');
+  :'reg2_version' = '1.2.0');
+select pg_temp.check(17, 'registration is not hardcoded (0 got 1.0.0, later got 1.2.0)',
+  :'reg0_version' = '1.0.0' and :'reg2_version' = '1.2.0');
 select pg_temp.check(18, 'new company receives an HR Core entitlement automatically',
   (select enabled from public.company_packages where company_id = (:'reg2_company')::uuid and package_key = 'hr-core'));
 select pg_temp.check(19, 'installation record created for the latest HR Core version',
-  (select status = 'installed' and package_version = '1.1.0'
+  (select status = 'installed' and package_version = '1.2.0'
      from public.company_packages where company_id = (:'reg2_company')::uuid and package_key = 'hr-core'));
 select pg_temp.check(21, 'registration assigns only HR Core (no private packages)',
   (select count(*) = 1 and bool_and(package_key = 'hr-core')
@@ -132,12 +132,12 @@ select pg_temp.check(22, 'all-company release changed the default for future reg
                      where package_key = 'hr-core' and released_at is not null and diagnostic_status = 'PASS'
                      order by string_to_array(version, '.')::int[] desc limit 1));
 select pg_temp.check(24, 'newly registered active company still receives the latest version',
-  (select package_version = '1.1.0' from public.company_packages
+  (select package_version = '1.2.0' from public.company_packages
      where company_id = (:'reg2_company')::uuid and package_key = 'hr-core'));
 
 -- Idempotency: re-running the HR Core assignment must not duplicate rows.
 insert into public.company_packages (company_id, package_key, package_version, enabled, status, activated_at)
-values ((:'reg2_company')::uuid, 'hr-core', '1.1.0', true, 'installed', now())
+values ((:'reg2_company')::uuid, 'hr-core', '1.2.0', true, 'installed', now())
 on conflict (company_id, package_key) do update
   set package_version = excluded.package_version, enabled = true, status = 'installed', updated_at = now();
 select pg_temp.check(20, 'retrying provisioning does not duplicate entitlement/installation',
@@ -150,14 +150,14 @@ select pg_temp.actor('a1111111-1111-1111-1111-111111111111');
 set local role authenticated;
 
 -- Base package (Attendance Management) + enable it for Alpha only.
-select public.create_package_with_version('attendance-management', 'Attendance Management', 'standard_update', 'Attendance base', '1.0.0', 'Attendance base release');
+select public.create_package_with_version('demo-attend-base', 'Demo Attendance Base', 'standard_update', 'Attendance base', '1.0.0', 'Attendance base release');
 select public.create_package_release(
-  (select id from public.package_versions where package_key = 'attendance-management' and version = '1.0.0'),
+  (select id from public.package_versions where package_key = 'demo-attend-base' and version = '1.0.0'),
   'one_company', array['a1000000-0000-0000-0000-000000000001']::uuid[], true);
 
 select pg_temp.check(5, 'private extension is created with a base package',
   (public.create_package_with_version('alpha-attendance-approval', 'Alpha Attendance Approval Rules', 'private_extension',
-     'Approval rules', '1.0.0', 'Initial private extension', 'attendance-management')->'package'->>'base_package_key') = 'attendance-management');
+     'Approval rules', '1.0.0', 'Initial private extension', 'demo-attend-base')->'package'->>'base_package_key') = 'demo-attend-base');
 select pg_temp.check(6, 'private extension without a base package is rejected',
   pg_temp.denied('a1111111-1111-1111-1111-111111111111',
     $$select public.create_package_with_version('bad-extension', 'Bad Extension', 'private_extension', 'x', '1.0.0', 'notes')$$));

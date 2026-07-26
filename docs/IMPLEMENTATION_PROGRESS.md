@@ -189,7 +189,7 @@
 | 5.5 Audit & Health | ✅ | ✅ | ✅ | 201 | ✅ | ✅ audit/health 9 (enriched actor/company, self-gate, company filter, failed→degraded) + 85 prior = 94 | audit + health adapters lazy chunks; main 476 KB |
 | 5.6 CI automation | ✅ | ✅ | ✅ | 201 | ✅ | hosted CI + local reset: 8 SQL/RLS suites (94 scenarios), typecheck, lint, tests, build | browser E2E and hosted deployment remain |
 | Engineering quality hardening | ✅ | ✅ | ✅ | 227 | ✅ | 8 SQL/RLS suites (94 scenarios), docs/state/session/version checks | hosted browser QA and hosted Auth/demo verification remain |
-| Admin package management | ✅ | ✅ | ✅ | 231 | pending final pass | ✅ 9 SQL/RLS suites (112 scenarios, including 18 new package-management scenarios) | migration is local only; hosted push and browser release smoke remain |
+| Admin package management | ✅ | ✅ | ✅ | 231 | ✅ (485.23 kB / 147.30 kB gzip) | ✅ 9 SQL/RLS suites (112 scenarios, including 18 new package-management scenarios) | migration is local only; hosted push and browser release smoke remain |
 
 ## Current risks
 - Mock is default; Supabase HR-Core path verified at DB/RLS level, **not yet exercised end-to-end in the browser**.

@@ -112,4 +112,8 @@ export const queryKeys = {
   visitorRegister: {
     list: (companyId: string) => ['visitor-register', companyId] as const,
   },
+  updates: {
+    /** Company-scoped pending updates — one source of truth for page + badge. */
+    list: (companyId: string) => ['company-updates', companyId] as const,
+  },
 } as const;

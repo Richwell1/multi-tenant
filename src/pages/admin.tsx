@@ -652,7 +652,7 @@ export function PackagesList() {
           <>
             <SearchBar value={q} onChange={setQ} />
             <Link to="/admin/packages/new">
-              <Button variant="outline">New Package</Button>
+              <Button variant="outline">Create Package</Button>
             </Link>
             <Link to="/admin/packages/releases/new">
               <Button>Create Package Release</Button>
@@ -700,19 +700,27 @@ export function PackagesList() {
   );
 }
 
-const PACKAGE_CREATION_TYPES: Array<{ value: Extract<PackageType, 'standard_update' | 'shared_extension' | 'private_customization'>; label: string }> = [
+// The three demo package types. "Standalone private package" maps to the
+// existing `private_customization` enum value (one company, no base package);
+// `private_extension` is the new one-company type that requires a base package.
+const PACKAGE_CREATION_TYPES: Array<{ value: Extract<PackageType, 'standard_update' | 'private_extension' | 'private_customization'>; label: string }> = [
   { value: 'standard_update', label: 'Standard update' },
-  { value: 'shared_extension', label: 'Shared extension' },
-  { value: 'private_customization', label: 'Private customization' },
+  { value: 'private_extension', label: 'Private extension' },
+  { value: 'private_customization', label: 'Standalone private package' },
 ];
 
 export function CreatePackage() {
   const navigate = useNavigate();
   const create = useCreatePackage();
+  const packagesQuery = usePackages();
   const [form, setForm] = useState<CreatePackageInput>({
-    code: '', name: '', classification: 'standard_update', description: '', version: '1.0.0', releaseNotes: '',
+    code: '', name: '', classification: 'standard_update', description: '', version: '1.0.0', releaseNotes: '', baseCode: '',
   });
   const [error, setError] = useState<string>();
+
+  const isExtension = form.classification === 'private_extension';
+  // Base-package options: any existing active package other than the one being created.
+  const baseOptions = (packagesQuery.data ?? []).filter((p) => p.isActive && p.code !== form.code);
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -737,10 +745,30 @@ export function CreatePackage() {
               <Input required pattern="[a-z0-9]+(-[a-z0-9]+)*" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} />
             </Field>
             <Field label="Package type">
-              <select className="h-10 w-full rounded-md border border-border bg-surface px-3 text-sm" value={form.classification} onChange={(e) => setForm({ ...form, classification: e.target.value as CreatePackageInput['classification'] })}>
+              <select
+                className="h-10 w-full rounded-md border border-border bg-surface px-3 text-sm"
+                value={form.classification}
+                onChange={(e) => {
+                  const classification = e.target.value as CreatePackageInput['classification'];
+                  // Only a private extension keeps a base package.
+                  setForm({ ...form, classification, baseCode: classification === 'private_extension' ? form.baseCode : '' });
+                }}
+              >
                 {PACKAGE_CREATION_TYPES.map((type) => <option key={type.value} value={type.value}>{type.label}</option>)}
               </select>
             </Field>
+            {isExtension && (
+              <Field label="Base package" hint="The private extension is only installable where this base package is already enabled.">
+                <select
+                  className="h-10 w-full rounded-md border border-border bg-surface px-3 text-sm"
+                  value={form.baseCode ?? ''}
+                  onChange={(e) => setForm({ ...form, baseCode: e.target.value })}
+                >
+                  <option value="">Select a base package…</option>
+                  {baseOptions.map((p) => <option key={p.code} value={p.code}>{p.name} ({p.code})</option>)}
+                </select>
+              </Field>
+            )}
             <Field label="Description">
               <textarea className="min-h-24 w-full rounded-md border border-border bg-surface px-3 py-2 text-sm" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
             </Field>
@@ -750,7 +778,7 @@ export function CreatePackage() {
             <Field label="Release notes">
               <textarea required className="min-h-24 w-full rounded-md border border-border bg-surface px-3 py-2 text-sm" value={form.releaseNotes} onChange={(e) => setForm({ ...form, releaseNotes: e.target.value })} />
             </Field>
-            {form.classification === 'private_customization' && <p className="text-sm text-content-variant">Private packages are not assigned during creation. Publish a release separately and target one company.</p>}
+            {(form.classification === 'private_customization' || isExtension) && <p className="text-sm text-content-variant">Private packages are not assigned during creation. Publish a release separately and target one company.{isExtension && ' The target company must already have the base package enabled.'}</p>}
             <SubmitButton pending={create.isPending} pendingLabel="Creating…">Create Package</SubmitButton>
           </form>
         </CardContent>
@@ -903,11 +931,13 @@ export function CreatePackageRelease() {
             <CompanyTargetSelector
               label="Target"
               description={
-                classification === 'private_customization'
-                  ? 'Private customizations target exactly one company.'
-                  : classification === 'shared_extension'
-                    ? 'Shared extensions target selected companies or all companies.'
-                    : 'This classification can target all, selected, or one company.'
+                classification === 'private_extension'
+                  ? 'Private extensions target exactly one company, which must already have the base package enabled.'
+                  : classification === 'private_customization'
+                    ? 'Standalone private packages target exactly one company.'
+                    : classification === 'shared_extension'
+                      ? 'Shared extensions target selected companies or all companies.'
+                      : 'This classification can target all, selected, or one company.'
               }
               value={target}
               onChange={setTarget}

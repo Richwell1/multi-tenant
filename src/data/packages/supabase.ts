@@ -68,6 +68,7 @@ export class SupabasePackageRepository implements PackageRepository {
       p_description: input.description,
       p_version: input.version,
       p_release_notes: input.releaseNotes,
+      p_base_package_key: input.baseCode ?? undefined,
     });
     if (error) throw mapSupabaseError(error, 'admin.packages.create');
     const result = data as unknown as {

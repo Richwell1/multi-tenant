@@ -10,7 +10,8 @@ import type { CompanyTargetMode } from './company-target';
 export function allowedTargetModesForPackageType(type: PackageType): CompanyTargetMode[] {
   switch (type) {
     case 'private_customization':
-      // A private customization can only ever target a single company.
+    case 'private_extension':
+      // A private customization or private extension only ever targets one company.
       return ['one_company'];
     case 'shared_extension':
       // A shared extension targets a group or everyone — never exactly one.

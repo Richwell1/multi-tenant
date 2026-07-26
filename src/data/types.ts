@@ -69,6 +69,7 @@ export interface CompanyUser {
 export type PackageType =
   | 'standard_update'
   | 'private_customization'
+  | 'private_extension'
   | 'shared_extension'
   | 'bug_fix'
   | 'configuration_update'

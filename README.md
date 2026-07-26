@@ -271,6 +271,38 @@ When the Platform Admin publishes HR Core 1.1.0 to all active companies,
 existing companies move to 1.1.0 (Employees appears) and newly registered
 companies start on the latest released version automatically.
 
+### Distribution models and the marketplace
+
+Packages carry a **category** that controls who installs them and whether they
+are discoverable:
+
+- `standard_package` — mandatory, platform-installed to all active companies.
+- `marketplace_extension` — optional; a `company_admin` self-installs it from the
+  **Extensions Marketplace**. The server (`install_marketplace_extension`) verifies
+  the company is active, the caller is an active `company_admin`, the package is an
+  active marketplace extension, the version is released with diagnostics PASS,
+  dependencies are satisfied, and it is not already installed. A company can never
+  install a private package by submitting its key.
+- `private_standalone` — a unique feature for exactly one company; Platform-Admin
+  assigned, hidden from the marketplace, no base dependency.
+- `private_extension` — a private modification of a base package for one company;
+  requires the base package (and a minimum base version where set, e.g. HR Core
+  ≥ 1.1.0).
+
+Every entitlement records an **installation_source** (`platform_push`,
+`company_marketplace`, `private_assignment`, `registration_default`) so the
+Platform Admin can see how each package reached each company. The admin
+**Adoption** page shows install counts per marketplace extension.
+
+**Update matrix** (package versions never change the platform `APP_VERSION`):
+
+| Action | Who moves |
+|---|---|
+| Standard update to all companies | every active company's installed version |
+| Marketplace install | only the installing company |
+| Marketplace update | only companies already entitled to that package |
+| Private extension / standalone update | only its assigned company |
+
 ### Release lifecycle
 
 Creating a package creates metadata and its initial version; it does not

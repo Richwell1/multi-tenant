@@ -267,6 +267,18 @@ no company action, and newly registered companies start on the latest released
 version. The company workspace shows each package's installed version and
 available features, separate from the platform `APP_VERSION`.
 
+**Distribution models.** Beyond platform-pushed standard packages, the product
+supports: **marketplace extensions** a `company_admin` self-installs from the
+Extensions Marketplace (server-gated — active company_admin, marketplace
+category, released/PASS version, dependencies, not already installed; private
+keys blocked); **private extensions** the Platform Admin assigns to one company
+(hidden, base + base-version gated); and **private standalone** packages (hidden,
+one company, no base). Each install records an `installation_source`, and the
+admin Adoption view reports marketplace install counts. Updates are targeted:
+standard → all active companies; marketplace install → the installing company;
+marketplace update → current adopters; private → the assigned company. No package
+action changes `APP_VERSION`.
+
 ### 5.10 Standard Update Flow
 
 The Platform Super Admin shall be able to publish a standard update to all active companies.

@@ -202,6 +202,20 @@ Navigation, the route-level `PackageGuard` (with an optional `minVersion`), and
 page rendering all read that one source; RLS remains the authoritative boundary.
 Package versions are independent of the platform `APP_VERSION`.
 
+**Distribution models.** `packages.category` separates *how a package is
+distributed* from its change-type: `standard_package` (platform-pushed to all),
+`marketplace_extension` (company self-installed), `private_standalone` and
+`private_extension` (Platform-Admin assigned to one company, hidden). Company
+package discovery is RLS-restricted to marketplace + entitled packages, so a
+company can neither see nor install a private package by key. Company self-install
+runs through the SECURITY DEFINER `install_marketplace_extension` (active
+company_admin + active company + marketplace category + released/PASS version +
+dependencies + not-already-installed); private assignment goes through
+`create_package_release` (one company, base + base-version gate). Every
+entitlement records an `installation_source`, and marketplace updates
+(`publish_update_to_installers`) reach only current adopters. Logout clears the
+React Query cache, so entitlement and marketplace data never leak across sessions.
+
 The operational lifecycle is:
 
 ```text

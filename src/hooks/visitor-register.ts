@@ -3,7 +3,6 @@ import { visitorRegisterService, type VisitorFormValues } from '@/services/visit
 import { useCompanyId } from './use-company-id';
 import { queryKeys } from '@/lib/query-keys';
 import { notify } from '@/lib/notify';
-import type { NetworkError } from '@/data/api';
 
 export function useVisitorEntries() {
   const companyId = useCompanyId();
@@ -23,6 +22,6 @@ export function useCreateVisitor() {
       notify.recordCreated('Visitor');
       qc.invalidateQueries({ queryKey: queryKeys.visitorRegister.list(companyId!) });
     },
-    onError: (e: NetworkError) => notify.networkFailure(e.message),
+    // Errors are shown inline beside the form; no duplicate toast here.
   });
 }

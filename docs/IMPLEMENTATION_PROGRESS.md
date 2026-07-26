@@ -14,7 +14,7 @@
 | Default data source | `mock` (`VITE_DATA_SOURCE`), Supabase path behind lazy adapters |
 | Local Supabase ports | API/Functions 54331 · DB 54332 · Studio 54333 (project-local +10 offset) |
 | Hosted Supabase | Linked (`uezvaqoqqqgblpcbkujq`); 15 migrations and required API grants deployed |
-| Test count | 220 application tests |
+| Test count | 227 application tests |
 
 > `main` carries everything through 5.6 and the hosted Supabase baseline is deployed. The hosted CI quality gate passed the full
 > SQL/RLS matrix and application checks. RLS suites under `supabase/tests/`:
@@ -132,7 +132,7 @@
   errors, strengthened dialog focus/IDs, and corrected error-state semantics.
 - Centralized safe Supabase error mapping and expanded notification helpers;
   provider-internal schema/SQL messages are no longer shown in UI errors.
-- Local verification: typecheck ✅ · lint ✅ · 220 application tests ✅ · build ✅.
+- Local verification: typecheck ✅ · lint ✅ · 227 application tests ✅ · build ✅.
 - SQL/RLS verification was attempted but is blocked in this environment because
   `psql` and the local Supabase Docker database are unavailable.
 - Hosted browser visual, keyboard, and tenant-isolation smoke remains pending.
@@ -156,7 +156,7 @@
 | 5.4 Usage Analytics | ✅ | ✅ | ✅ | 197 | ✅ | ✅ usage 7 (audit-derived aggregation, self-gate, company filter, distinct companies) + 78 prior = 85 | usage adapter lazy chunk (0.4 KB); main 476 KB |
 | 5.5 Audit & Health | ✅ | ✅ | ✅ | 201 | ✅ | ✅ audit/health 9 (enriched actor/company, self-gate, company filter, failed→degraded) + 85 prior = 94 | audit + health adapters lazy chunks; main 476 KB |
 | 5.6 CI automation | ✅ | ✅ | ✅ | 201 | ✅ | hosted CI + local reset: 8 SQL/RLS suites (94 scenarios), typecheck, lint, tests, build | browser E2E and hosted deployment remain |
-| Engineering quality hardening | N/A | ✅ | ✅ | 220 | ✅ | docs/state/session/version checks plus existing SQL baseline | hosted browser QA remains |
+| Engineering quality hardening | N/A | ✅ | ✅ | 227 | ✅ | docs/state/session/version checks plus existing SQL baseline | hosted browser QA remains |
 
 ## Current risks
 - Mock is default; Supabase HR-Core path verified at DB/RLS level, **not yet exercised end-to-end in the browser**.

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider, createRouter, createMemoryHistory } from '@tanstack/react-router';
@@ -103,5 +103,61 @@ describe('logout clears tenant-scoped cache', () => {
     );
     fireEvent.click(screen.getByText('logout'));
     await waitFor(() => expect(qc.getQueryData(['employees', 'alpha'])).toBeUndefined());
+  });
+
+  it('clears the authenticated session and company context on logout', async () => {
+    await authRepository.signIn({ email: 'admin@alpha.test', password: 'x' });
+
+    function SessionProbe() {
+      const { authenticated, email, logout } = useSession();
+      return (
+        <>
+          <span>{authenticated ? 'authenticated' : 'signed out'}</span>
+          <span>{email ?? 'no email'}</span>
+          <button onClick={() => void logout()}>logout session</button>
+        </>
+      );
+    }
+
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <SessionProvider>
+          <SessionProbe />
+        </SessionProvider>
+      </QueryClientProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByText('authenticated')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'logout session' }));
+    await waitFor(() => expect(screen.getByText('signed out')).toBeInTheDocument());
+    expect(screen.getByText('no email')).toBeInTheDocument();
+  });
+});
+
+describe('session restoration failure', () => {
+  beforeEach(async () => {
+    await authRepository.signOut();
+    window.history.replaceState({}, '', '/login?portal=admin');
+  });
+
+  it('releases auth loading and leaves the user signed out', async () => {
+    const getSession = vi.spyOn(authRepository, 'getSession').mockRejectedValueOnce(new Error('offline'));
+
+    function SessionProbe() {
+      const { authLoading, authenticated } = useSession();
+      return <span>{authLoading ? 'restoring' : authenticated ? 'authenticated' : 'signed out'}</span>;
+    }
+
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <SessionProvider>
+          <SessionProbe />
+        </SessionProvider>
+      </QueryClientProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByText('signed out')).toBeInTheDocument());
+    expect(getSession).toHaveBeenCalledOnce();
+    getSession.mockRestore();
   });
 });

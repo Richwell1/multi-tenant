@@ -29,7 +29,7 @@ Branch: `chore/engineering-quality-hardening`
 
 | Area | Status | Improvements | Verification / remaining |
 |---|---|---|---|
-| Application version | Complete | Shared `APP_VERSION` reads `package.json` and is shown in auth and shell UI | 2 focused tests pass |
+| Application version | Complete | Shared `APP_VERSION` reads `package.json` and is shown in auth and both shells | 6 focused tests pass |
 | Session lifecycle | Complete | Restore failures exit loading; logout clears local session/cache on remote failure | Typecheck/lint/tests/build pass |
 | Guard states | Complete | Platform/company context failures show retryable errors instead of ambiguous denial | Route guard suite passes |
 | Dialog accessibility | Complete | Stable focus lifecycle and unique title/description IDs | Shared state tests pass |

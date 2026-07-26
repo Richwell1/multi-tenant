@@ -32,6 +32,7 @@ export function ConfirmDialog({
   const previouslyFocused = useRef<HTMLElement | null>(null);
   const pendingRef = useRef(pending);
   const onCancelRef = useRef(onCancel);
+  const previousBodyOverflow = useRef('');
   const titleId = useId();
   const descriptionId = useId();
   pendingRef.current = pending;
@@ -40,6 +41,8 @@ export function ConfirmDialog({
   useEffect(() => {
     if (!open) return;
     previouslyFocused.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    previousBodyOverflow.current = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
     cancelRef.current?.focus();
 
     const onKey = (e: KeyboardEvent) => {
@@ -65,6 +68,7 @@ export function ConfirmDialog({
     document.addEventListener('keydown', onKey);
     return () => {
       document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = previousBodyOverflow.current;
       previouslyFocused.current?.focus();
     };
   }, [open]);
@@ -82,7 +86,7 @@ export function ConfirmDialog({
     >
       <div
         ref={dialogRef}
-        className={cn('w-full max-w-md rounded-lg border border-border bg-surface p-5 shadow-xl sm:p-6')}
+        className={cn('max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg border border-border bg-surface p-5 shadow-xl sm:p-6')}
         onClick={(e) => e.stopPropagation()}
       >
         <h2 id={titleId} className="text-lg font-semibold text-content">

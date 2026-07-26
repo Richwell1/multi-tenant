@@ -222,7 +222,7 @@ check, not a claim of automated coverage.
 
 Application tests cover repository/service behavior, route guards, package
 targeting, transitions, tenant scoping, notifications/states, and the lazy
-repository boundary. CI runs typecheck, lint, 220 application tests, and a
+repository boundary. CI runs typecheck, lint, 227 application tests, and a
 production build. The Supabase job starts a local project, resets it, and runs
 eight SQL/RLS suites containing 94 authenticated scenarios before cleanup.
 

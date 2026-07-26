@@ -37,39 +37,47 @@ export function createRepository(source: DataSource = resolveDataSource()): Repo
 class LazySupabaseRepository implements Repository {
   private realP: Promise<Repository> | null = null;
 
-  private real(): Promise<Repository> {
+  private real = (): Promise<Repository> => {
     this.realP ??= import('./supabase-repository').then((m) => new m.SupabaseRepository());
     return this.realP;
-  }
+  };
 
-  getCompanies() { return this.real().then((r) => r.getCompanies()); }
-  getCompany(id: string) { return this.real().then((r) => r.getCompany(id)); }
-  getRequests() { return this.real().then((r) => r.getRequests()); }
-  getRequest(id: string) { return this.real().then((r) => r.getRequest(id)); }
-  getPackages() { return this.real().then((r) => r.getPackages()); }
-  getPackage(key: string) { return this.real().then((r) => r.getPackage(key)); }
-  getDiagnostic(id: string) { return this.real().then((r) => r.getDiagnostic(id)); }
-  getDiagnostics() { return this.real().then((r) => r.getDiagnostics()); }
-  getInstallations() { return this.real().then((r) => r.getInstallations()); }
-  getUsage() { return this.real().then((r) => r.getUsage()); }
-  getHealth() { return this.real().then((r) => r.getHealth()); }
-  getAudit() { return this.real().then((r) => r.getAudit()); }
-  getEmployees(tenantId: string) { return this.real().then((r) => r.getEmployees(tenantId)); }
-  getEmployee(id: string) { return this.real().then((r) => r.getEmployee(id)); }
-  getDepartments(tenantId: string) { return this.real().then((r) => r.getDepartments(tenantId)); }
-  getPositions(tenantId: string) { return this.real().then((r) => r.getPositions(tenantId)); }
-  getCompanyUsers(tenantId: string) { return this.real().then((r) => r.getCompanyUsers(tenantId)); }
-  getInstallationsForTenant(tenantId: string) { return this.real().then((r) => r.getInstallationsForTenant(tenantId)); }
-  getLeaveRequests(tenantId: string) { return this.real().then((r) => r.getLeaveRequests(tenantId)); }
-  getAttendance(tenantId: string) { return this.real().then((r) => r.getAttendance(tenantId)); }
-  createEmployee(input: Parameters<Repository['createEmployee']>[0]) { return this.real().then((r) => r.createEmployee(input)); }
-  disableDepartment(id: string) { return this.real().then((r) => r.disableDepartment(id)); }
-  createRequest(input: Parameters<Repository['createRequest']>[0]) { return this.real().then((r) => r.createRequest(input)); }
-  changeRequestStatus(id: string, status: RequestStatus) { return this.real().then((r) => r.changeRequestStatus(id, status)); }
-  createPackage(input: Parameters<Repository['createPackage']>[0]) { return this.real().then((r) => r.createPackage(input)); }
-  assignPackage(packageKey: PackageKey, companyId: string) { return this.real().then((r) => r.assignPackage(packageKey, companyId)); }
-  saveSettings(input: Record<string, unknown>) { return this.real().then((r) => r.saveSettings(input)); }
-  installPackage(packageKey: PackageKey, companyId: string) { return this.real().then((r) => r.installPackage(packageKey, companyId)); }
+  getCompanies = () => this.real().then((repository) => repository.getCompanies());
+  getCompany = (id: string) => this.real().then((repository) => repository.getCompany(id));
+  getRequests = () => this.real().then((repository) => repository.getRequests());
+  getRequest = (id: string) => this.real().then((repository) => repository.getRequest(id));
+  getPackages = () => this.real().then((repository) => repository.getPackages());
+  getPackage = (key: string) => this.real().then((repository) => repository.getPackage(key));
+  getDiagnostic = (id: string) => this.real().then((repository) => repository.getDiagnostic(id));
+  getDiagnostics = () => this.real().then((repository) => repository.getDiagnostics());
+  getInstallations = () => this.real().then((repository) => repository.getInstallations());
+  getUsage = () => this.real().then((repository) => repository.getUsage());
+  getHealth = () => this.real().then((repository) => repository.getHealth());
+  getAudit = () => this.real().then((repository) => repository.getAudit());
+  getEmployees = (tenantId: string) => this.real().then((repository) => repository.getEmployees(tenantId));
+  getEmployee = (id: string) => this.real().then((repository) => repository.getEmployee(id));
+  getDepartments = (tenantId: string) => this.real().then((repository) => repository.getDepartments(tenantId));
+  getPositions = (tenantId: string) => this.real().then((repository) => repository.getPositions(tenantId));
+  getCompanyUsers = (tenantId: string) => this.real().then((repository) => repository.getCompanyUsers(tenantId));
+  getInstallationsForTenant = (tenantId: string) =>
+    this.real().then((repository) => repository.getInstallationsForTenant(tenantId));
+  getLeaveRequests = (tenantId: string) => this.real().then((repository) => repository.getLeaveRequests(tenantId));
+  getAttendance = (tenantId: string) => this.real().then((repository) => repository.getAttendance(tenantId));
+  createEmployee = (input: Parameters<Repository['createEmployee']>[0]) =>
+    this.real().then((repository) => repository.createEmployee(input));
+  disableDepartment = (id: string) => this.real().then((repository) => repository.disableDepartment(id));
+  createRequest = (input: Parameters<Repository['createRequest']>[0]) =>
+    this.real().then((repository) => repository.createRequest(input));
+  changeRequestStatus = (id: string, status: RequestStatus) =>
+    this.real().then((repository) => repository.changeRequestStatus(id, status));
+  createPackage = (input: Parameters<Repository['createPackage']>[0]) =>
+    this.real().then((repository) => repository.createPackage(input));
+  assignPackage = (packageKey: PackageKey, companyId: string) =>
+    this.real().then((repository) => repository.assignPackage(packageKey, companyId));
+  saveSettings = (input: Record<string, unknown>) =>
+    this.real().then((repository) => repository.saveSettings(input));
+  installPackage = (packageKey: PackageKey, companyId: string) =>
+    this.real().then((repository) => repository.installPackage(packageKey, companyId));
 }
 
 /** Default repository instance consumed by hooks. */

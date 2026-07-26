@@ -2,7 +2,20 @@ import { useEffect, useState } from 'react';
 import { Link, useParams, useNavigate } from '@tanstack/react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Search } from 'lucide-react';
+import {
+  Search,
+  LayoutDashboard,
+  Building2,
+  Inbox,
+  Package,
+  DownloadCloud,
+  TrendingUp,
+  BarChart3,
+  Activity,
+  ScrollText,
+  Stethoscope,
+  CheckCircle2,
+} from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import { StatCard } from '@/components/stat-card';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,6 +29,7 @@ import { TableBoundary, RefreshingIndicator } from '@/components/table-boundary'
 import { PageLoadingState, ErrorState, EmptyState, ConfirmDialog } from '@/components/states';
 import { CompanyTargetSelector } from '@/components/company-target';
 import { formatDate } from '@/lib/utils';
+import { actionLabel } from '@/lib/audit-labels';
 import { notify } from '@/lib/notify';
 import { useCompanies, useCompany } from '@/hooks/queries';
 import { useUsage } from '@/hooks/usage';
@@ -133,6 +147,7 @@ export function AdminDashboard() {
       <>
         <PageHeader
           title="Platform Dashboard"
+        icon={<LayoutDashboard className="size-5" />}
           description="Multi-Tenants HR — system overview"
           actions={<RefreshingIndicator show={companies.isFetching} />}
         />
@@ -149,14 +164,15 @@ export function AdminDashboard() {
     <>
       <PageHeader
         title="Platform Dashboard"
+        icon={<LayoutDashboard className="size-5" />}
         description="Multi-Tenants HR — system overview"
         actions={<RefreshingIndicator show={companies.isFetching} />}
       />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Total Companies" value={companies.data.length} />
-        <StatCard label="Active Companies" value={active} />
-        <StatCard label="Using HR Core" value={companies.data.length} hint="Auto-assigned" />
-        <StatCard label="Most-used Module" value="Employees" />
+        <StatCard label="Total Companies" value={companies.data.length} icon={<Building2 className="size-5" />} />
+        <StatCard label="Active Companies" value={active} icon={<CheckCircle2 className="size-5" />} />
+        <StatCard label="Using HR Core" value={companies.data.length} hint="Auto-assigned" icon={<Package className="size-5" />} />
+        <StatCard label="Most-used Module" value="Employees" icon={<BarChart3 className="size-5" />} />
       </div>
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <Card>
@@ -171,7 +187,7 @@ export function AdminDashboard() {
             {auditWidget.state === 'empty' && <p className="text-content-variant">No activity yet.</p>}
             {auditWidget.rows.slice(0, 3).map((a) => (
               <div key={a.id} className="flex justify-between">
-                <span className="text-content">{a.action}</span>
+                <span className="text-content">{actionLabel(a.action)}</span>
                 <span className="text-content-variant">{a.target}</span>
               </div>
             ))}
@@ -212,6 +228,7 @@ export function CompaniesList() {
     <>
       <PageHeader
         title="Companies"
+        icon={<Building2 className="size-5" />}
         description="All registered tenant companies"
         actions={
           <>
@@ -331,6 +348,7 @@ export function RequestsList() {
     <>
       <PageHeader
         title="Request Records"
+        icon={<Inbox className="size-5" />}
         description="Feature requests received by email, logged manually"
         actions={
           <>
@@ -608,7 +626,7 @@ export function DiagnosticsList() {
   const rows = query.data ?? [];
   return (
     <>
-      <PageHeader title="Diagnostics" description="Package compatibility and release-readiness checks" />
+      <PageHeader icon={<Stethoscope className="size-5" />} title="Diagnostics" description="Package compatibility and release-readiness checks" />
       <TableBoundary
         query={query}
         filtered={rows}
@@ -671,6 +689,7 @@ export function PackagesList() {
     <>
       <PageHeader
         title="Packages"
+        icon={<Package className="size-5" />}
         description="System packages, marketplace extensions, and private packages"
         actions={
           <>
@@ -1308,6 +1327,7 @@ export function InstallationsPage() {
     <>
       <PageHeader
         title="Installation Monitoring"
+        icon={<DownloadCloud className="size-5" />}
         description="Package installations across companies"
         actions={<RefreshingIndicator show={query.isFetching && !query.isPending} />}
       />
@@ -1399,7 +1419,7 @@ export function UsagePage() {
   const filtered = query.data ?? [];
   return (
     <>
-      <PageHeader title="Usage Analytics" description="Per-module activity across tenants" />
+      <PageHeader icon={<BarChart3 className="size-5" />} title="Usage Analytics" description="Per-module activity across tenants" />
       <TargetFilter value={target} onChange={setTarget} />
       <TableBoundary
         query={query}
@@ -1436,7 +1456,7 @@ export function HealthPage() {
   if (query.data.length === 0) {
     return (
       <>
-        <PageHeader title="System Health" description="API, database and uptime signals" />
+        <PageHeader icon={<Activity className="size-5" />} title="System Health" description="API, database and uptime signals" />
         <EmptyState
           title="No health signals yet"
           description="System health checks will appear here once the platform records its first signal."
@@ -1446,7 +1466,7 @@ export function HealthPage() {
   }
   return (
     <>
-      <PageHeader title="System Health" description="API, database and uptime signals" />
+      <PageHeader icon={<Activity className="size-5" />} title="System Health" description="API, database and uptime signals" />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {query.data.map((h) => (
           <Card key={h.label} className="p-6">
@@ -1468,7 +1488,7 @@ export function AuditPage() {
   const filtered = query.data ?? [];
   return (
     <>
-      <PageHeader title="Platform Audit Logs" description="System and admin actions" />
+      <PageHeader icon={<ScrollText className="size-5" />} title="Platform Audit Logs" description="System and admin actions" />
       <TargetFilter value={target} onChange={setTarget} />
       <TableBoundary
         query={query}
@@ -1489,7 +1509,7 @@ export function AuditPage() {
               <TR key={a.id}>
                 <TD className="text-content-variant">{new Date(a.timestamp).toLocaleString()}</TD>
                 <TD>{a.actor}</TD>
-                <TD>{a.action}</TD>
+                <TD>{actionLabel(a.action)}</TD>
                 <TD className="text-content-variant">{a.target}</TD>
               </TR>
             ))}
@@ -1533,7 +1553,7 @@ export function AdoptionPage() {
   const rows = query.data ?? [];
   return (
     <>
-      <PageHeader title="Marketplace Adoption" description="How many companies installed each marketplace extension" />
+      <PageHeader icon={<TrendingUp className="size-5" />} title="Marketplace Adoption" description="How many companies installed each marketplace extension" />
       <TableBoundary query={query} filtered={rows} cols={3} emptyTitle="No marketplace extensions" emptyDescription="Adoption appears once marketplace extensions are published.">
         <DataTable>
           <THead>

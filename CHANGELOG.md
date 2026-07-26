@@ -1,5 +1,40 @@
 # Changelog
 
+## Unreleased — Platform Admin UI polish, phase 1 (branch `feat/platform-admin-ui-polish`)
+
+First phase of the Admin UI polish, focused on the highest-leverage, low-risk
+items. No business logic, RLS, or migrations changed.
+
+- **Human-readable event labels:** a centralized mapper (`src/lib/audit-labels.ts`)
+  turns raw action codes into labels (`marketplace.installed` → "Marketplace
+  extension installed", `diagnostic.created` → "Diagnostic report created"), with
+  a safe prettified fallback for unknown codes. Applied to the Dashboard Recent
+  Activity list and the Audit Logs table — no raw codes are shown.
+- **Page-header icons:** the shared `PageHeader` gained an optional portal-tinted
+  `icon`; every top-level Admin page (Dashboard, Companies, Requests, Packages,
+  Installations, Adoption, Usage, Health, Audit, Diagnostics) now leads with its
+  icon for clearer hierarchy.
+- Verified the branded loading architecture already in place (`TableSkeleton` via
+  `TableBoundary`) and category-label clarity from the previous branch.
+- **Motion:** kept restrained and dependency-free — reduced-motion-aware CSS
+  (`motion-safe:` variants) rather than adding Framer Motion (~50 KB); revisit if
+  richer motion is required. Bundle impact this phase: +~2.4 KB (icons only).
+- Tests: `audit-labels.test.ts` (label mapping + no raw-code leakage). 317 tests.
+
+**Phase 2:**
+- **Sidebar section grouping** — `NavItem.section` groups the Admin sidebar into
+  Platform / Packages / Operations with section labels (hidden when collapsed).
+- **Top-bar profile menu** — an accessible account dropdown (identity, role/
+  context, app version, logout) replaces the plain email + logout link; closes on
+  Escape / outside click with `aria-haspopup` / `aria-expanded`.
+- **Dashboard metric icons** — `StatCard` gained an optional portal-tinted icon +
+  tabular numerals; dashboard cards now carry icons.
+- Tests: AppShell section + profile-menu, StatCard. 322 tests. Bundle +~2.2 KB.
+
+_Remaining phases (per-page card/table/filter polish, login/logout feedback,
+dialog focus sweep, responsive/accessibility audit, design tokens) are scoped in
+`docs/UI_UX_PROGRESS.md`._
+
 ## Unreleased — Company update notifications (branch `feat/company-update-notifications`)
 
 - **Available Updates** now shows the updates actually assigned/released to the

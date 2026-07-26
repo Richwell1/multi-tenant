@@ -8,13 +8,13 @@
 | | |
 |---|---|
 | Product | Multi-Tenants HR |
-| Current branch | `feat/admin-package-management` |
-| Current phase | Admin package management and independent installation processing |
-| Current increment | Package creation, versioning, release planning, per-company processing, retry, and release details |
+| Current branch | `feat/minimal-package-version-demo` |
+| Current phase | Minimal package-version feasibility demo (version-gated features) |
+| Current increment | HR Core 1.0.0→1.1.0 (Departments→+Employees), Attendance 1.0.0, version-gated nav, dashboard version display |
 | Default data source | `mock` (`VITE_DATA_SOURCE`), Supabase path behind lazy adapters |
 | Local Supabase ports | API/Functions 54331 · DB 54332 · Studio 54333 (project-local +10 offset) |
-| Hosted Supabase | Linked (`uezvaqoqqqgblpcbkujq`); all 16 migrations deployed (admin package management pushed 2026-07-26); local↔remote history aligned |
-| Test count | 231 application tests |
+| Hosted Supabase | Linked (`uezvaqoqqqgblpcbkujq`); all 18 migrations deployed (demo package workflows pushed 2026-07-27); local↔remote history aligned |
+| Test count | 235 application tests |
 
 > `main` carries everything through 5.6 and the hosted Supabase baseline is deployed. The hosted CI quality gate passed the full
 > SQL/RLS matrix and application checks. RLS suites under `supabase/tests/`:

@@ -1,6 +1,27 @@
 import { getSupabaseClient } from '@/lib/supabase';
 import { logSupabaseError, mapSupabaseError } from '@/data/errors';
+import { toPackageCategory } from '@/lib/packages/category';
 import type { PackageType } from '@/data/types';
+
+interface PackageRow {
+  key: string;
+  name: string;
+  description: string | null;
+  type: PackageType;
+  category: string | null;
+  base_package_key: string | null;
+  is_active: boolean;
+}
+
+const toPackage = (r: PackageRow): Package => ({
+  code: r.key,
+  name: r.name,
+  description: r.description ?? '',
+  classification: r.type,
+  category: toPackageCategory({ category: r.category, type: r.type }),
+  basePackageKey: r.base_package_key ?? null,
+  isActive: r.is_active,
+});
 import type {
   InstallationRepository,
   PackageAssignmentRepository,
@@ -30,23 +51,20 @@ export class SupabasePackageRepository implements PackageRepository {
   async list(): Promise<Package[]> {
     const { data, error } = await getSupabaseClient()
       .from('packages')
-      .select('key,name,description,type,is_active')
+      .select('key,name,description,type,category,base_package_key,is_active')
       .order('name');
     if (error) throw mapSupabaseError(error, 'admin.packages.catalog');
-    return ((data ?? []) as unknown as Array<{ key: string; name: string; description: string | null; type: PackageType; is_active: boolean }>).map(
-      (r) => ({ code: r.key, name: r.name, description: r.description ?? '', classification: r.type, isActive: r.is_active }),
-    );
+    return ((data ?? []) as unknown as PackageRow[]).map(toPackage);
   }
   async getByCode(code: string): Promise<Package | undefined> {
     const { data, error } = await getSupabaseClient()
       .from('packages')
-      .select('key,name,description,type,is_active')
+      .select('key,name,description,type,category,base_package_key,is_active')
       .eq('key', code)
       .maybeSingle();
     if (error) throw mapSupabaseError(error, 'admin.packages.detail');
     if (!data) return undefined;
-    const r = data as unknown as { key: string; name: string; description: string | null; type: PackageType; is_active: boolean };
-    return { code: r.key, name: r.name, description: r.description ?? '', classification: r.type, isActive: r.is_active };
+    return toPackage(data as unknown as PackageRow);
   }
   async listVersions(packageCode: string): Promise<PackageVersion[]> {
     const { data, error } = await getSupabaseClient()
@@ -72,7 +90,7 @@ export class SupabasePackageRepository implements PackageRepository {
     });
     if (error) throw mapSupabaseError(error, 'admin.packages.create');
     const result = data as unknown as {
-      package: { key: string; name: string; type: PackageType; description: string; is_active: boolean };
+      package: { key: string; name: string; type: PackageType; description: string; is_active: boolean; category?: string | null; base_package_key?: string | null };
       version: { id: string; package_key: string; version: string; notes: string; compatibility_notes: string; diagnostic_status: PackageDiagnosticStatus | null; released_at: string | null };
     };
     return {
@@ -80,6 +98,8 @@ export class SupabasePackageRepository implements PackageRepository {
         code: result.package.key,
         name: result.package.name,
         classification: result.package.type,
+        category: toPackageCategory({ category: result.package.category, type: result.package.type }),
+        basePackageKey: result.package.base_package_key ?? null,
         description: result.package.description,
         isActive: result.package.is_active,
       },

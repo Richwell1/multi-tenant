@@ -55,6 +55,13 @@ import {
   type CompanyTargetValue,
 } from '@/lib/company-target';
 import { allowedTargetModesForPackageType, allowedTargetModesForExtension, type ExtensionNature } from '@/lib/package-target';
+import {
+  packageCategoryLabel,
+  packageVisibilityLabel,
+  packageInstallerLabel,
+  PACKAGE_CATEGORIES,
+  type PackageCategory,
+} from '@/lib/packages/category';
 import type { CompanyStatus, DiagnosticResult, PackageType, RequestStatus } from '@/data/types';
 
 /** Shared page-level company-target filter used by monitoring/analytics pages. */
@@ -640,15 +647,31 @@ export function DiagnosticsList() {
   );
 }
 
+/** Distinct badge tones per category (text label still carries the meaning). */
+const CATEGORY_TONE: Record<PackageCategory, 'platform' | 'company' | 'warning' | 'role'> = {
+  standard_package: 'platform',
+  marketplace_extension: 'company',
+  private_extension: 'warning',
+  private_standalone: 'role',
+};
+
 export function PackagesList() {
   const [q, setQ] = useState('');
+  const [category, setCategory] = useState<'all' | PackageCategory>('all');
   const query = usePackages();
-  const filtered = (query.data ?? []).filter((p) => p.name.toLowerCase().includes(q.toLowerCase()));
+  const all = query.data ?? [];
+  const nameByCode = new Map(all.map((p) => [p.code, p.name]));
+  const baseName = (code: string | null) => (code ? nameByCode.get(code) ?? code : '');
+  const filtered = all.filter((p) => {
+    if (category !== 'all' && p.category !== category) return false;
+    const haystack = `${p.name} ${p.code} ${packageCategoryLabel(p.category)} ${baseName(p.basePackageKey)}`.toLowerCase();
+    return haystack.includes(q.toLowerCase());
+  });
   return (
     <>
       <PageHeader
         title="Packages"
-        description="Standard updates and private customizations"
+        description="System packages, marketplace extensions, and private packages"
         actions={
           <>
             <SearchBar value={q} onChange={setQ} />
@@ -661,19 +684,37 @@ export function PackagesList() {
           </>
         }
       />
+      <p className="mb-4 max-w-3xl text-sm text-content-variant">
+        System packages are managed by the platform. Marketplace extensions are installed by companies.
+        Private packages are assigned by Platform Admin to one company.
+      </p>
+      <div className="mb-4 flex flex-wrap gap-2">
+        {(['all', ...PACKAGE_CATEGORIES] as const).map((c) => (
+          <Button
+            key={c}
+            size="sm"
+            variant={category === c ? undefined : 'outline'}
+            onClick={() => setCategory(c)}
+          >
+            {c === 'all' ? 'All' : packageCategoryLabel(c)}
+          </Button>
+        ))}
+      </div>
       <TableBoundary
         query={query}
         filtered={filtered}
         searchTerm={q}
-        cols={3}
+        cols={5}
         emptyTitle="No packages yet"
         emptyDescription="Package catalog entries will appear here when they are added."
       >
         <DataTable>
           <THead>
             <TH>Package</TH>
-            <TH>Classification</TH>
-            <TH>Global status</TH>
+            <TH>Category</TH>
+            <TH>Visibility</TH>
+            <TH>Base Package</TH>
+            <TH>Status</TH>
           </THead>
           <TBody>
             {filtered.map((p) => (
@@ -688,9 +729,13 @@ export function PackagesList() {
                   </Link>
                   <span className="ml-2 text-content-variant">{p.code}</span>
                 </TD>
-                <TD className="text-content-variant">{p.classification.replace(/_/g, ' ')}</TD>
                 <TD>
-                  <Badge tone={p.isActive ? 'healthy' : 'neutral'}>{p.isActive ? 'active' : 'inactive'}</Badge>
+                  <Badge tone={CATEGORY_TONE[p.category]}>{packageCategoryLabel(p.category)}</Badge>
+                </TD>
+                <TD className="text-content-variant">{packageVisibilityLabel(p.category)}</TD>
+                <TD className="text-content-variant">{p.basePackageKey ? baseName(p.basePackageKey) : '—'}</TD>
+                <TD>
+                  <Badge tone={p.isActive ? 'healthy' : 'neutral'}>{p.isActive ? 'Active' : 'Inactive'}</Badge>
                 </TD>
               </TR>
             ))}
@@ -968,6 +1013,7 @@ export function PackageDetails() {
   const { packageId } = useParams({ strict: false });
   const code = packageId as string;
   const query = usePackage(code);
+  const catalog = usePackages();
   const versions = usePackageVersions(code);
   const installs = useInstallationsMonitor({ packageCode: code });
 
@@ -976,20 +1022,26 @@ export function PackageDetails() {
   const pkg = query.data;
   if (!pkg) return <EmptyState title="Package not found" />;
 
+  // Resolve the base package's display name (falls back to its key).
+  const nameByCode = new Map((catalog.data ?? []).map((p) => [p.code, p.name]));
+  const baseName = (c: string) => nameByCode.get(c) ?? c;
+
   const rows = installs.data ?? [];
   const installed = rows.filter((r) => r.status === 'installed').length;
   const pending = rows.filter((r) => r.status === 'pending' || r.status === 'installing').length;
   const failed = rows.filter((r) => r.status === 'failed').length;
 
+  const baseLabel = pkg.basePackageKey ? baseName(pkg.basePackageKey) : '—';
+
   return (
     <>
       <PageHeader
         title={pkg.name}
-        description={`${pkg.code} · ${pkg.classification.replace(/_/g, ' ')}`}
+        description={`${pkg.code} · ${packageCategoryLabel(pkg.category)}`}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             {pkg.isActive && <Link to="/admin/packages/$packageKey/versions/new" params={{ packageKey: pkg.code }}><Button size="sm" variant="outline">New Version</Button></Link>}
-            <Badge tone={pkg.isActive ? 'healthy' : 'neutral'}>{pkg.isActive ? 'active' : 'inactive'}</Badge>
+            <Badge tone={pkg.isActive ? 'healthy' : 'neutral'}>{pkg.isActive ? 'Active' : 'Inactive'}</Badge>
           </div>
         }
       />
@@ -1000,9 +1052,30 @@ export function PackageDetails() {
       </div>
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle>Description</CardTitle>
+          <CardTitle>Overview</CardTitle>
         </CardHeader>
-        <CardContent className="text-sm text-content-variant">{pkg.description || '—'}</CardContent>
+        <CardContent className="grid gap-4 text-sm sm:grid-cols-2">
+          <div>
+            <p className="text-content-variant">Category</p>
+            <Badge tone={CATEGORY_TONE[pkg.category]}>{packageCategoryLabel(pkg.category)}</Badge>
+          </div>
+          <div>
+            <p className="text-content-variant">Visibility</p>
+            <p className="font-medium">{packageVisibilityLabel(pkg.category)}</p>
+          </div>
+          <div>
+            <p className="text-content-variant">Base package</p>
+            <p className="font-medium">{baseLabel}</p>
+          </div>
+          <div>
+            <p className="text-content-variant">Installed by</p>
+            <p className="font-medium">{packageInstallerLabel(pkg.category)}</p>
+          </div>
+          <div className="sm:col-span-2">
+            <p className="text-content-variant">Description</p>
+            <p>{pkg.description || '—'}</p>
+          </div>
+        </CardContent>
       </Card>
       <Card className="mt-6">
         <CardHeader>

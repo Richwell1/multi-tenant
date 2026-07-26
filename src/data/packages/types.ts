@@ -5,6 +5,7 @@
 
 import type { CompanyTargetMode } from '@/lib/company-target';
 import type { PackageType } from '@/data/types';
+import type { PackageCategory } from '@/lib/packages/category';
 
 export type PackageDiagnosticStatus = 'PASS' | 'WARN' | 'FAIL';
 export type PackageInstallationStatus =
@@ -19,7 +20,11 @@ export interface Package {
   code: string; // stable identifier (packages.key)
   name: string;
   description: string;
-  classification: PackageType;
+  classification: PackageType; // legacy change-type enum (not shown to users)
+  /** Distribution/ownership category (packages.category) — drives the UI label. */
+  category: PackageCategory;
+  /** Base package this one extends (packages.base_package_key); null otherwise. */
+  basePackageKey: string | null;
   isActive: boolean; // global kill switch (packages.is_active)
 }
 

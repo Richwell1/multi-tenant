@@ -4,24 +4,24 @@ import type { EmployeeRepository } from './employee-repository';
 import type { CreateEmployeeInput, TerminateEmployeeInput, UpdateEmployeeInput } from './types';
 
 class LazySupabaseEmployeeRepository implements EmployeeRepository {
-  private impl() {
+  private impl = () => {
     return import('./supabase-employee-repository').then((m) => new m.SupabaseEmployeeRepository());
-  }
-  list(companyId: string) {
+  };
+  list = (companyId: string) => {
     return this.impl().then((r) => r.list(companyId));
-  }
-  getById(companyId: string, id: string) {
+  };
+  getById = (companyId: string, id: string) => {
     return this.impl().then((r) => r.getById(companyId, id));
-  }
-  create(companyId: string, input: CreateEmployeeInput) {
+  };
+  create = (companyId: string, input: CreateEmployeeInput) => {
     return this.impl().then((r) => r.create(companyId, input));
-  }
-  update(companyId: string, id: string, input: UpdateEmployeeInput) {
+  };
+  update = (companyId: string, id: string, input: UpdateEmployeeInput) => {
     return this.impl().then((r) => r.update(companyId, id, input));
-  }
-  terminate(companyId: string, id: string, input: TerminateEmployeeInput) {
+  };
+  terminate = (companyId: string, id: string, input: TerminateEmployeeInput) => {
     return this.impl().then((r) => r.terminate(companyId, id, input));
-  }
+  };
 }
 
 export function createEmployeeRepository(source = resolveDataSource()): EmployeeRepository {

@@ -20,7 +20,7 @@ function invalidate(qc: QueryClient, keys: readonly QueryKey[]) {
 // --- Queries ------------------------------------------------------------------
 
 export const useCompanies = () =>
-  useQuery({ queryKey: queryKeys.companies.list(), queryFn: repository.getCompanies });
+  useQuery({ queryKey: queryKeys.companies.list(), queryFn: () => repository.getCompanies() });
 
 /**
  * Single centralized source for the active-company list consumed by every
@@ -69,8 +69,8 @@ export const useTenantInstallations = (companyId: string | undefined) =>
 
 export function useSaveSettings(companyId: string | undefined) {
   const qc = useQueryClient();
-  return useMutation({
-    mutationFn: repository.saveSettings,
+  return useMutation<Record<string, unknown>, NetworkError, Record<string, unknown>>({
+    mutationFn: (input: Record<string, unknown>) => repository.saveSettings(input),
     onSuccess: () => {
       notify.recordUpdated('Company settings');
       invalidate(qc, invalidationTargets.saveSettings(companyId ?? 'unresolved'));

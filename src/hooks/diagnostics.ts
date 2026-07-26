@@ -11,7 +11,7 @@ function invalidate(qc: ReturnType<typeof useQueryClient>, keys: readonly QueryK
 }
 
 export function useDiagnostics() {
-  return useQuery({ queryKey: queryKeys.diagnostics.all, queryFn: diagnosticService.list });
+  return useQuery({ queryKey: queryKeys.diagnostics.all, queryFn: () => diagnosticService.list() });
 }
 
 export function useDiagnostic(id: string) {

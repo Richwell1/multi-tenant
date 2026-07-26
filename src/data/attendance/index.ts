@@ -4,20 +4,20 @@ import type { AttendanceRepository } from './attendance-repository';
 import type { CheckOutAttendanceInput, CreateAttendanceInput } from './types';
 
 class LazySupabaseAttendanceRepository implements AttendanceRepository {
-  private impl() {
+  private impl = () => {
     return import('./supabase-attendance-repository').then(
       (m) => new m.SupabaseAttendanceRepository(),
     );
-  }
-  list(companyId: string) {
+  };
+  list = (companyId: string) => {
     return this.impl().then((r) => r.list(companyId));
-  }
-  create(companyId: string, input: CreateAttendanceInput) {
+  };
+  create = (companyId: string, input: CreateAttendanceInput) => {
     return this.impl().then((r) => r.create(companyId, input));
-  }
-  checkOut(companyId: string, id: string, input: CheckOutAttendanceInput) {
+  };
+  checkOut = (companyId: string, id: string, input: CheckOutAttendanceInput) => {
     return this.impl().then((r) => r.checkOut(companyId, id, input));
-  }
+  };
 }
 
 export function createAttendanceRepository(source = resolveDataSource()): AttendanceRepository {

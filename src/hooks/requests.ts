@@ -11,7 +11,7 @@ function invalidate(qc: ReturnType<typeof useQueryClient>, keys: readonly QueryK
 }
 
 export function useRequests() {
-  return useQuery({ queryKey: queryKeys.requests.all, queryFn: requestService.list });
+  return useQuery({ queryKey: queryKeys.requests.all, queryFn: () => requestService.list() });
 }
 
 export function useRequest(id: string) {

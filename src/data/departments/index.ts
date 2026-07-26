@@ -5,24 +5,24 @@ import type { CreateDepartmentInput, UpdateDepartmentInput } from './types';
 
 /** Lazy Supabase adapter — keeps the SDK out of the default bundle. */
 class LazySupabaseDepartmentRepository implements DepartmentRepository {
-  private impl() {
+  private impl = () => {
     return import('./supabase-department-repository').then((m) => new m.SupabaseDepartmentRepository());
-  }
-  list(companyId: string) {
+  };
+  list = (companyId: string) => {
     return this.impl().then((r) => r.list(companyId));
-  }
-  getById(companyId: string, id: string) {
+  };
+  getById = (companyId: string, id: string) => {
     return this.impl().then((r) => r.getById(companyId, id));
-  }
-  create(companyId: string, input: CreateDepartmentInput) {
+  };
+  create = (companyId: string, input: CreateDepartmentInput) => {
     return this.impl().then((r) => r.create(companyId, input));
-  }
-  update(companyId: string, id: string, input: UpdateDepartmentInput) {
+  };
+  update = (companyId: string, id: string, input: UpdateDepartmentInput) => {
     return this.impl().then((r) => r.update(companyId, id, input));
-  }
-  disable(companyId: string, id: string) {
+  };
+  disable = (companyId: string, id: string) => {
     return this.impl().then((r) => r.disable(companyId, id));
-  }
+  };
 }
 
 export function createDepartmentRepository(source = resolveDataSource()): DepartmentRepository {

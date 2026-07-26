@@ -4,20 +4,20 @@ import type { DiagnosticRepository } from './diagnostic-repository';
 import type { RunDiagnosticInput } from './types';
 
 class LazySupabaseDiagnosticRepository implements DiagnosticRepository {
-  private impl() {
+  private impl = () => {
     return import('./supabase-diagnostic-repository').then(
       (m) => new m.SupabaseDiagnosticRepository(),
     );
-  }
-  list() {
+  };
+  list = () => {
     return this.impl().then((r) => r.list());
-  }
-  getById(id: string) {
+  };
+  getById = (id: string) => {
     return this.impl().then((r) => r.getById(id));
-  }
-  run(input: RunDiagnosticInput) {
+  };
+  run = (input: RunDiagnosticInput) => {
     return this.impl().then((r) => r.run(input));
-  }
+  };
 }
 
 export function createDiagnosticRepository(source = resolveDataSource()): DiagnosticRepository {

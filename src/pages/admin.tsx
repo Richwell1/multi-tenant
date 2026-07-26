@@ -113,6 +113,22 @@ export function AdminDashboard() {
   if (companies.isError)
     return <ErrorState onRetry={() => companies.refetch()} retrying={companies.isFetching} />;
 
+  if (companies.data.length === 0) {
+    return (
+      <>
+        <PageHeader
+          title="Platform Dashboard"
+          description="Multi-Tenants HR — system overview"
+          actions={<RefreshingIndicator show={companies.isFetching} />}
+        />
+        <EmptyState
+          title="No companies yet"
+          description="Registered tenant companies will appear here after the first company completes registration."
+        />
+      </>
+    );
+  }
+
   const active = companies.data.filter((c) => c.status === 'active').length;
   return (
     <>
@@ -179,7 +195,14 @@ export function CompaniesList() {
           </>
         }
       />
-      <TableBoundary query={query} filtered={filtered} searchTerm={q} cols={6}>
+      <TableBoundary
+        query={query}
+        filtered={filtered}
+        searchTerm={q}
+        cols={6}
+        emptyTitle="No companies yet"
+        emptyDescription="Registered tenant companies will appear here after the first company completes registration."
+      >
         <DataTable>
           <THead>
             <TH>Company</TH>
@@ -293,7 +316,14 @@ export function RequestsList() {
           </>
         }
       />
-      <TableBoundary query={query} filtered={filtered} searchTerm={q} cols={5}>
+      <TableBoundary
+        query={query}
+        filtered={filtered}
+        searchTerm={q}
+        cols={5}
+        emptyTitle="No request records yet"
+        emptyDescription="Requests logged by the platform team will appear here."
+      >
         <DataTable>
           <THead>
             <TH>Title</TH>
@@ -566,7 +596,14 @@ export function PackagesList() {
           </>
         }
       />
-      <TableBoundary query={query} filtered={filtered} searchTerm={q} cols={3}>
+      <TableBoundary
+        query={query}
+        filtered={filtered}
+        searchTerm={q}
+        cols={3}
+        emptyTitle="No packages yet"
+        emptyDescription="Package catalog entries will appear here when they are added."
+      >
         <DataTable>
           <THead>
             <TH>Package</TH>
@@ -962,7 +999,13 @@ export function InstallationsPage() {
           </Field>
         </CardContent>
       </Card>
-      <TableBoundary query={query} filtered={filtered} cols={6}>
+      <TableBoundary
+        query={query}
+        filtered={filtered}
+        cols={6}
+        emptyTitle="No installations yet"
+        emptyDescription="Package installation activity will appear here after a release is targeted to a company."
+      >
         <DataTable>
           <THead>
             <TH>Company</TH>
@@ -1026,7 +1069,13 @@ export function UsagePage() {
     <>
       <PageHeader title="Usage Analytics" description="Per-module activity across tenants" />
       <TargetFilter value={target} onChange={setTarget} />
-      <TableBoundary query={query} filtered={filtered} cols={3}>
+      <TableBoundary
+        query={query}
+        filtered={filtered}
+        cols={3}
+        emptyTitle="No usage data yet"
+        emptyDescription="Module activity will appear here as companies use the platform."
+      >
         <DataTable>
           <THead>
             <TH>Module</TH>
@@ -1052,6 +1101,17 @@ export function HealthPage() {
   const query = useHealth();
   if (query.isPending) return <PageLoadingState label="Checking system health…" />;
   if (query.isError) return <ErrorState onRetry={() => query.refetch()} retrying={query.isFetching} />;
+  if (query.data.length === 0) {
+    return (
+      <>
+        <PageHeader title="System Health" description="API, database and uptime signals" />
+        <EmptyState
+          title="No health signals yet"
+          description="System health checks will appear here once the platform records its first signal."
+        />
+      </>
+    );
+  }
   return (
     <>
       <PageHeader title="System Health" description="API, database and uptime signals" />
@@ -1078,7 +1138,13 @@ export function AuditPage() {
     <>
       <PageHeader title="Platform Audit Logs" description="System and admin actions" />
       <TargetFilter value={target} onChange={setTarget} />
-      <TableBoundary query={query} filtered={filtered} cols={4}>
+      <TableBoundary
+        query={query}
+        filtered={filtered}
+        cols={4}
+        emptyTitle="No audit activity yet"
+        emptyDescription="Platform and administrator actions will appear here as they occur."
+      >
         <DataTable>
           <THead>
             <TH>Timestamp</TH>

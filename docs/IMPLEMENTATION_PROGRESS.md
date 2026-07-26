@@ -204,8 +204,9 @@
 - Local verification: Supabase reset ✅ · 10 SQL/RLS suites ✅ · typecheck ✅ ·
   lint ✅ · 235 application tests ✅ · build ✅ (main 485.24 kB / 147.30 kB gzip;
   APP_VERSION unchanged `v0.1.0`).
-- Hosted status: migrations are **branch-local**; not pushed. Hosted push +
-  browser demo dry-run remain a separate deploy step after review.
+- Hosted status: both migrations pushed to hosted Supabase on 2026-07-27
+  (backward-compatible ahead of PR merge); local↔remote history aligned (18/18).
+  Frontend ships when the branch merges to `main`; browser demo dry-run pending.
 
 ## Verification history
 

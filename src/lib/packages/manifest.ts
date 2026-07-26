@@ -74,6 +74,11 @@ export const PACKAGE_MANIFEST: Partial<Record<PackageKey, PackageManifestEntry>>
     name: 'Custom Department Code Field',
     features: [{ label: 'Department Code', minVersion: '1.0.0', route: '/departments' }],
   },
+  [PACKAGE_CODES.visitorRegister]: {
+    code: PACKAGE_CODES.visitorRegister,
+    name: 'Custom Visitor Register',
+    features: [{ label: 'Visitor Register', minVersion: '1.0.0', route: '/extensions/visitor-register' }],
+  },
 };
 
 /** Installed version of a package for the company, or null when not entitled. */

@@ -1019,6 +1019,41 @@ export type Database = {
           },
         ]
       }
+      visitor_register: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          visit_purpose: string
+          visitor_name: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          visit_purpose?: string
+          visitor_name: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          visit_purpose?: string
+          visitor_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visitor_register_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

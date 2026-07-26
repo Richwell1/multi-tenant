@@ -13,6 +13,7 @@ import {
   Store,
   FileText,
   Receipt,
+  DoorOpen,
 } from 'lucide-react';
 import { AppShell, type NavItem } from './app-shell';
 import { useSession } from '@/lib/session';
@@ -36,6 +37,7 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
   const hasLeave = hasPackage(codes, PACKAGE_CODES.leave);
   const hasDocumentNotes = hasFeature(packages, PACKAGE_CODES.documentNotes, '1.0.0');
   const hasExpenseRequests = hasFeature(packages, PACKAGE_CODES.expenseRequests, '1.0.0');
+  const hasVisitorRegister = hasFeature(packages, PACKAGE_CODES.visitorRegister, '1.0.0');
 
   const nav: NavItem[] = [
     { to: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="size-4" /> },
@@ -48,6 +50,8 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
   // Installed marketplace extensions (version-gated) appear as feature pages.
   if (hasDocumentNotes) nav.push({ to: '/extensions/document-notes', label: 'Document Notes', icon: <FileText className="size-4" /> });
   if (hasExpenseRequests) nav.push({ to: '/extensions/expense-requests', label: 'Expense Requests', icon: <Receipt className="size-4" /> });
+  // Private standalone: only the assigned company sees this.
+  if (hasVisitorRegister) nav.push({ to: '/extensions/visitor-register', label: 'Visitor Register', icon: <DoorOpen className="size-4" /> });
   nav.push(
     { to: '/extensions/marketplace', label: 'Marketplace', icon: <Store className="size-4" /> },
     { to: '/updates', label: 'Available Updates', icon: <RefreshCw className="size-4" /> },

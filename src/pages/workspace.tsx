@@ -11,6 +11,7 @@ import type { PackageKey } from '@/data/types';
 import { useMarketplacePackages, useInstallMarketplaceExtension } from '@/hooks/marketplace';
 import { useDocumentNotes, useCreateDocumentNote } from '@/hooks/document-notes';
 import { useExpenseRequests, useCreateExpenseRequest } from '@/hooks/expense-requests';
+import { useVisitorEntries, useCreateVisitor } from '@/hooks/visitor-register';
 import { RepositoryError } from '@/data/errors';
 import { StatCard } from '@/components/stat-card';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -1381,6 +1382,75 @@ function ExpenseRequestsContent() {
                 <TD className="font-medium">{r.amount.toFixed(2)}</TD>
                 <TD className="text-content-variant">{r.description}</TD>
                 <TD><Badge tone="neutral">{r.status}</Badge></TD>
+              </TR>
+            ))}
+          </TBody>
+        </DataTable>
+      )}
+    </>
+  );
+}
+
+export function VisitorRegisterPage() {
+  return (
+    <PackageGuard packageCode={PACKAGE_CODES.visitorRegister} packageName="Custom Visitor Register">
+      <VisitorRegisterContent />
+    </PackageGuard>
+  );
+}
+
+function VisitorRegisterContent() {
+  const query = useVisitorEntries();
+  const create = useCreateVisitor();
+  const [visitorName, setVisitorName] = useState('');
+  const [visitPurpose, setVisitPurpose] = useState('');
+  const [error, setError] = useState<string>();
+  const rows = query.data ?? [];
+
+  const submit = (event: React.FormEvent) => {
+    event.preventDefault();
+    setError(undefined);
+    create.mutate(
+      { visitorName, visitPurpose },
+      {
+        onSuccess: () => { setVisitorName(''); setVisitPurpose(''); },
+        onError: (err) => setError(err instanceof RepositoryError ? err.message : 'Could not add the visitor.'),
+      },
+    );
+  };
+
+  return (
+    <>
+      <PageHeader title="Visitor Register" description="Simple visitor register for your company" />
+      <Card className="mb-6 max-w-2xl">
+        <CardContent className="pt-6">
+          {error && <div role="alert" className="mb-4 rounded-md border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">{error}</div>}
+          <form onSubmit={submit} className="space-y-4" noValidate>
+            <Field label="Visitor name">
+              <Input required value={visitorName} onChange={(e) => setVisitorName(e.target.value)} />
+            </Field>
+            <Field label="Visit purpose">
+              <Input value={visitPurpose} onChange={(e) => setVisitPurpose(e.target.value)} />
+            </Field>
+            <SubmitButton pending={create.isPending} pendingLabel="Adding…">Add Visitor</SubmitButton>
+          </form>
+        </CardContent>
+      </Card>
+      {query.isPending ? (
+        <PageLoadingState label="Loading visitors…" />
+      ) : rows.length === 0 ? (
+        <EmptyState title="No visitors yet" description="Add your first visitor above." />
+      ) : (
+        <DataTable>
+          <THead>
+            <TH>Visitor</TH>
+            <TH>Purpose</TH>
+          </THead>
+          <TBody>
+            {rows.map((v) => (
+              <TR key={v.id}>
+                <TD className="font-medium">{v.visitorName}</TD>
+                <TD className="text-content-variant">{v.visitPurpose}</TD>
               </TR>
             ))}
           </TBody>

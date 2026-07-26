@@ -109,4 +109,7 @@ export const queryKeys = {
   expenseRequests: {
     list: (companyId: string) => ['expense-requests', companyId] as const,
   },
+  visitorRegister: {
+    list: (companyId: string) => ['visitor-register', companyId] as const,
+  },
 } as const;

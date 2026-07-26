@@ -1,5 +1,6 @@
 import { companies, installations, packages } from '@/data/mock';
 import { RepositoryError } from '@/data/errors';
+import { toPackageCategory } from '@/lib/packages/category';
 import type {
   CreatePackageInput,
   CreateVersionInput,
@@ -39,6 +40,8 @@ export class MockPackageRepository implements PackageRepository {
       name: p.name,
       description: p.releaseNotes,
       classification: p.type,
+      category: toPackageCategory({ type: p.type }),
+      basePackageKey: null,
       isActive: p.status !== 'deprecated',
     })), ...createdPackages];
   }
@@ -83,6 +86,8 @@ export class MockPackageRepository implements PackageRepository {
       name: input.name,
       description: input.description,
       classification: input.classification,
+      category: toPackageCategory({ type: input.classification }),
+      basePackageKey: input.baseCode ?? null,
       isActive: true,
     };
     const version: PackageVersion = {

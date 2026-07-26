@@ -1199,10 +1199,12 @@ export function MarketplacePage() {
   const context = useCompanyContext();
   const isAdmin = context.data?.role === 'company_admin';
   const install = useInstallMarketplaceExtension();
+  // Pending state is package-specific: only the card being installed shows it.
+  const installingKey = install.isPending ? install.variables : undefined;
   const items = query.data ?? [];
   return (
     <>
-      <PageHeader title="Extensions Marketplace" description="Optional extensions your company can install" />
+      <PageHeader title="Extensions Marketplace" description="Optional standalone features your company can install" />
       {query.isPending ? (
         <PageLoadingState label="Loading marketplace…" />
       ) : query.isError ? (
@@ -1214,18 +1216,28 @@ export function MarketplacePage() {
           {items.map((p) => {
             const installed = codes.includes(p.code);
             const installedVersion = packages.find((x) => x.code === p.code)?.version ?? null;
+            const isInstalling = installingKey === p.code;
+            const openRoute = PACKAGE_MANIFEST[p.code as PackageKey]?.features[0]?.route;
             return (
               <Card key={p.code}>
                 <CardHeader>
                   <CardTitle>{p.name}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <Badge tone="neutral">Latest version {p.latestVersion ?? '—'}</Badge>
+                  {p.description && <p className="text-sm text-content-variant">{p.description}</p>}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge tone="neutral">Latest {p.latestVersion ?? '—'}</Badge>
+                    {installed && installedVersion && <Badge tone="healthy">Installed · {installedVersion}</Badge>}
+                  </div>
                   {installed ? (
-                    <Badge tone="healthy">Installed{installedVersion ? ` · ${installedVersion}` : ''}</Badge>
+                    openRoute && (
+                      <Link to={openRoute}>
+                        <Button variant="secondary" aria-label={`Open ${p.name}`}>Open</Button>
+                      </Link>
+                    )
                   ) : isAdmin ? (
-                    <Button onClick={() => install.mutate(p.code)} disabled={install.isPending}>
-                      {install.isPending ? 'Installing…' : 'Install'}
+                    <Button onClick={() => install.mutate(p.code)} disabled={isInstalling} aria-label={`Install ${p.name}`}>
+                      {isInstalling ? 'Installing…' : 'Install'}
                     </Button>
                   ) : (
                     <p className="text-sm text-content-variant">Ask a company admin to install this extension.</p>

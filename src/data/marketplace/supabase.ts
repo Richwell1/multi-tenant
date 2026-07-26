@@ -9,7 +9,7 @@ export class SupabaseMarketplaceRepository implements MarketplaceRepository {
     // RLS restricts this to marketplace packages the company may discover.
     const { data, error } = await client
       .from('packages')
-      .select('key,name,category,is_active,package_versions(version,released_at)')
+      .select('key,name,description,category,is_active,package_versions(version,released_at)')
       .eq('category', 'marketplace_extension')
       .eq('is_active', true)
       .order('name');
@@ -17,12 +17,13 @@ export class SupabaseMarketplaceRepository implements MarketplaceRepository {
     const rows = (data ?? []) as unknown as Array<{
       key: string;
       name: string;
+      description: string | null;
       package_versions: Array<{ version: string; released_at: string | null }> | null;
     }>;
     return rows.map((r) => {
       const released = (r.package_versions ?? []).filter((v) => v.released_at);
       const latest = released.sort((a, b) => compareSemver(b.version, a.version))[0]?.version ?? null;
-      return { code: r.key, name: r.name, latestVersion: latest };
+      return { code: r.key, name: r.name, description: r.description ?? '', latestVersion: latest };
     });
   }
 

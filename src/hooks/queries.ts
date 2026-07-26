@@ -39,8 +39,12 @@ export const useCompany = (id: string) =>
 
 // HR Core (Departments, Positions, Employees) is persisted via dedicated hooks
 // in '@/hooks/departments', '@/hooks/positions', '@/hooks/employees'.
-export const useCompanyUsers = (companyId: string) =>
-  useQuery({ queryKey: queryKeys.users.all(companyId), queryFn: () => repository.getCompanyUsers(companyId) });
+export const useCompanyUsers = (companyId: string | undefined) =>
+  useQuery({
+    queryKey: queryKeys.users.all(companyId ?? 'unresolved'),
+    queryFn: () => repository.getCompanyUsers(companyId!),
+    enabled: !!companyId,
+  });
 
 // Request Records are persisted via dedicated hooks in '@/hooks/requests'.
 
@@ -48,10 +52,11 @@ export const useCompanyUsers = (companyId: string) =>
 // served by the dedicated '@/hooks/packages' layer (package repositories + RPC).
 // Diagnostics are persisted via dedicated hooks in '@/hooks/diagnostics'.
 
-export const useTenantInstallations = (companyId: string) =>
+export const useTenantInstallations = (companyId: string | undefined) =>
   useQuery({
-    queryKey: queryKeys.installations.company(companyId),
-    queryFn: () => repository.getInstallationsForTenant(companyId),
+    queryKey: queryKeys.installations.company(companyId ?? 'unresolved'),
+    queryFn: () => repository.getInstallationsForTenant(companyId!),
+    enabled: !!companyId,
   });
 
 // Usage analytics, platform audit log, and system health are served by the
@@ -62,13 +67,13 @@ export const useTenantInstallations = (companyId: string) =>
 
 // --- Mutations (scoped invalidation + toasts) --------------------------------
 
-export function useSaveSettings(companyId: string) {
+export function useSaveSettings(companyId: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: repository.saveSettings,
     onSuccess: () => {
       notify.recordUpdated('Company settings');
-      invalidate(qc, invalidationTargets.saveSettings(companyId));
+      invalidate(qc, invalidationTargets.saveSettings(companyId ?? 'unresolved'));
     },
     onError: (e: NetworkError) => notify.networkFailure(e.message),
   });

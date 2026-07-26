@@ -25,6 +25,7 @@ import {
   type InstallationPhase,
 } from '@/components/states';
 import { useSession } from '@/lib/session';
+import { useCompanyId } from '@/hooks/use-company-id';
 import { PackageGuard } from '@/components/guards';
 import { useHasPackage } from '@/hooks/entitlements';
 import { PACKAGE_CODES } from '@/lib/entitlements';
@@ -49,8 +50,9 @@ import { leaveRequestFormSchema, type LeaveRequestFormValues } from '@/services/
 import { attendanceFormSchema, type AttendanceFormValues } from '@/services/attendance-service';
 
 function useTenantId() {
-  const { tenantId } = useSession();
-  return tenantId ?? 'alpha';
+  // Mock mode uses the route slug; Supabase mode uses the real company UUID
+  // resolved from the signed-in membership context.
+  return useCompanyId();
 }
 
 // --- Dashboard ----------------------------------------------------------------
@@ -563,6 +565,7 @@ export function UpdatesPage() {
   const packageName = 'Attendance Management 1.0.0';
 
   const runInstall = () => {
+    if (!tid) return;
     setPhase('installing');
     notify.updateStarted(packageName);
     if (forceFail) forceNextFailure('install');

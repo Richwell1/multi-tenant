@@ -11,5 +11,7 @@ import { resolveDataSource } from '@/data/repository';
 export function useCompanyId(): string | undefined {
   const { tenantId } = useSession();
   const context = useCompanyContext();
-  return resolveDataSource() === 'supabase' ? context.data?.companyId : (tenantId ?? undefined);
+  return resolveDataSource() === 'supabase'
+    ? context.data?.companyId
+    : (tenantId ?? context.data?.companySlug);
 }

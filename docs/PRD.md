@@ -257,6 +257,16 @@ target must not remove successful installations; the failed row exposes a safe
 reason and can
 be retried individually.
 
+**Version-gated features (minimal demo).** Features are gated on the installed
+package version via one centralized manifest: HR Core 1.0.0 exposes Departments,
+1.1.0 adds Employees, and Attendance Management 1.0.0 exposes Attendance.
+Navigation, direct routes, and rendering all check the installed version
+(Employees requires HR Core ≥ 1.1.0). When the Admin publishes HR Core 1.1.0 to
+all active companies, existing companies move to 1.1.0 (Employees appears) with
+no company action, and newly registered companies start on the latest released
+version. The company workspace shows each package's installed version and
+available features, separate from the platform `APP_VERSION`.
+
 ### 5.10 Standard Update Flow
 
 The Platform Super Admin shall be able to publish a standard update to all active companies.

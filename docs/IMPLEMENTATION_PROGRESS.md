@@ -208,6 +208,31 @@
   (backward-compatible ahead of PR merge); local↔remote history aligned (18/18).
   Frontend ships when the branch merges to `main`; browser demo dry-run pending.
 
+### Minimal package-version demo — 2026-07-28
+
+- Branch: `feat/minimal-package-version-demo` (off `main`). Small, visual proof
+  that package versions change, Admin pushes updates, all active companies
+  receive them, new companies get the latest HR Core, and versions show on the
+  company workspace.
+- **Version-gated features** via a centralized `src/lib/packages/manifest.ts`
+  (single source): HR Core 1.0.0 → Departments; 1.1.0 → +Employees; Attendance
+  1.0.0 → Attendance. Gating applies to **nav, direct route, and rendering**
+  (Employees needs HR Core ≥ 1.1.0; Attendance ≥ 1.0.0) via a version-aware
+  `PackageGuard` and a `semver` util.
+- **Context** now carries installed versions (`CompanySessionContext.enabledPackages`)
+  from both mock and Supabase providers; the Installed Packages page renders
+  name + installed version + available features, separate from `APP_VERSION`.
+- **Seed** migration `20260728010000` adds HR Core 1.1.0 and Attendance
+  Management 1.0.0 (diagnostic PASS, unreleased) so the Admin can publish them
+  live; registration still resolves the latest released+PASS+semver HR Core.
+- Reconciled two existing SQL suites for the new seed (demo workflows uses HR
+  Core 1.2.0 / `demo-attend-base`; attendance suite uses version 2.0.0).
+- Local verification: Supabase reset ✅ · 11 SQL/RLS suites ✅ · typecheck ✅ ·
+  lint ✅ · 251 application tests ✅ · build ✅ (main 486.56 kB / 147.73 kB gzip;
+  APP_VERSION unchanged `v0.1.0`).
+- Hosted status: seed migration is **branch-local**; hosted push + browser demo
+  dry-run remain a deploy step after review.
+
 ## Verification history
 
 | Increment | db reset | typecheck | lint | tests | build | RLS/JWT | notes |
@@ -230,6 +255,7 @@
 | Engineering quality hardening | ✅ | ✅ | ✅ | 227 | ✅ | 8 SQL/RLS suites (94 scenarios), docs/state/session/version checks | hosted browser QA and hosted Auth/demo verification remain |
 | Admin package management | ✅ | ✅ | ✅ | 231 | ✅ (485.23 kB / 147.30 kB gzip) | ✅ 9 SQL/RLS suites (112 scenarios, including 18 new package-management scenarios) | migration is local only; hosted push and browser release smoke remain |
 | Demo package workflows | ✅ | ✅ | ✅ | 235 | ✅ (485.24 kB / 147.30 kB gzip) | ✅ 10 SQL/RLS suites (incl. 23-scenario demo suite) | branch-local migrations; hosted push + browser demo dry-run remain |
+| Minimal package-version demo | ✅ | ✅ | ✅ | 251 | ✅ (486.56 kB / 147.73 kB gzip) | ✅ 11 SQL/RLS suites (incl. 9-scenario minimal suite) | version-gated features; seed branch-local; hosted push + browser dry-run remain |
 
 ## Current risks
 - Mock is default; Supabase HR-Core path verified at DB/RLS level, **not yet exercised end-to-end in the browser**.

@@ -193,6 +193,15 @@ implementation remains in the shared codebase and deployment. Package-aware
 routes, navigation, services, repositories, tables, and RLS provide the
 feature; package assignments only control access for a tenant.
 
+**Version-gated features.** Access is gated on the company's *installed version*,
+not only the entitlement. The resolved company context carries
+`enabledPackages` (code + installed version), and a centralized manifest
+(`src/lib/packages/manifest.ts`) maps each package version to its features and
+the minimum version that unlocks each (e.g. Employees requires HR Core ≥ 1.1.0).
+Navigation, the route-level `PackageGuard` (with an optional `minVersion`), and
+page rendering all read that one source; RLS remains the authoritative boundary.
+Package versions are independent of the platform `APP_VERSION`.
+
 The operational lifecycle is:
 
 ```text

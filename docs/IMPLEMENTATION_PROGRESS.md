@@ -8,13 +8,13 @@
 | | |
 |---|---|
 | Product | Multi-Tenants HR |
-| Current branch | `main` |
-| Current phase | Marketplace extensions + private extensions + private standalone (merged) |
-| Current increment | Category/visibility model, company self-install, private assignment, adoption, 5 minimal packages |
+| Current branch | `fix/marketplace-entitlement-and-ui` |
+| Current phase | Marketplace fixes (entitlement grant + per-card pending state + UX) |
+| Current increment | Missing `authenticated` grant on new feature tables; package-specific install state; card/wording polish |
 | Default data source | `mock` (`VITE_DATA_SOURCE`), Supabase path behind lazy adapters |
 | Local Supabase ports | API/Functions 54331 · DB 54332 · Studio 54333 (project-local +10 offset) |
 | Hosted Supabase | Linked (`uezvaqoqqqgblpcbkujq`); all 23 migrations deployed (marketplace + private packages pushed 2026-07-29); local↔remote aligned |
-| Test count | 273 application tests |
+| Test count | 275 application tests |
 
 > `main` carries everything through 5.6 and the hosted Supabase baseline is deployed. The hosted CI quality gate passed the full
 > SQL/RLS matrix and application checks. RLS suites under `supabase/tests/`:
@@ -296,6 +296,7 @@
 | Demo package workflows | ✅ | ✅ | ✅ | 235 | ✅ (485.24 kB / 147.30 kB gzip) | ✅ 10 SQL/RLS suites (incl. 23-scenario demo suite) | branch-local migrations; hosted push + browser demo dry-run remain |
 | Minimal package-version demo | ✅ | ✅ | ✅ | 251 | ✅ (486.56 kB / 147.73 kB gzip) | ✅ 11 SQL/RLS suites (incl. 9-scenario minimal suite) | version-gated features; seed branch-local; hosted push + browser dry-run remain |
 | Marketplace + private packages | ✅ | ✅ | ✅ | 273 | ✅ | ✅ 15 SQL/RLS suites (+31 marketplace/private scenarios) | 4 branch-local migrations; hosted push + browser smoke remain |
+| Marketplace entitlement + UI fix | ✅ | ✅ | ✅ | 275 | ✅ (491.64 kB) | ✅ 16 SQL/RLS suites (+9 Document Notes authz scenarios) | grant migration `20260730010000` branch-local (hosted push needed to fix live insert) |
 
 ## Current risks
 - Mock is default; Supabase HR-Core path verified at DB/RLS level, **not yet exercised end-to-end in the browser**.

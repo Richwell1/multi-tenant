@@ -11,7 +11,7 @@ import type {
   PackageReleaseRepository,
   PackageRepository,
 } from './package-repository';
-import type { InstallationFilters, PublishReleaseInput } from './types';
+import type { CreatePackageInput, CreateVersionInput, InstallationFilters, PublishReleaseInput } from './types';
 
 const supa = () => import('./supabase');
 
@@ -25,10 +25,25 @@ class LazyPackageRepository implements PackageRepository {
   listVersions(code: string) {
     return supa().then((m) => new m.SupabasePackageRepository().listVersions(code));
   }
+  createPackage(input: CreatePackageInput) {
+    return supa().then((m) => new m.SupabasePackageRepository().createPackage(input));
+  }
+  createVersion(input: CreateVersionInput) {
+    return supa().then((m) => new m.SupabasePackageRepository().createVersion(input));
+  }
 }
 class LazyPackageReleaseRepository implements PackageReleaseRepository {
   publish(input: PublishReleaseInput) {
     return supa().then((m) => new m.SupabasePackageReleaseRepository().publish(input));
+  }
+  createPlan(input: PublishReleaseInput) {
+    return supa().then((m) => new m.SupabasePackageReleaseRepository().createPlan(input));
+  }
+  processInstallation(id: string) {
+    return supa().then((m) => new m.SupabasePackageReleaseRepository().processInstallation(id));
+  }
+  getDetails(id: string) {
+    return supa().then((m) => new m.SupabasePackageReleaseRepository().getDetails(id));
   }
 }
 class LazyPackageAssignmentRepository implements PackageAssignmentRepository {

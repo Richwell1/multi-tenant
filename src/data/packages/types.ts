@@ -28,8 +28,30 @@ export interface PackageVersion {
   packageCode: string;
   version: string;
   releaseNotes: string;
+  compatibilityNotes: string;
   diagnosticStatus: PackageDiagnosticStatus | null;
   releasedAt: string | null;
+}
+
+export interface CreatePackageInput {
+  code: string;
+  name: string;
+  classification: PackageType;
+  description: string;
+  version: string;
+  releaseNotes: string;
+}
+
+export interface CreateVersionInput {
+  packageCode: string;
+  version: string;
+  releaseNotes: string;
+  compatibilityNotes: string;
+}
+
+export interface CreatedPackage {
+  package: Package;
+  version: PackageVersion;
 }
 
 export interface PackageInstallation {
@@ -43,6 +65,10 @@ export interface PackageInstallation {
   startedAt: string;
   completedAt: string | null;
   error: string | null;
+  attemptCount: number;
+  lastErrorCode: string | null;
+  lastErrorMessage: string | null;
+  lastAttemptAt: string | null;
 }
 
 export interface CompanyPackageAssignment {
@@ -71,8 +97,38 @@ export interface PublishReleaseResult {
   automaticInstall: boolean;
 }
 
+export interface ReleaseInstallationResult {
+  id: string;
+  companyId: string;
+  status: PackageInstallationStatus;
+  error: string | null;
+}
+
+export interface ReleasePlanResult {
+  releaseId: string;
+  packageCode: string;
+  version: string;
+  mode: CompanyTargetMode;
+  targetCount: number;
+  automaticInstall: boolean;
+  installations: ReleaseInstallationResult[];
+}
+
+export interface PackageReleaseDetails {
+  releaseId: string;
+  packageCode: string;
+  packageName: string;
+  classification: PackageType;
+  version: string;
+  mode: CompanyTargetMode;
+  releasedAt: string;
+  automaticInstall: boolean;
+  installations: PackageInstallation[];
+}
+
 /** Filters for installation monitoring (all optional). */
 export interface InstallationFilters {
+  releaseId?: string;
   companyIds?: string[];
   packageCode?: string;
   status?: PackageInstallationStatus;

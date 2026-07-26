@@ -559,11 +559,15 @@ export type Database = {
       }
       package_installations: {
         Row: {
+          attempt_count: number
           company_id: string
           completed_at: string | null
           created_at: string
           error: string | null
           id: string
+          last_attempt_at: string | null
+          last_error_code: string | null
+          last_error_message: string | null
           package_key: string
           release_id: string
           started_at: string
@@ -571,11 +575,15 @@ export type Database = {
           version: string
         }
         Insert: {
+          attempt_count?: number
           company_id: string
           completed_at?: string | null
           created_at?: string
           error?: string | null
           id?: string
+          last_attempt_at?: string | null
+          last_error_code?: string | null
+          last_error_message?: string | null
           package_key: string
           release_id: string
           started_at?: string
@@ -583,11 +591,15 @@ export type Database = {
           version: string
         }
         Update: {
+          attempt_count?: number
           company_id?: string
           completed_at?: string | null
           created_at?: string
           error?: string | null
           id?: string
+          last_attempt_at?: string | null
+          last_error_code?: string | null
+          last_error_message?: string | null
           package_key?: string
           release_id?: string
           started_at?: string
@@ -697,6 +709,7 @@ export type Database = {
       }
       package_versions: {
         Row: {
+          compatibility_notes: string
           created_at: string
           diagnostic_status: string | null
           id: string
@@ -706,6 +719,7 @@ export type Database = {
           version: string
         }
         Insert: {
+          compatibility_notes?: string
           created_at?: string
           diagnostic_status?: string | null
           id?: string
@@ -715,6 +729,7 @@ export type Database = {
           version: string
         }
         Update: {
+          compatibility_notes?: string
           created_at?: string
           diagnostic_status?: string | null
           id?: string
@@ -938,6 +953,35 @@ export type Database = {
         Returns: boolean
       }
       is_platform_admin: { Args: { uid?: string }; Returns: boolean }
+      create_package_release: {
+        Args: {
+          p_automatic_install?: boolean
+          p_company_ids?: string[]
+          p_target_mode: Database["public"]["Enums"]["release_target_mode"]
+          p_version_id: string
+        }
+        Returns: Json
+      }
+      create_package_version: {
+        Args: {
+          p_compatibility_notes?: string
+          p_package_key: string
+          p_release_notes: string
+          p_version: string
+        }
+        Returns: Json
+      }
+      create_package_with_version: {
+        Args: {
+          p_description: string
+          p_key: string
+          p_name: string
+          p_release_notes: string
+          p_type: Database["public"]["Enums"]["package_type"]
+          p_version: string
+        }
+        Returns: Json
+      }
       onboard_company: {
         Args: {
           p_company_email?: string
@@ -959,6 +1003,10 @@ export type Database = {
           id: string
           target: string
         }[]
+      }
+      process_package_installation: {
+        Args: { p_installation_id: string }
+        Returns: Json
       }
       publish_package_release: {
         Args: {
@@ -1250,4 +1298,3 @@ export const Constants = {
     },
   },
 } as const
-

@@ -5,6 +5,12 @@ import type {
   Package,
   PackageInstallation,
   PackageVersion,
+  CreatePackageInput,
+  CreateVersionInput,
+  CreatedPackage,
+  PackageReleaseDetails,
+  ReleaseInstallationResult,
+  ReleasePlanResult,
   PublishReleaseInput,
   PublishReleaseResult,
 } from './types';
@@ -14,11 +20,18 @@ export interface PackageRepository {
   list(): Promise<Package[]>;
   getByCode(code: string): Promise<Package | undefined>;
   listVersions(packageCode: string): Promise<PackageVersion[]>;
+  createPackage(input: CreatePackageInput): Promise<CreatedPackage>;
+  createVersion(input: CreateVersionInput): Promise<PackageVersion>;
 }
+
+export type { CreatePackageInput, CreateVersionInput, CreatedPackage } from './types';
 
 /** Release publishing — the write path goes through the trusted RPC. */
 export interface PackageReleaseRepository {
   publish(input: PublishReleaseInput): Promise<PublishReleaseResult>;
+  createPlan(input: PublishReleaseInput): Promise<ReleasePlanResult>;
+  processInstallation(id: string): Promise<ReleaseInstallationResult>;
+  getDetails(id: string): Promise<PackageReleaseDetails | undefined>;
 }
 
 /** Per-company package assignments (entitlement state). */

@@ -30,6 +30,9 @@ import {
   usePackage,
   usePackages,
   usePackageVersions,
+  useReleaseDetails,
+  useCreatePackage,
+  useCreatePackageVersion,
   usePublishRelease,
   useRetryInstallation,
   useRollbackInstallation,
@@ -44,6 +47,7 @@ import {
   type PackageInstallation,
   type PackageInstallationStatus,
 } from '@/data/packages';
+import type { CreatePackageInput } from '@/data/packages';
 import {
   emptyCompanyTarget,
   createCompanyTargetSchema,
@@ -648,6 +652,9 @@ export function PackagesList() {
           <>
             <SearchBar value={q} onChange={setQ} />
             <Link to="/admin/packages/new">
+              <Button variant="outline">New Package</Button>
+            </Link>
+            <Link to="/admin/packages/releases/new">
               <Button>Create Package Release</Button>
             </Link>
           </>
@@ -693,7 +700,107 @@ export function PackagesList() {
   );
 }
 
+const PACKAGE_CREATION_TYPES: Array<{ value: Extract<PackageType, 'standard_update' | 'shared_extension' | 'private_customization'>; label: string }> = [
+  { value: 'standard_update', label: 'Standard update' },
+  { value: 'shared_extension', label: 'Shared extension' },
+  { value: 'private_customization', label: 'Private customization' },
+];
+
 export function CreatePackage() {
+  const navigate = useNavigate();
+  const create = useCreatePackage();
+  const [form, setForm] = useState<CreatePackageInput>({
+    code: '', name: '', classification: 'standard_update', description: '', version: '1.0.0', releaseNotes: '',
+  });
+  const [error, setError] = useState<string>();
+
+  const submit = (event: React.FormEvent) => {
+    event.preventDefault();
+    setError(undefined);
+    create.mutate(form, {
+      onSuccess: (result) => navigate({ to: '/admin/packages/$packageId', params: { packageId: result.package.code } }),
+      onError: (err) => setError(err instanceof RepositoryError ? err.message : 'Package creation failed. Please try again.'),
+    });
+  };
+
+  return (
+    <>
+      <PageHeader title="New Package" description="Create package metadata and its first version" />
+      <Card className="max-w-2xl">
+        <CardContent className="pt-6">
+          {error && <div role="alert" className="mb-4 rounded-md border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">{error}</div>}
+          <form onSubmit={submit} className="space-y-4" noValidate>
+            <Field label="Package name">
+              <Input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            </Field>
+            <Field label="Package key" hint="Lowercase kebab-case, for example attendance-management.">
+              <Input required pattern="[a-z0-9]+(-[a-z0-9]+)*" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} />
+            </Field>
+            <Field label="Package type">
+              <select className="h-10 w-full rounded-md border border-border bg-surface px-3 text-sm" value={form.classification} onChange={(e) => setForm({ ...form, classification: e.target.value as CreatePackageInput['classification'] })}>
+                {PACKAGE_CREATION_TYPES.map((type) => <option key={type.value} value={type.value}>{type.label}</option>)}
+              </select>
+            </Field>
+            <Field label="Description">
+              <textarea className="min-h-24 w-full rounded-md border border-border bg-surface px-3 py-2 text-sm" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+            </Field>
+            <Field label="Initial version" hint="Use semantic versioning, for example 1.0.0.">
+              <Input required value={form.version} onChange={(e) => setForm({ ...form, version: e.target.value })} />
+            </Field>
+            <Field label="Release notes">
+              <textarea required className="min-h-24 w-full rounded-md border border-border bg-surface px-3 py-2 text-sm" value={form.releaseNotes} onChange={(e) => setForm({ ...form, releaseNotes: e.target.value })} />
+            </Field>
+            {form.classification === 'private_customization' && <p className="text-sm text-content-variant">Private packages are not assigned during creation. Publish a release separately and target one company.</p>}
+            <SubmitButton pending={create.isPending} pendingLabel="Creating…">Create Package</SubmitButton>
+          </form>
+        </CardContent>
+      </Card>
+    </>
+  );
+}
+
+export function CreatePackageVersion() {
+  const navigate = useNavigate();
+  const { packageKey } = useParams({ strict: false });
+  const code = packageKey as string;
+  const pkg = usePackage(code);
+  const create = useCreatePackageVersion();
+  const [version, setVersion] = useState('');
+  const [releaseNotes, setReleaseNotes] = useState('');
+  const [compatibilityNotes, setCompatibilityNotes] = useState('');
+  const [error, setError] = useState<string>();
+
+  if (pkg.isPending) return <PageLoadingState />;
+  if (pkg.isError) return <ErrorState onRetry={() => pkg.refetch()} retrying={pkg.isFetching} />;
+  if (!pkg.data) return <EmptyState title="Package not found" />;
+  if (!pkg.data.isActive) return <EmptyState title="Package is inactive" description="Reactivate the package before creating another version." />;
+
+  const submit = (event: React.FormEvent) => {
+    event.preventDefault();
+    setError(undefined);
+    create.mutate({ packageCode: code, version, releaseNotes, compatibilityNotes }, {
+      onSuccess: () => navigate({ to: '/admin/packages/$packageId', params: { packageId: code } }),
+      onError: (err) => setError(err instanceof RepositoryError ? err.message : 'Version creation failed. Please try again.'),
+    });
+  };
+
+  return (
+    <>
+      <PageHeader title={`New ${pkg.data.name} version`} description="Create a version without publishing or assigning it" />
+      <Card className="max-w-2xl"><CardContent className="pt-6">
+        {error && <div role="alert" className="mb-4 rounded-md border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">{error}</div>}
+        <form onSubmit={submit} className="space-y-4" noValidate>
+          <Field label="Version"><Input required value={version} onChange={(e) => setVersion(e.target.value)} /></Field>
+          <Field label="Release notes"><textarea required className="min-h-24 w-full rounded-md border border-border bg-surface px-3 py-2 text-sm" value={releaseNotes} onChange={(e) => setReleaseNotes(e.target.value)} /></Field>
+          <Field label="Compatibility notes"><textarea className="min-h-20 w-full rounded-md border border-border bg-surface px-3 py-2 text-sm" value={compatibilityNotes} onChange={(e) => setCompatibilityNotes(e.target.value)} /></Field>
+          <SubmitButton pending={create.isPending} pendingLabel="Creating…">Create Version</SubmitButton>
+        </form>
+      </CardContent></Card>
+    </>
+  );
+}
+
+export function CreatePackageRelease() {
   const navigate = useNavigate();
   const packagesQuery = usePackages();
   const [packageCode, setPackageCode] = useState('');
@@ -730,7 +837,7 @@ export function CreatePackage() {
     publish.mutate(
       { packageVersionId: versionId, classification, target, automaticInstall },
       {
-        onSuccess: () => navigate({ to: '/admin/packages' }),
+        onSuccess: (result) => navigate({ to: '/admin/releases/$releaseId', params: { releaseId: result.releaseId } }),
         onError: (err) => {
           const msg = err instanceof RepositoryError ? err.message : 'Publish failed. Please try again.';
           setError(
@@ -848,7 +955,12 @@ export function PackageDetails() {
       <PageHeader
         title={pkg.name}
         description={`${pkg.code} · ${pkg.classification.replace(/_/g, ' ')}`}
-        actions={<Badge tone={pkg.isActive ? 'healthy' : 'neutral'}>{pkg.isActive ? 'active' : 'inactive'}</Badge>}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            {pkg.isActive && <Link to="/admin/packages/$packageKey/versions/new" params={{ packageKey: pkg.code }}><Button size="sm" variant="outline">New Version</Button></Link>}
+            <Badge tone={pkg.isActive ? 'healthy' : 'neutral'}>{pkg.isActive ? 'active' : 'inactive'}</Badge>
+          </div>
+        }
       />
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard label="Installed" value={installed} />
@@ -1017,6 +1129,65 @@ const INSTALL_STATUSES: PackageInstallationStatus[] = [
   'retrying',
   'rolled_back',
 ];
+
+export function ReleaseDetails() {
+  const { releaseId } = useParams({ strict: false });
+  const query = useReleaseDetails(releaseId as string);
+  const retry = useRetryInstallation();
+  if (query.isPending) return <PageLoadingState />;
+  if (query.isError) return <ErrorState onRetry={() => query.refetch()} retrying={query.isFetching} />;
+  if (!query.data) return <EmptyState title="Release not found" />;
+
+  const release = query.data;
+  const installed = release.installations.filter((i) => i.status === 'installed').length;
+  const failed = release.installations.filter((i) => i.status === 'failed').length;
+  const pending = release.installations.filter((i) => ['pending', 'installing', 'retrying'].includes(i.status)).length;
+
+  return (
+    <>
+      <PageHeader
+        title={`${release.packageName} ${release.version}`}
+        description={`${release.packageCode} · ${release.classification.replace(/_/g, ' ')}`}
+        actions={<Badge tone={failed ? 'degraded' : pending ? 'platform' : 'healthy'}>{failed ? 'attention required' : pending ? 'in progress' : 'complete'}</Badge>}
+      />
+      <div className="grid gap-4 sm:grid-cols-4">
+        <StatCard label="Total targets" value={release.installations.length} />
+        <StatCard label="Installed" value={installed} />
+        <StatCard label="Failed" value={failed} />
+        <StatCard label="Pending" value={pending} />
+      </div>
+      <Card className="mt-6">
+        <CardHeader><CardTitle>Release plan</CardTitle></CardHeader>
+        <CardContent className="grid gap-2 text-sm sm:grid-cols-3">
+          <Row label="Target type" value={release.mode.replace(/_/g, ' ')} />
+          <Row label="Released" value={formatDate(release.releasedAt)} />
+          <Row label="Automatic installation" value={release.automaticInstall ? 'Enabled' : 'Disabled'} />
+        </CardContent>
+      </Card>
+      <Card className="mt-6">
+        <CardHeader><CardTitle>Per-company installations</CardTitle></CardHeader>
+        <CardContent>
+          {release.installations.length === 0 ? <EmptyState title="No target installations" /> : (
+            <DataTable>
+              <THead><TH>Company</TH><TH>Status</TH><TH>Attempts</TH><TH>Failure</TH><TH>Action</TH></THead>
+              <TBody>
+                {release.installations.map((installation) => (
+                  <TR key={installation.id}>
+                    <TD>{installation.companyName}</TD>
+                    <TD><Badge tone={installTone(installation.status)}>{installation.status.replace(/_/g, ' ')}</Badge></TD>
+                    <TD>{installation.attemptCount}</TD>
+                    <TD className="text-content-variant">{installation.lastErrorMessage ?? installation.error ?? '—'}</TD>
+                    <TD>{canRetryInstallation(installation.status) ? <Button size="sm" variant="ghost" disabled={retry.isPending} onClick={() => retry.mutate(installation)}>Retry</Button> : '—'}</TD>
+                  </TR>
+                ))}
+              </TBody>
+            </DataTable>
+          )}
+        </CardContent>
+      </Card>
+    </>
+  );
+}
 
 export function InstallationsPage() {
   const [target, setTarget] = useState<CompanyTargetValue>(emptyCompanyTarget('all_companies'));

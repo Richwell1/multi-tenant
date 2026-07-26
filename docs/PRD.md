@@ -211,13 +211,21 @@ The demo shall not include request chat, company request forms, message threads,
 The Platform Super Admin shall be able to:
 
 - View packages
-- Create a package release
-- Set package name and version
+- Create a package definition and its initial version atomically
+- Create additional package versions without publishing them
+- Create a package release plan
 - Add short release notes
 - Classify the package
 - Select a target
 - View package status
 - Enable or disable a package assignment
+- Monitor each company's installation independently
+- Retry a failed installation without reinstalling successful targets
+
+Creating a package record does not generate feature code. Package behavior is
+implemented in the shared application codebase and deployment. Private
+packages remain metadata and entitlement boundaries within the same codebase;
+they do not create customer branches or customer deployments.
 
 Supported package classifications:
 
@@ -231,7 +239,11 @@ Required target options:
 - All companies
 - One company
 
-Selected-company targeting may be represented but is not required for the core demo flow.
+Selected-company targeting is also supported. The release plan resolves active
+companies, creates one pending installation per target, and automatic
+installation processes each target independently. A failed target must not
+remove successful installations; the failed row exposes a safe reason and can
+be retried individually.
 
 ### 5.10 Standard Update Flow
 
@@ -343,7 +355,10 @@ This data may be seeded or generated from simple usage events.
 - Create Request Record
 - Request Record Details
 - Packages List
+- Create Package
+- Create Package Version
 - Create Package Release
+- Release Details
 - Package Details
 - Package Targeting
 - Diagnostic Report

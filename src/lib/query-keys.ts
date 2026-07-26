@@ -59,6 +59,9 @@ export const queryKeys = {
     /** A single company's package entitlements. */
     company: (companyId: string) => ['packages', 'company', companyId] as const,
   },
+  releases: {
+    detail: (releaseId: string) => ['releases', 'detail', releaseId] as const,
+  },
   packageAssignments: {
     company: (companyId: string) => ['package-assignments', companyId] as const,
   },

@@ -8,13 +8,13 @@
 | | |
 |---|---|
 | Product | Multi-Tenants HR |
-| Current branch | `chore/engineering-quality-hardening` |
-| Current phase | Engineering quality, documentation, UX state, session, and versioning hardening |
-| Current increment | Cross-cutting quality hardening after Phase 6.1 |
+| Current branch | `feat/admin-package-management` |
+| Current phase | Admin package management and independent installation processing |
+| Current increment | Package creation, versioning, release planning, per-company processing, retry, and release details |
 | Default data source | `mock` (`VITE_DATA_SOURCE`), Supabase path behind lazy adapters |
 | Local Supabase ports | API/Functions 54331 · DB 54332 · Studio 54333 (project-local +10 offset) |
-| Hosted Supabase | Linked (`uezvaqoqqqgblpcbkujq`); 15 migrations and required API grants deployed |
-| Test count | 227 application tests |
+| Hosted Supabase | Linked (`uezvaqoqqqgblpcbkujq`); all 16 migrations deployed (admin package management pushed 2026-07-26); local↔remote history aligned |
+| Test count | 231 application tests |
 
 > `main` carries everything through 5.6 and the hosted Supabase baseline is deployed. The hosted CI quality gate passed the full
 > SQL/RLS matrix and application checks. RLS suites under `supabase/tests/`:
@@ -143,6 +143,32 @@
   gzip; the current hardening build is 484.88 kB main JS / 147.23 kB gzip.
 - Commits on this branch: `688f949`, `15f4a56`, `c4a3502`.
 
+### Admin package management — 2026-07-26
+
+- Branch: `feat/admin-package-management`
+- Added atomic Platform Admin package + initial-version creation and separate
+  package-version creation. Package metadata is configuration; it does not
+  generate customer-specific frontend code, branches, or deployments.
+- Added a two-stage release workflow: Stage A validates diagnostics and target
+  rules, creates the release/target/install rows, and leaves entitlements
+  unchanged; Stage B processes each installation independently and updates only
+  that company's entitlement. Failed companies can be retried without
+  reprocessing successful companies.
+- Added package creation, version creation, release-detail, per-company status,
+  safe failure, attempt-count, and retry UI. Existing package classification
+  vocabulary is preserved (`standard_update`, `shared_extension`, and
+  `private_customization`).
+- Added migration `20260726020000_admin_package_management.sql` and SQL suite
+  `admin_package_management_rls.sql` with 18 scenarios. The migration was pushed
+  to hosted Supabase on 2026-07-26; local↔remote history is aligned (16/16).
+- Local verification: Supabase reset ✅ · 9 SQL/RLS suites / 112 scenarios ✅ ·
+  typecheck ✅ · lint ✅ · 231 application tests ✅ · build ✅.
+- Hosted status: all 16 migrations deployed (the admin package management
+  migration was pushed 2026-07-26); hosted browser smoke remains before release.
+- Remaining risks: automatic processing is currently client-orchestrated with
+  `Promise.allSettled` (each company is isolated, but no background worker is
+  introduced); hosted deployment and browser verification remain pending.
+
 ## Verification history
 
 | Increment | db reset | typecheck | lint | tests | build | RLS/JWT | notes |
@@ -163,6 +189,7 @@
 | 5.5 Audit & Health | ✅ | ✅ | ✅ | 201 | ✅ | ✅ audit/health 9 (enriched actor/company, self-gate, company filter, failed→degraded) + 85 prior = 94 | audit + health adapters lazy chunks; main 476 KB |
 | 5.6 CI automation | ✅ | ✅ | ✅ | 201 | ✅ | hosted CI + local reset: 8 SQL/RLS suites (94 scenarios), typecheck, lint, tests, build | browser E2E and hosted deployment remain |
 | Engineering quality hardening | ✅ | ✅ | ✅ | 227 | ✅ | 8 SQL/RLS suites (94 scenarios), docs/state/session/version checks | hosted browser QA and hosted Auth/demo verification remain |
+| Admin package management | ✅ | ✅ | ✅ | 231 | ✅ (485.23 kB / 147.30 kB gzip) | ✅ 9 SQL/RLS suites (112 scenarios, including 18 new package-management scenarios) | migration is local only; hosted push and browser release smoke remain |
 
 ## Current risks
 - Mock is default; Supabase HR-Core path verified at DB/RLS level, **not yet exercised end-to-end in the browser**.
@@ -174,6 +201,9 @@
 - The deployment checklist names `usage_events` and `system_health_checks`, but this repository intentionally derives usage from `audit_logs` (`usage_metrics()`) and health from `system_health()`; those tables should not be added without a product/schema decision.
 - **Fixed (4.1):** package gating previously read mock `company.packages`, which is `undefined` for real Supabase tenants (would have hidden Leave for everyone on the Supabase path). Gating now uses `enabledPackageCodes` from the membership context — one source for mock and Supabase, guard + nav aligned.
 - Request Records are now persisted (platform-plane). Remaining mock-backed platform surfaces: diagnostics, installations monitor, usage, health — Phase 5.2–5.5.
+- Admin package creation and release processing is implemented in both mock and
+  lazy Supabase adapters. The new migration has not yet been pushed to hosted
+  Supabase, so hosted package creation/release behavior is not yet verified.
 
 ### Technical debt (explicit, from 5.1)
 - **`request_records.diagnostic_id`** is a nullable column with **no FK yet** — the diagnostics table arrives in 5.2, which will add the composite/plain FK and the "attach diagnostic to request/package version" flow. Until then the Request detail's Diagnostic link resolves against mock diagnostics.

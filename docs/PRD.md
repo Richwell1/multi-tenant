@@ -285,6 +285,16 @@ database enum values are never shown. The Admin Packages table shows category,
 visibility, and base package, with category filters, so the differences are
 immediately clear.
 
+**Available Updates (company).** The company workspace shows the updates assigned
+or released to it: pending System Package, Private Extension, and Private
+Standalone installs, plus a marketplace extension update only when the company
+already installed that extension. Uninstalled marketplace packages remain in the
+Marketplace. Automatic-install releases apply without a company click and do not
+linger as pending. Each update installs from its own card (per-card pending
+state, base/version gated, company-scoped). The sidebar shows a pending-update
+count badge (hidden at zero, `9+` above nine) with a subtle reduced-motion-aware
+pulse; the count is tenant-isolated and cleared on logout.
+
 ### 5.10 Standard Update Flow
 
 The Platform Super Admin shall be able to publish a standard update to all active companies.

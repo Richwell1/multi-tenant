@@ -223,6 +223,15 @@ visibility derived from category. `Package` domain objects carry `category` and
 `basePackageKey`; a `toPackageCategory` compatibility helper prefers the explicit
 persisted category and never infers a category from the package name.
 
+**Company Available Updates** are derived, tenant-scoped, and company-installable.
+`company_available_updates()` (SECURITY DEFINER, membership-derived) returns the
+caller company's pending/failed release installations that are newer than what's
+installed — never another company's. `install_company_update(id)` lets an active
+`company_admin` install one of its own updates (base + base-version gated,
+respecting the installation state machine); it blocks installing another
+company's update by guessing an id. The page and the sidebar count badge read one
+shared query key, so the count and list never diverge and both clear on logout.
+
 The operational lifecycle is:
 
 ```text

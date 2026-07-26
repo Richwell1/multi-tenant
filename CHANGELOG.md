@@ -1,5 +1,27 @@
 # Changelog
 
+## Unreleased — Company update notifications (branch `feat/company-update-notifications`)
+
+- **Available Updates** now shows the updates actually assigned/released to the
+  company: pending System Package, Private Extension, and Private Standalone
+  installs. Uninstalled marketplace packages stay in the Marketplace; auto-pushed
+  marketplace updates apply immediately (they don't linger as pending). Company
+  is resolved server-side from the authenticated membership.
+- New RPCs: `company_available_updates()` (tenant-scoped pending updates) and
+  `install_company_update(id)` (an active `company_admin` installs one of its own
+  updates — base/version gated, respects the installation state machine, blocks
+  installing another company's update by id). Migration `20260731010000`.
+- Page rewritten from a single hardcoded wizard to per-update cards with human
+  category badges, installed/available versions, base package, release notes, and
+  **per-card** install state (only the update being installed shows "Installing…").
+  Empty state: "Your packages are up to date".
+- **Sidebar badge** on Available Updates: count from one shared query
+  (`useAvailableUpdateCount`), hidden at 0, `9+` above nine, with a subtle
+  reduced-motion-aware pulse (`motion-safe:animate-pulse`). Clears on logout; the
+  count is tenant-isolated (keyed by company).
+- Tests: `company_updates_rls.sql` (10 scenarios) + AppShell badge, UpdatesPage
+  (per-card pending), and logout-cache tests. 312 app tests, 17 SQL suites.
+
 ## Unreleased — Package category clarity (branch `refactor/package-categories`)
 
 - Stop showing raw enum values (`standard_update`, `private_extension`,

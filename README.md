@@ -301,6 +301,16 @@ Standalone Package** — with derived visibility (Platform managed / Marketplace
 Private). The admin Packages table columns are Package · Category · Visibility ·
 Base Package · Status, with category filters.
 
+**Available Updates** (company side) shows only what the Platform Admin assigned
+or released to that company: pending System Package, Private Extension, and
+Private Standalone installs. Uninstalled marketplace packages stay in the
+Marketplace; auto-pushed marketplace updates apply immediately rather than
+lingering as pending. A company_admin installs each update from its card
+(`install_company_update` — base/version gated, own-company only). The sidebar
+shows a pending-update count badge (hidden at 0, `9+` above nine) with a
+reduced-motion-aware pulse, from one shared query that is cleared on logout and
+scoped per company.
+
 **Update matrix** (package versions never change the platform `APP_VERSION`):
 
 | Action | Who moves |

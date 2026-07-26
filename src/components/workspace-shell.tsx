@@ -21,11 +21,13 @@ import { usePackageEntitlements } from '@/hooks/entitlements';
 import { useCompanyContext } from '@/hooks/context';
 import { hasPackage, PACKAGE_CODES } from '@/lib/entitlements';
 import { hasFeature } from '@/lib/packages/manifest';
+import { useAvailableUpdateCount } from '@/hooks/company-updates';
 
 export function WorkspaceShell({ children }: { children: ReactNode }) {
   const { company } = useSession();
   const companyContext = useCompanyContext();
   const { codes, packages } = usePackageEntitlements();
+  const updateCount = useAvailableUpdateCount();
   const companyName = company?.name ?? companyContext.data?.companyName ?? 'Company Workspace';
 
   // Version-gated nav — driven by installed package versions (single source):
@@ -54,7 +56,7 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
   if (hasVisitorRegister) nav.push({ to: '/extensions/visitor-register', label: 'Visitor Register', icon: <DoorOpen className="size-4" /> });
   nav.push(
     { to: '/extensions/marketplace', label: 'Marketplace', icon: <Store className="size-4" /> },
-    { to: '/updates', label: 'Available Updates', icon: <RefreshCw className="size-4" /> },
+    { to: '/updates', label: 'Available Updates', icon: <RefreshCw className="size-4" />, badgeCount: updateCount },
     { to: '/packages', label: 'Installed Packages', icon: <Package className="size-4" /> },
     { to: '/users', label: 'Users & Roles', icon: <UserCog className="size-4" /> },
     { to: '/settings', label: 'Settings', icon: <Settings className="size-4" /> },

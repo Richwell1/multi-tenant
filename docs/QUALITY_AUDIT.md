@@ -126,6 +126,21 @@ browser verification at 320, 375, 768, 1024, and 1440 pixels remains
 - Full browser smoke testing at 320/375/768/1024/1440 pixels, hosted Auth
   seed verification, and visual regression automation remain deployment tasks.
 
+## Final verification record — 2026-07-26
+
+| Item | Result |
+|---|---|
+| Branch | `chore/engineering-quality-hardening` |
+| Commits | `688f949`, `15f4a56`, `c4a3502` |
+| Hosted deployment | Schema and 15 migration records/API grants deployed; hosted CI passed |
+| Local database | `npx supabase db reset` passed |
+| SQL/RLS | 8/8 suites, 94 scenarios passed |
+| Application checks | typecheck, lint, 227 tests, build passed |
+| Browser smoke | Deferred: no browser runner available |
+| Hosted Auth/demo data | Pending final confirmation |
+| Custom domain | Deferred |
+| Remaining demo risk | Hosted cross-session tenant-isolation smoke and final Vercel environment verification |
+
 ## Code-quality audit
 
 The focused audit found and addressed these proven issues:

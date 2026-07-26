@@ -132,10 +132,16 @@
   errors, strengthened dialog focus/IDs, and corrected error-state semantics.
 - Centralized safe Supabase error mapping and expanded notification helpers;
   provider-internal schema/SQL messages are no longer shown in UI errors.
-- Local verification: typecheck ✅ · lint ✅ · 227 application tests ✅ · build ✅.
-- SQL/RLS verification was attempted but is blocked in this environment because
-  `psql` and the local Supabase Docker database are unavailable.
-- Hosted browser visual, keyboard, and tenant-isolation smoke remains pending.
+- Local verification: Supabase reset ✅ · 8 SQL/RLS suites / 94 scenarios ✅ ·
+  typecheck ✅ · lint ✅ · 227 application tests ✅ · build ✅.
+- Hosted schema remains deployed and the hosted CI quality gate passed; hosted
+  Auth/demo-user, Vercel environment, and hosted browser tenant-isolation
+  verification remain deployment checks.
+- Browser visual and keyboard smoke at 320/375/768/1024/1440 remains deferred
+  because no browser runner was available.
+- Bundle reference: the UI polish increment was +4.28 kB main JS / +1.13 kB
+  gzip; the current hardening build is 484.88 kB main JS / 147.23 kB gzip.
+- Commits on this branch: `688f949`, `15f4a56`, `c4a3502`.
 
 ## Verification history
 
@@ -156,14 +162,14 @@
 | 5.4 Usage Analytics | ✅ | ✅ | ✅ | 197 | ✅ | ✅ usage 7 (audit-derived aggregation, self-gate, company filter, distinct companies) + 78 prior = 85 | usage adapter lazy chunk (0.4 KB); main 476 KB |
 | 5.5 Audit & Health | ✅ | ✅ | ✅ | 201 | ✅ | ✅ audit/health 9 (enriched actor/company, self-gate, company filter, failed→degraded) + 85 prior = 94 | audit + health adapters lazy chunks; main 476 KB |
 | 5.6 CI automation | ✅ | ✅ | ✅ | 201 | ✅ | hosted CI + local reset: 8 SQL/RLS suites (94 scenarios), typecheck, lint, tests, build | browser E2E and hosted deployment remain |
-| Engineering quality hardening | N/A | ✅ | ✅ | 227 | ✅ | docs/state/session/version checks plus existing SQL baseline | hosted browser QA remains |
+| Engineering quality hardening | ✅ | ✅ | ✅ | 227 | ✅ | 8 SQL/RLS suites (94 scenarios), docs/state/session/version checks | hosted browser QA and hosted Auth/demo verification remain |
 
 ## Current risks
 - Mock is default; Supabase HR-Core path verified at DB/RLS level, **not yet exercised end-to-end in the browser**.
 - Role model is `company_admin` / `company_user` only — no `hr_manager`; spec HR-Manager rules map to `company_admin`.
 - `feat/hr-core-persistence` is based on `feat/live-route-guards` (unmerged) — rebases when the guard PR lands.
 - Mock create/update/disable/terminate are simulated (no persistence) — expected pattern.
-- Hosted Supabase schema is deployed and migration history is aligned; the API-grants migration fixed authenticated REST access to RLS-protected tables. Hosted companies, memberships, and platform admins are still empty.
+- Hosted Supabase schema is deployed and migration history is aligned; the API-grants migration fixed authenticated REST access to RLS-protected tables. Hosted companies, memberships, and platform admins still require final demo-data verification.
 - Hosted Auth URL configuration, demo users/seed data, and final Vercel environment verification remain deployment checks. Confirm the production URL and environment scope before changing hosted settings.
 - The deployment checklist names `usage_events` and `system_health_checks`, but this repository intentionally derives usage from `audit_logs` (`usage_metrics()`) and health from `system_health()`; those tables should not be added without a product/schema decision.
 - **Fixed (4.1):** package gating previously read mock `company.packages`, which is `undefined` for real Supabase tenants (would have hidden Leave for everyone on the Supabase path). Gating now uses `enabledPackageCodes` from the membership context — one source for mock and Supabase, guard + nav aligned.

@@ -40,7 +40,17 @@ export const packageService = {
     if (!PACKAGE_KEY.test(input.code)) throw new RepositoryError('Use a lowercase kebab-case package key.', 'validation');
     if (!SEMVER.test(input.version)) throw new RepositoryError('Enter a valid semantic version.', 'validation');
     if (!input.releaseNotes.trim()) throw new RepositoryError('Release notes are required.', 'validation');
-    return packageRepository.createPackage({ ...input, name: input.name.trim(), releaseNotes: input.releaseNotes.trim() });
+    const baseCode = input.baseCode?.trim() || undefined;
+    if (input.classification === 'private_extension' && !baseCode) {
+      throw new RepositoryError('Select a base package for the private extension.', 'validation');
+    }
+    return packageRepository.createPackage({
+      ...input,
+      name: input.name.trim(),
+      releaseNotes: input.releaseNotes.trim(),
+      // Only a private extension carries a base package.
+      baseCode: input.classification === 'private_extension' ? baseCode : undefined,
+    });
   },
   createVersion: async (input: CreateVersionInput): Promise<PackageVersion> => {
     if (!SEMVER.test(input.version)) throw new RepositoryError('Enter a valid semantic version.', 'validation');

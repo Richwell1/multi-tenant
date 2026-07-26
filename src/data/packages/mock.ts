@@ -61,8 +61,22 @@ export class MockPackageRepository implements PackageRepository {
   }
   async createPackage(input: CreatePackageInput): Promise<CreatedPackage> {
     await delay();
-    if ([...await this.list()].some((pkg) => pkg.code === input.code)) {
+    const existing = await this.list();
+    if (existing.some((pkg) => pkg.code === input.code)) {
       throw new RepositoryError('That package key is already taken.', 'conflict');
+    }
+    // Private extensions must depend on an existing, active base package.
+    if (input.classification === 'private_extension') {
+      const base = input.baseCode?.trim();
+      if (!base) {
+        throw new RepositoryError('A private extension requires a base package.', 'validation');
+      }
+      if (base === input.code) {
+        throw new RepositoryError('A package cannot be its own base package.', 'validation');
+      }
+      if (!existing.some((pkg) => pkg.code === base && pkg.isActive)) {
+        throw new RepositoryError('The base package was not found or is inactive.', 'not_found');
+      }
     }
     const created: Package = {
       code: input.code,

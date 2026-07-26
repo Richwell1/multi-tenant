@@ -229,9 +229,10 @@ they do not create customer branches or customer deployments.
 
 Supported package classifications:
 
-- Standard update
-- Private customization
-- Shared extension
+- Standard update — one, selected, or all active companies
+- Private extension — one company; requires an enabled base package on the target
+- Private customization (standalone private) — one company; no base package
+- Shared extension — selected or all companies
 - Bug fix
 
 Required target options:
@@ -239,10 +240,21 @@ Required target options:
 - All companies
 - One company
 
-Selected-company targeting is also supported. The release plan resolves active
-companies, creates one pending installation per target, and automatic
-installation processes each target independently. A failed target must not
-remove successful installations; the failed row exposes a safe reason and can
+**Demo scope (three workflows):** (1) a general HR Core update to all active
+companies, (2) a private extension for one company that depends on a base
+package, and (3) a standalone private package for one company. With "Install
+automatically" checked, publishing enables and installs every active target in a
+single transaction; if any target fails, the whole release rolls back with a
+clear error. New active companies receive the latest released, diagnostic-PASS,
+highest-semver HR Core version at registration (never hardcoded), and a newer
+all-company HR Core release becomes the default for future registrations; only
+HR Core is assigned automatically.
+
+Selected-company targeting is also supported. The two-stage flow
+(`automatic_install=false`) resolves active companies, creates one pending
+installation per target, and processes each target independently. A failed
+target must not remove successful installations; the failed row exposes a safe
+reason and can
 be retried individually.
 
 ### 5.10 Standard Update Flow

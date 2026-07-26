@@ -224,17 +224,30 @@ released too.
 Classification describes what kind of change a release contains:
 
 - `standard_update`: a normal shared product update
+- `private_extension`: a customer-specific extension that depends on a base
+  package (the target company must already have that base package enabled)
+- `private_customization`: a standalone customer-specific package (no base)
 - `shared_extension`: an extension intended for multiple companies
-- `private_customization`: a customer-specific extension
 - `configuration_update`: a configuration change
 - `bug_fix`: a defect correction
 - `security_update`: a security correction
 
 Targeting describes who receives the release and is validated separately from
 classification: all active companies, selected companies, or one company.
-Private customizations are limited to one company; shared extensions may target
-selected or all companies. The database release RPC is the final authority for
-these rules.
+Private customizations and private extensions are limited to one company; shared
+extensions may target selected or all companies. A private extension can only be
+released to a company that already has its base package enabled. The database
+release RPC is the final authority for these rules.
+
+When "Install automatically" is checked, publishing enables every active
+target's entitlement and marks it installed in one transaction; if any target
+fails, the whole release rolls back with a clear error (no partial state).
+
+New companies receive the latest **released, diagnostic-PASS, highest semantic
+version** of HR Core at registration (never a hardcoded version); publishing a
+newer all-company HR Core release becomes the default for future registrations.
+Only HR Core is assigned automatically — private packages and extensions are
+never auto-assigned during registration.
 
 ### Release lifecycle
 

@@ -75,9 +75,12 @@ select pg_temp.check(12, 'suspended companies excluded from all-company plan',
 select pg_temp.check(13, 'release plan creates independent pending installations',
   (select count(*) >= 2 from public.package_installations pi join public.package_releases pr on pr.id = pi.release_id where pr.package_version_id = (select id from public.package_versions where package_key = 'standard-plan') and pi.status = 'pending'));
 
--- Create a fresh two-company plan, then make Beta inactive to force only Beta's
--- processor call to fail. Alpha's completed work must remain intact.
-select public.create_package_release((select id from public.package_versions where package_key = 'standard-plan'), 'selected_companies', array['a1000000-0000-0000-0000-000000000001','b1000000-0000-0000-0000-000000000002']::uuid[], true)->>'release_id' as release_id \gset
+-- Create a fresh two-company plan in MANUAL mode (automatic_install = false), so
+-- installations start pending and are processed independently. Then make Beta
+-- inactive to force only Beta's processor call to fail. Alpha's completed work
+-- must remain intact. (Automatic mode installs transactionally — covered in the
+-- demo suite.)
+select public.create_package_release((select id from public.package_versions where package_key = 'standard-plan'), 'selected_companies', array['a1000000-0000-0000-0000-000000000001','b1000000-0000-0000-0000-000000000002']::uuid[], false)->>'release_id' as release_id \gset
 select id as alpha_installation from public.package_installations where release_id = :'release_id' and company_id = 'a1000000-0000-0000-0000-000000000001' \gset
 select id as beta_installation from public.package_installations where release_id = :'release_id' and company_id = 'b1000000-0000-0000-0000-000000000002' \gset
 update public.companies set status = 'suspended' where id = 'b1000000-0000-0000-0000-000000000002';
@@ -95,7 +98,7 @@ select pg_temp.check(16, 'retry processes Beta only',
   (select status = 'installed' and attempt_count = 2 from public.package_installations where id = :'beta_installation'::uuid)
   and (select attempt_count = 1 from public.package_installations where id = :'alpha_installation'::uuid));
 select pg_temp.check(17, 'package audit records created',
-  (select count(*) >= 4 from public.audit_logs where action in ('package.created', 'package_version.created', 'release.planned', 'installation.installed', 'installation.failed')));
+  (select count(*) >= 4 from public.audit_logs where action in ('package.created', 'package_version.created', 'release.published', 'installation.planned', 'installation.installed', 'installation.failed')));
 select pg_temp.actor('a2222222-2222-2222-2222-222222222222');
 set local role authenticated;
 select pg_temp.check(18, 'non-admin cannot read platform release plans',

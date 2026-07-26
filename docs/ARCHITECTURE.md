@@ -155,12 +155,25 @@ must not be mistaken for a platform deployment.
 ### Classification versus targeting
 
 Classification answers “what kind of change is this?” The supported package
-classifications are standard update, shared extension, private customization,
-configuration update, bug fix, and security update. Targeting answers “which
-companies receive it?” and is independently represented as all companies,
-selected companies, or one company. A private customization can target only
-one company; a shared extension can target selected or all companies. The
-database RPC validates the combination, so the UI is not the final authority.
+classifications are standard update, private extension, private customization,
+shared extension, configuration update, bug fix, and security update. Targeting
+answers “which companies receive it?” and is independently represented as all
+companies, selected companies, or one company. A private customization or
+private extension can target only one company; a shared extension can target
+selected or all companies. The database RPC validates the combination, so the UI
+is not the final authority.
+
+A **private extension** additionally depends on a base package
+(`packages.base_package_key`): it can only be released to a company that already
+has that base package enabled. The dependency is a simple presence check (no
+semantic min/max compatibility ranges) enforced in `create_package_release`.
+
+When "Install automatically" is checked, `create_package_release` is
+**transactional**: it enables each active target's entitlement and marks the
+installation installed within one transaction, so a release either fully
+succeeds or rolls back with a clear error. Setting `automatic_install=false`
+keeps the two-stage flow (pending installations processed independently, with
+per-company retry).
 
 ### Release records
 
@@ -209,7 +222,13 @@ usage analytics / audit logs / system health
 The registration Edge Function performs the server-side atomic onboarding
 workflow: Auth user, company, membership, and automatic HR Core assignment.
 The browser calls the function; it does not receive or store the service-role
-credential.
+credential. The `onboard_company` RPC resolves the mandatory HR Core version
+dynamically — the globally active package's latest **released, diagnostic-PASS,
+highest semantic version** — rather than a hardcoded version, so publishing a
+newer all-company HR Core release automatically becomes the default for future
+registrations. The assignment is idempotent (`unique(company_id, package_key)`),
+assigns only HR Core, and fails safely (`hr_core_unavailable`) if no eligible
+version exists rather than creating a company without its mandatory entitlement.
 
 ## UI state and interaction rules
 

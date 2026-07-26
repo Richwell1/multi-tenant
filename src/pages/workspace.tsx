@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { CheckCircle2, Circle } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
+import { APP_VERSION } from '@/lib/app-version';
 import { StatCard } from '@/components/stat-card';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -684,7 +685,11 @@ export function InstalledPackagesPage() {
   const filtered = query.data ?? [];
   return (
     <>
-      <PageHeader title="Installed Packages" description="Packages active in this workspace" />
+      <PageHeader
+        title="Installed Packages"
+        description="Packages active in this workspace"
+        actions={<Badge tone="neutral">Platform version: {APP_VERSION}</Badge>}
+      />
       <TableBoundary query={query} filtered={filtered} cols={3}>
         <DataTable>
           <THead>

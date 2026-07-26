@@ -40,6 +40,8 @@ export interface CreatePackageInput {
   description: string;
   version: string;
   releaseNotes: string;
+  /** Required only for `private_extension`: the base package it depends on. */
+  baseCode?: string;
 }
 
 export interface CreateVersionInput {

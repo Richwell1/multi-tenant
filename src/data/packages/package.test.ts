@@ -51,6 +51,25 @@ describe('packageService validation', () => {
     await expect(packageService.createPackage({ code: 'valid-key', name: 'Demo', classification: 'standard_update', description: '', version: '1.0', releaseNotes: 'notes' })).rejects.toMatchObject({ kind: 'validation' });
     await expect(packageService.createPackage({ code: 'valid-key', name: 'Demo', classification: 'standard_update', description: '', version: '1.0.0', releaseNotes: ' ' })).rejects.toMatchObject({ kind: 'validation' });
   });
+
+  it('rejects a private extension created without a base package', async () => {
+    await expect(
+      packageService.createPackage({ code: 'ext-no-base', name: 'Ext', classification: 'private_extension', description: '', version: '1.0.0', releaseNotes: 'notes' }),
+    ).rejects.toMatchObject({ kind: 'validation' });
+  });
+});
+
+describe('MockPackageRepository — private extension base package', () => {
+  const repo = new MockPackageRepository();
+  it('requires an existing, active base package', async () => {
+    await expect(
+      repo.createPackage({ code: 'ext-missing-base', name: 'Ext', classification: 'private_extension', description: '', version: '1.0.0', releaseNotes: 'notes', baseCode: 'does-not-exist' }),
+    ).rejects.toMatchObject({ kind: 'not_found' });
+  });
+  it('creates a private extension when the base package exists', async () => {
+    const result = await repo.createPackage({ code: 'alpha-approval', name: 'Alpha Approval', classification: 'private_extension', description: '', version: '1.0.0', releaseNotes: 'notes', baseCode: 'hr-core' });
+    expect(result.package.classification).toBe('private_extension');
+  });
 });
 
 describe('MockPackageReleaseRepository', () => {

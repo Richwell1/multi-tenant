@@ -171,6 +171,43 @@
   `Promise.allSettled` (each company is isolated, but no background worker is
   introduced); hosted deployment and browser verification remain pending.
 
+### Demo package workflows — 2026-07-27
+
+- Branch: `feat/demo-package-workflows` (off `main`). Scoped to the three
+  presentation workflows only; the long-term package roadmap is deferred.
+- **Type model** narrowed to three business types with **one** new enum value:
+  `standard_update`, the new `private_extension` (one company + required base
+  package), and `private_customization` reused as the standalone private
+  package. No existing enum values were renamed.
+- **Workflow 1 (general HR Core update):** publishing HR Core 1.1.0 to all
+  active companies with automatic install moves every active company (suspended
+  excluded) and stamps the version released.
+- **Workflow 2 (private extension):** `packages.base_package_key` + a DB rule —
+  a private extension can only be released to a company that already has the
+  base package enabled (`base_package_not_enabled` otherwise); one company only.
+- **Workflow 3 (standalone private):** `private_customization`, one company.
+- **Automatic install is transactional:** `create_package_release` enables each
+  active target's entitlement and marks it installed in one transaction; any
+  failure rolls back the whole release (all-succeed-or-clear-error). The
+  per-company retry engine remains but is unused on the happy path
+  (`automatic_install=false` keeps the two-stage pending flow).
+- **Registration** now assigns the latest **released + diagnostic-PASS + highest
+  semver** HR Core version (no hardcoded version); a newer all-company HR Core
+  release becomes the default for future registrations. Assignment is idempotent
+  (`unique(company_id, package_key)`) and assigns only `hr-core`.
+- Migrations `20260727010000_add_private_extension_package_type.sql` (enum value,
+  alone so it commits before use) and `20260727020000_demo_package_workflows.sql`
+  (base column, `create_package_with_version` base param, upgraded
+  `create_package_release`, refined `onboard_company`). SQL suite
+  `demo_package_workflows_rls.sql` (23 DB scenarios; APP_VERSION/version-display
+  covered by unit tests).
+- Local verification: Supabase reset ✅ · 10 SQL/RLS suites ✅ · typecheck ✅ ·
+  lint ✅ · 235 application tests ✅ · build ✅ (main 485.24 kB / 147.30 kB gzip;
+  APP_VERSION unchanged `v0.1.0`).
+- Hosted status: both migrations pushed to hosted Supabase on 2026-07-27
+  (backward-compatible ahead of PR merge); local↔remote history aligned (18/18).
+  Frontend ships when the branch merges to `main`; browser demo dry-run pending.
+
 ## Verification history
 
 | Increment | db reset | typecheck | lint | tests | build | RLS/JWT | notes |
@@ -192,6 +229,7 @@
 | 5.6 CI automation | ✅ | ✅ | ✅ | 201 | ✅ | hosted CI + local reset: 8 SQL/RLS suites (94 scenarios), typecheck, lint, tests, build | browser E2E and hosted deployment remain |
 | Engineering quality hardening | ✅ | ✅ | ✅ | 227 | ✅ | 8 SQL/RLS suites (94 scenarios), docs/state/session/version checks | hosted browser QA and hosted Auth/demo verification remain |
 | Admin package management | ✅ | ✅ | ✅ | 231 | ✅ (485.23 kB / 147.30 kB gzip) | ✅ 9 SQL/RLS suites (112 scenarios, including 18 new package-management scenarios) | migration is local only; hosted push and browser release smoke remain |
+| Demo package workflows | ✅ | ✅ | ✅ | 235 | ✅ (485.24 kB / 147.30 kB gzip) | ✅ 10 SQL/RLS suites (incl. 23-scenario demo suite) | branch-local migrations; hosted push + browser demo dry-run remain |
 
 ## Current risks
 - Mock is default; Supabase HR-Core path verified at DB/RLS level, **not yet exercised end-to-end in the browser**.

@@ -5,6 +5,9 @@ describe('allowedTargetModesForPackageType', () => {
   it('private customization is restricted to one company', () => {
     expect(allowedTargetModesForPackageType('private_customization')).toEqual(['one_company']);
   });
+  it('private extension is restricted to one company', () => {
+    expect(allowedTargetModesForPackageType('private_extension')).toEqual(['one_company']);
+  });
   it('shared extension permits selected or all companies (never one)', () => {
     const modes = allowedTargetModesForPackageType('shared_extension');
     expect(modes).toEqual(['selected_companies', 'all_companies']);

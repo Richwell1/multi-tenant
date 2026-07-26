@@ -750,6 +750,7 @@ export type Database = {
       }
       packages: {
         Row: {
+          base_package_key: string | null
           created_at: string
           description: string | null
           is_active: boolean
@@ -759,6 +760,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          base_package_key?: string | null
           created_at?: string
           description?: string | null
           is_active?: boolean
@@ -768,6 +770,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          base_package_key?: string | null
           created_at?: string
           description?: string | null
           is_active?: boolean
@@ -776,7 +779,15 @@ export type Database = {
           type?: Database["public"]["Enums"]["package_type"]
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "packages_base_package_key_fkey"
+            columns: ["base_package_key"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["key"]
+          },
+        ]
       }
       platform_admins: {
         Row: {
@@ -933,26 +944,6 @@ export type Database = {
         Args: { target_company: string; target_package: string }
         Returns: boolean
       }
-      has_company_role: {
-        Args: {
-          target_company: string
-          target_role: Database["public"]["Enums"]["company_role"]
-          uid?: string
-        }
-        Returns: boolean
-      }
-      installation_can_transition: {
-        Args: {
-          from_status: Database["public"]["Enums"]["installation_status"]
-          to_status: Database["public"]["Enums"]["installation_status"]
-        }
-        Returns: boolean
-      }
-      is_company_member: {
-        Args: { target_company: string; uid?: string }
-        Returns: boolean
-      }
-      is_platform_admin: { Args: { uid?: string }; Returns: boolean }
       create_package_release: {
         Args: {
           p_automatic_install?: boolean
@@ -973,6 +964,7 @@ export type Database = {
       }
       create_package_with_version: {
         Args: {
+          p_base_package_key?: string
           p_description: string
           p_key: string
           p_name: string
@@ -982,6 +974,26 @@ export type Database = {
         }
         Returns: Json
       }
+      has_company_role: {
+        Args: {
+          target_company: string
+          target_role: Database["public"]["Enums"]["company_role"]
+          uid?: string
+        }
+        Returns: boolean
+      }
+      installation_can_transition: {
+        Args: {
+          from_status: Database["public"]["Enums"]["installation_status"]
+          to_status: Database["public"]["Enums"]["installation_status"]
+        }
+        Returns: boolean
+      }
+      is_company_member: {
+        Args: { target_company: string; uid?: string }
+        Returns: boolean
+      }
+      is_platform_admin: { Args: { uid?: string }; Returns: boolean }
       onboard_company: {
         Args: {
           p_company_email?: string
@@ -1052,6 +1064,7 @@ export type Database = {
           module: string
         }[]
       }
+      valid_semver: { Args: { p_version: string }; Returns: boolean }
       version_release_blocked: {
         Args: { p_version_id: string }
         Returns: boolean
@@ -1092,6 +1105,7 @@ export type Database = {
         | "bug_fix"
         | "configuration_update"
         | "security_update"
+        | "private_extension"
       release_status: "published" | "failed"
       release_target_mode:
         | "all_companies"
@@ -1275,6 +1289,7 @@ export const Constants = {
         "bug_fix",
         "configuration_update",
         "security_update",
+        "private_extension",
       ],
       release_status: ["published", "failed"],
       release_target_mode: [
@@ -1298,3 +1313,4 @@ export const Constants = {
     },
   },
 } as const
+

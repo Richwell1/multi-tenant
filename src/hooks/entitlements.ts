@@ -10,6 +10,8 @@ export function usePackageEntitlements() {
   const context = useCompanyContext();
   return {
     codes: context.data?.enabledPackageCodes ?? [],
+    /** Enabled packages with installed versions (drives version-gated features). */
+    packages: context.data?.enabledPackages ?? [],
     isPending: context.isPending,
     isError: context.isError,
   };

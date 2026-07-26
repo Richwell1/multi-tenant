@@ -28,6 +28,7 @@ interface MembershipRow {
 }
 interface PackageRow {
   package_key: string;
+  package_version: string | null;
   packages: { is_active: boolean } | null;
 }
 
@@ -75,13 +76,13 @@ export class SupabaseCompanyContextRepository implements CompanyContextRepositor
 
     const { data: pkgData, error: pkgError } = await client
       .from('company_packages')
-      .select('package_key, packages!inner(is_active)')
+      .select('package_key, package_version, packages!inner(is_active)')
       .eq('company_id', m.company_id)
       .eq('enabled', true);
     if (pkgError) throw mapSupabaseError(pkgError);
-    const enabledPackageCodes = ((pkgData ?? []) as unknown as PackageRow[])
+    const enabledPackages = ((pkgData ?? []) as unknown as PackageRow[])
       .filter((p) => p.packages?.is_active)
-      .map((p) => p.package_key);
+      .map((p) => ({ code: p.package_key, version: p.package_version }));
 
     return {
       userId: user.id,
@@ -91,7 +92,8 @@ export class SupabaseCompanyContextRepository implements CompanyContextRepositor
       companyStatus: m.companies.status,
       membershipStatus: m.status,
       role: m.role,
-      enabledPackageCodes,
+      enabledPackages,
+      enabledPackageCodes: enabledPackages.map((p) => p.code),
     };
   }
 }

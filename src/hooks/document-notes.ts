@@ -3,7 +3,6 @@ import { documentNotesService, type DocumentNoteFormValues } from '@/services/do
 import { useCompanyId } from './use-company-id';
 import { queryKeys } from '@/lib/query-keys';
 import { notify } from '@/lib/notify';
-import type { NetworkError } from '@/data/api';
 
 export function useDocumentNotes() {
   const companyId = useCompanyId();
@@ -23,6 +22,6 @@ export function useCreateDocumentNote() {
       notify.recordCreated('Note');
       qc.invalidateQueries({ queryKey: queryKeys.documentNotes.list(companyId!) });
     },
-    onError: (e: NetworkError) => notify.networkFailure(e.message),
+    // Errors are shown inline beside the form; no duplicate toast here.
   });
 }

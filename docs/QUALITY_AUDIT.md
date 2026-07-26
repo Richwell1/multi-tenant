@@ -6,6 +6,24 @@ Branch: `feat/admin-package-management`
 This audit records implementation coverage and known verification boundaries.
 It does not claim that hosted browser smoke testing has been completed.
 
+## Marketplace entitlement authorization fix (2026-07-30)
+
+- **Root cause:** the marketplace/private feature tables (`document_notes`,
+  `expense_requests`, `visitor_register`) were created after `api_role_grants`
+  and never granted to the `authenticated` role. Table privileges are checked
+  *before* RLS, so hosted `INSERT`s were denied ("not authorized"), even though
+  the entitlement-gated RLS policies were correct. Installing the extension
+  worked because it runs through a SECURITY DEFINER RPC (definer privileges).
+  Local default privileges auto-grant, which hid the gap in the SQL suite.
+- **Fix:** explicit `grant select, insert, update, delete … to authenticated`
+  (migration `20260730010000`), plus a suite (`marketplace_notes_authz_rls.sql`)
+  that asserts the grant invariant and the full INSERT-authorization rule
+  (entitlement, active company, active membership, matching company_id, global
+  package active). RLS remains the authoritative boundary; no broad access was
+  granted. **Requires a hosted migration push to fix the live insert.**
+- **Lesson:** new RLS-protected tables need an explicit `authenticated` grant;
+  the local auto-grant masks omissions, so the grant is now asserted in SQL.
+
 ## Shared behavior matrix
 
 | Concern | Current behavior | Status |

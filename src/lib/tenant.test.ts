@@ -5,23 +5,19 @@ describe('context resolution', () => {
   it('resolves admin from admin subdomain', () => {
     expect(resolveContext('admin.multi-tenants-hr.com')).toEqual({ portal: 'admin', tenantId: null });
   });
-  it('resolves alpha from subdomain', () => {
-    expect(resolveContext('alpha.multi-tenants-hr.com')).toEqual({ portal: 'company', tenantId: 'alpha' });
-  });
-  it('resolves beta from subdomain', () => {
-    expect(resolveContext('beta.multi-tenants-hr.com')).toEqual({ portal: 'company', tenantId: 'beta' });
+  it('does not resolve a tenant from a bare company subdomain (wildcard subdomains deferred)', () => {
+    // No company slug is hardcoded; a subdomain alone defaults to admin.
+    expect(resolveContext('anycompany.multi-tenants-hr.com')).toEqual({ portal: 'admin', tenantId: null });
   });
   it('supports local dev ?portal=admin', () => {
     expect(resolveContext('localhost', '?portal=admin')).toEqual({ portal: 'admin', tenantId: null });
   });
-  it('supports local dev ?tenant=alpha', () => {
-    expect(resolveContext('localhost', '?tenant=alpha')).toEqual({ portal: 'company', tenantId: 'alpha' });
-  });
-  it('supports local dev ?tenant=beta', () => {
-    expect(resolveContext('localhost', '?tenant=beta')).toEqual({ portal: 'company', tenantId: 'beta' });
+  it('resolves any dynamically-created tenant slug via ?tenant=', () => {
+    expect(resolveContext('localhost', '?tenant=acme')).toEqual({ portal: 'company', tenantId: 'acme' });
+    expect(resolveContext('localhost', '?tenant=other-co')).toEqual({ portal: 'company', tenantId: 'other-co' });
   });
 
-  it('supports production-created tenant slugs', () => {
+  it('supports production-created tenant slugs on the hosted domain', () => {
     expect(resolveContext('multi-tenant-hr.vercel.app', '?tenant=rich')).toEqual({
       portal: 'company',
       tenantId: 'rich',

@@ -1,5 +1,27 @@
 # Changelog
 
+## Unreleased — Marketplace fixes (branch `fix/marketplace-entitlement-and-ui`)
+
+- **Fix (authorization):** installing a marketplace extension enabled the
+  entitlement, but creating records (e.g. Document Notes) failed on hosted with
+  "not authorized". Root cause: the new feature tables (`document_notes`,
+  `expense_requests`, `visitor_register`) were missing the `authenticated` table
+  grant — privileges are evaluated *before* RLS, and the install worked only
+  because it runs through a SECURITY DEFINER RPC. Locally, default privileges
+  auto-grant, which masked the gap. Added explicit grants (migration
+  `20260730010000`); RLS remains the authorization boundary.
+- **Fix (UI state):** the marketplace install mutation exposed one global
+  `isPending`, so every card showed "Installing…". Pending state is now
+  package-specific (keyed on `install.variables`); only the clicked card shows
+  it and is disabled.
+- **UX:** marketplace subtitle now "Optional standalone features your company can
+  install"; cards show description, latest/installed version, and an Open action
+  once installed. Feature-page create errors show inline only (removed the
+  duplicate toast).
+- Tests: `marketplace_notes_authz_rls.sql` (9 INSERT-authorization scenarios incl.
+  the table-grant invariant) + a `MarketplacePage` component test (per-card
+  pending). 275 app tests, 16 SQL suites.
+
 ## Unreleased — Marketplace + private packages (branch `feat/marketplace-and-private-packages`)
 
 Adds company self-service and Platform-Admin private assignment. `APP_VERSION`

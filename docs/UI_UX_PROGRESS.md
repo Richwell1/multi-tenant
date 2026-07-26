@@ -6,6 +6,8 @@ Branch: `feat/ui-ux-polish`
 | Area | Status | Improvements | Verification / remaining |
 |---|---|---|---|
 | Audit | Complete | Added route-by-route findings and priorities in `docs/UI_UX_AUDIT.md` | Stitch MCP was unavailable; browser screenshots deferred |
+| Extensions Marketplace | Complete | Subtitle "Optional standalone features your company can install"; cards show description, latest/installed version, and an Open action once installed; **per-card** install pending state (only the clicked card shows "Installing…" and is disabled) | `MarketplacePage` component test; hosted browser smoke pending |
+| Feature-page errors | Complete | Create errors show inline once near the form (removed duplicate toast); form values preserved on failure; disabled + "Adding…" only while pending; access denied (not an editable form) via `PackageGuard` | Covered by hooks + `PackageGuard`; browser smoke pending |
 | Shared buttons, badges, cards | Complete | Added outline/icon sizing, richer status tones, calmer borders/shadows, responsive padding | Typecheck/lint/tests/build pass |
 | Forms and fields | Complete | Linked hints/errors with `aria-describedby`, clearer labels, shared select/textarea styling, autofill treatment | Full route form smoke test deferred |
 | Tables | Complete | Improved row rhythm, focus-within state, responsive minimum width, consistent surface treatment | Browser viewport checks deferred |

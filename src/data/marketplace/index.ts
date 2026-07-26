@@ -6,6 +6,7 @@ import { resolveDataSource } from '@/data/repository';
 export interface MarketplacePackage {
   code: string;
   name: string;
+  description: string;
   latestVersion: string | null;
 }
 
@@ -28,8 +29,8 @@ export interface MarketplaceRepository {
 }
 
 const MOCK_CATALOG: MarketplacePackage[] = [
-  { code: 'document-notes', name: 'Document Notes', latestVersion: '1.0.0' },
-  { code: 'expense-requests', name: 'Expense Requests', latestVersion: '1.0.0' },
+  { code: 'document-notes', name: 'Document Notes', description: 'Create simple internal notes for your company.', latestVersion: '1.0.0' },
+  { code: 'expense-requests', name: 'Expense Requests', description: 'Record and track basic company expense requests.', latestVersion: '1.0.0' },
 ];
 
 class MockMarketplaceRepository implements MarketplaceRepository {

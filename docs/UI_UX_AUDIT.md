@@ -97,3 +97,24 @@ adds the following cross-cutting improvements:
 Full browser visual and keyboard QA remains pending at 320, 375, 768, 1024,
 and 1440 pixels. It must be performed against the hosted URL before declaring
 the visual audit fully closed.
+
+## Final verification addendum — 2026-07-26
+
+This audit remains historical where it records the original UI-polish branch;
+the hardening follow-up is on `chore/engineering-quality-hardening` in commits
+`688f949`, `15f4a56`, and `c4a3502`.
+
+- Shared state semantics, retry behavior, empty data handling, notifications,
+  dialog focus/pending behavior, session cleanup, and centralized versioning
+  are implemented and covered by the 227-test application suite.
+- Local Supabase was reset successfully and all 8 SQL/RLS suites passed,
+  covering 94 scenarios. No RLS, grant, or migration change was required by
+  this audit.
+- Hosted schema and CI remain verified. Hosted Auth/demo-user setup, final
+  Vercel environment confirmation, and hosted tenant-isolation smoke are still
+  deployment checks.
+- Manual visual and keyboard verification at 320, 375, 768, 1024, and 1440
+  pixels is deferred because a browser runner was unavailable.
+- The global platform version is `v0.1.0`, sourced once from `package.json`.
+  Package releases remain independent and do not mutate that value. The custom
+  domain is intentionally deferred.

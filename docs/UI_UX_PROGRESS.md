@@ -36,3 +36,23 @@ Branch: `chore/engineering-quality-hardening`
 | State semantics | Complete | Error/suspended panels use `alert`; loading/status panels use `status` | Shared state tests pass |
 | Documentation | Complete | README, architecture, PRD, overview, changelog, progress, and quality audit aligned | Browser-only claims remain deferred |
 | Hosted visual QA | Deferred | No browser automation claim added | Manual checks still required |
+
+## Final engineering-hardening verification — 2026-07-26
+
+The historical UI polish record above is preserved. The follow-up hardening
+branch is `chore/engineering-quality-hardening` with commits `688f949`,
+`15f4a56`, and `c4a3502`.
+
+| Area | Status | Evidence / remaining risk |
+|---|---|---|
+| Shared states | Complete | Loading, empty, success, error, warning, retry, and destructive states covered by shared tests and route audit |
+| Notifications/dialogs | Complete | Central notification helpers and pending ConfirmDialog safeguards |
+| Auth/session/cache isolation | Complete | Restore/logout/guard tests; hosted cross-account browser smoke pending |
+| Application version | Complete | `APP_VERSION` reads `package.json`; `AppVersion` appears in auth and both shells |
+| Responsive/keyboard behavior | Implemented | Manual 320/375/768/1024/1440 verification deferred without a browser runner |
+| Local verification | Complete | Supabase reset, 8 SQL suites / 94 scenarios, typecheck, lint, 227 tests, and build pass |
+| Hosted verification | Deferred | Hosted schema/CI verified; Auth/demo users, Vercel environment, and tenant-isolation smoke remain |
+
+The UI polish bundle reference remains +4.28 kB main JavaScript and +1.13 kB
+gzip. The current hardening build artifact is 484.88 kB main JavaScript and
+147.23 kB gzip. Custom domain and wildcard-subdomain work remain deferred.

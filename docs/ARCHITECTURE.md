@@ -139,11 +139,13 @@ Package classification and release targeting are distinct:
 - Selected-company targeting is represented explicitly by release targets.
 
 Publishing is authorized and validated by the database RPC. The release gate
-uses diagnostic results, then creates release targets, installations, and
-assignment changes atomically. Installation recovery is a state machine:
-retry can recover a failed installation and rollback disables the corresponding
-assignment. The UI mirrors valid transitions, but the database remains the
-authority.
+uses diagnostic results, then creates a release plan atomically. Planning
+creates release targets and pending installations but does not install every
+company in one transaction. `process_package_installation` processes exactly
+one target, updates its entitlement only after success, and records safe failure
+metadata. Installation recovery is a state machine: retry processes only the
+selected failed row and rollback disables the corresponding assignment. The UI
+mirrors valid transitions, but the database remains the authority.
 
 Package versions (`package_versions`) describe a package release. The platform
 application version is separate: `package.json` is the source of truth and
@@ -172,6 +174,19 @@ The release model keeps these concepts distinct:
 6. Installations — the operational state of applying the release.
 7. Diagnostics — impact and required-check evidence for the release gate.
 8. Audit and usage — platform activity and derived operational analytics.
+
+Package creation is metadata management, not feature generation. The package
+implementation remains in the shared codebase and deployment. Package-aware
+routes, navigation, services, repositories, tables, and RLS provide the
+feature; package assignments only control access for a tenant.
+
+The operational lifecycle is:
+
+```text
+Request → classification → package definition → shared-code implementation
+→ version creation → diagnostics → release plan → target installations
+→ monitoring → retry/rollback/deprecation
+```
 
 An installation state transition is enforced in the database and mirrored in
 the service/UI. Recovery is explicit: retry can restore a failed installation;

@@ -13,3 +13,6 @@ Initial hosted-capable Multi-Tenants HR demonstration release.
   deployment support.
 - Added shared loading, empty, error, retry, confirmation, accessibility, and
   application-version UI foundations.
+- Added Platform Admin package creation, package-version creation, atomic
+  release planning, independent per-company installation processing, retry
+  summaries, and release details.

@@ -178,7 +178,7 @@ npm run test:rls
 npm run build
 ```
 
-GitHub Actions runs local Supabase startup/reset, all eight SQL/RLS suites (94
+GitHub Actions runs local Supabase startup/reset, all nine SQL/RLS suites (112
 security scenarios), typecheck, lint, application tests, and the production
 build on pull requests and pushes to `main`.
 
@@ -188,8 +188,9 @@ Public routes: `/`, `/login`, `/register`, `/access-denied`, and
 `/company-suspended`.
 
 Platform Admin routes: `/admin`, `/admin/companies`, company details,
-`/admin/requests`, request creation/details, `/admin/packages`, package
-creation/details, `/admin/diagnostics`, diagnostic details,
+`/admin/requests`, request creation/details, `/admin/packages`, new package,
+new package version, release creation/details, package details,
+`/admin/diagnostics`, diagnostic details,
 `/admin/installations`, `/admin/usage`, `/admin/health`, and `/admin/audit`.
 
 Company routes: `/dashboard`, `/employees`, employee creation/details,
@@ -237,12 +238,27 @@ these rules.
 
 ### Release lifecycle
 
-The package model separates package definition, package version, release,
-release targets, company assignments, installations, diagnostics, audit, and
-usage. A diagnostic release gate runs before publishing; an installation can
-be pending, installing, installed, failed, retrying, or rolled back. Rollback
-disables the affected assignment so entitlement checks change with the
-installation state.
+Creating a package creates metadata and its initial version; it does not
+generate feature code. Package implementation remains in this shared codebase:
+routes, navigation, services, repositories, tables, and RLS must all be
+package-aware. A private package still uses the same deployment and never
+creates a permanent customer branch or customer deployment.
+
+The lifecycle is:
+
+```text
+Request → classification → package definition → shared-code implementation
+→ version creation → diagnostics → release plan → target installations
+→ monitoring → retry/rollback/deprecation
+```
+
+The release plan is atomic only for planning: it creates one release, target
+rows, and one pending installation per active target. Automatic installation
+then processes each installation independently. Alpha can succeed while Beta
+fails; a retry processes only Beta. A diagnostic release gate runs before
+planning; an installation can be pending, installing, installed, failed,
+retrying, or rolled back. Rollback disables the affected assignment so
+entitlement checks change with the installation state.
 
 ## UI state, deletes, and notifications
 

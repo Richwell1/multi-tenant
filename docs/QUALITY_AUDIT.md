@@ -1,7 +1,7 @@
 # Engineering Quality Audit
 
 Date: 2026-07-26  
-Branch: `chore/engineering-quality-hardening`
+Branch: `feat/admin-package-management`
 
 This audit records implementation coverage and known verification boundaries.
 It does not claim that hosted browser smoke testing has been completed.
@@ -37,8 +37,11 @@ It does not claim that hosted browser smoke testing has been completed.
 | `/admin/requests/new` | Request creation form | Validation/request error | Success toast and redirect | Complete |
 | `/admin/requests/:id` | Request detail | Missing/error state | Status/update feedback | Complete |
 | `/admin/packages` | Package catalog | Empty/no-results/retry | Release action link | Complete |
-| `/admin/packages/new` | Package release form | Validation/gate errors | Publish confirmation/toast | Complete |
+| `/admin/packages/new` | Package + initial version creation | Validation/duplicate/retry errors | Success notification; no assignment on creation | Complete |
+| `/admin/packages/releases/new` | Release plan and per-company targeting | Validation/gate/target errors | Plan/install notifications; independent failures remain visible | Complete |
+| `/admin/packages/:key/versions/new` | Additional package version creation | Validation/duplicate/retry errors | Success notification; no publish or assignment on creation | Complete |
 | `/admin/packages/:key` | Package/version detail | Empty versions/retry | Target/install actions | Complete |
+| `/admin/releases/:releaseId` | Release plan and installation detail | Empty/retryable installation list | Per-company retry; no bulk failure masking | Complete |
 | `/admin/diagnostics` | Diagnostic reports list | Empty/no-results/retry | Run action feedback | Complete |
 | `/admin/diagnostics/:id` | Diagnostic checks/report | Empty checks/retry | Release gate state | Complete |
 | `/admin/installations` | Installation monitoring | Empty installations/retry | Retry and confirmed rollback | Complete |
@@ -119,23 +122,26 @@ browser verification at 320, 375, 768, 1024, and 1440 pixels remains
 
 ## Evidence and remaining work
 
-- Local verification: typecheck, lint, build, and 227 application tests pass.
-- CI includes eight SQL/RLS suites with 94 scenarios.
+- Local verification: typecheck, lint, 231 application tests, and production
+  build pass. The package-management focused tests are included in that total.
+- CI baseline includes eight SQL/RLS suites with 94 scenarios. This branch adds
+  one suite with 18 scenarios, for 9 suites and 112 local scenarios.
 - Supabase mode has repository/adapters and real UUID scoping; no mock IDs are
   intended to reach Supabase requests.
 - Full browser smoke testing at 320/375/768/1024/1440 pixels, hosted Auth
-  seed verification, and visual regression automation remain deployment tasks.
+  seed verification, hosted migration deployment, and visual regression
+  automation remain deployment tasks.
 
 ## Final verification record — 2026-07-26
 
 | Item | Result |
 |---|---|
-| Branch | `chore/engineering-quality-hardening` |
-| Commits | `688f949`, `15f4a56`, `c4a3502` |
-| Hosted deployment | Schema and 15 migration records/API grants deployed; hosted CI passed |
+| Branch | `feat/admin-package-management` |
+| Commits | Pending feature commit(s) |
+| Hosted deployment | Previous schema and 15 migration records/API grants deployed; new package-management migration pending |
 | Local database | `npx supabase db reset` passed |
-| SQL/RLS | 8/8 suites, 94 scenarios passed |
-| Application checks | typecheck, lint, 227 tests, build passed |
+| SQL/RLS | 9/9 suites, 112 scenarios passed |
+| Application checks | typecheck, lint, 231 tests, build passed |
 | Browser smoke | Deferred: no browser runner available |
 | Hosted Auth/demo data | Pending final confirmation |
 | Custom domain | Deferred |
@@ -160,3 +166,23 @@ The audit did not find a proven need for a broad component rewrite, a new
 error-boundary hierarchy, or a schema/RLS/grant change. Existing non-null
 assertions occur behind query `enabled` guards or static app-root mounting and
 remain covered by the current type/test boundaries.
+
+## Package-management audit addendum — 2026-07-26
+
+- Package creation is Platform-Admin-only and creates the package plus its first
+  version atomically. It intentionally creates no company assignment or
+  installation.
+- Additional versions are created independently from release publication and
+  remain unreleased until a release plan targets companies.
+- Release planning validates package classification, diagnostic gate, target
+  cardinality, and active-company scope before inserting pending installation
+  rows. It does not partially assign entitlements during planning.
+- Installation processing locks and updates one installation at a time. A
+  company failure records a safe failure code/message and does not cancel other
+  companies. Retry reprocesses only the selected failed installation.
+- Release detail surfaces show planned, installed, failed, and pending counts,
+  attempt count, and sanitized failure details. No provider SQL or credentials
+  are rendered.
+- The old `publish_package_release` RPC remains for compatibility with existing
+  historical fixtures; the new Admin flow uses `create_package_release` plus
+  `process_package_installation`.

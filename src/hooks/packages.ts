@@ -11,6 +11,7 @@ import { invalidationTargets } from '@/data/invalidation';
 import { notify } from '@/lib/notify';
 import type { NetworkError } from '@/data/api';
 import type { InstallationFilters, PackageInstallation } from '@/data/packages';
+import type { CreatePackageInput, CreateVersionInput } from '@/data/packages';
 
 function invalidate(qc: ReturnType<typeof useQueryClient>, keys: readonly QueryKey[]) {
   keys.forEach((queryKey) => qc.invalidateQueries({ queryKey }));
@@ -36,6 +37,40 @@ export function usePackageVersions(code: string) {
   });
 }
 
+export function useReleaseDetails(id: string) {
+  return useQuery({
+    queryKey: queryKeys.releases.detail(id),
+    queryFn: () => releaseService.getDetails(id),
+    enabled: !!id,
+  });
+}
+
+export function useCreatePackage() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreatePackageInput) => packageService.createPackage(input),
+    onSuccess: (result) => {
+      notify.recordCreated(`Package ${result.package.name}`);
+      qc.invalidateQueries({ queryKey: queryKeys.packages.all });
+      qc.invalidateQueries({ queryKey: queryKeys.packages.versions(result.package.code) });
+    },
+    onError: (e: NetworkError) => notify.networkFailure(e.message),
+  });
+}
+
+export function useCreatePackageVersion() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateVersionInput) => packageService.createVersion(input),
+    onSuccess: (result) => {
+      notify.recordCreated(`Version ${result.version}`);
+      qc.invalidateQueries({ queryKey: queryKeys.packages.versions(result.packageCode) });
+      qc.invalidateQueries({ queryKey: queryKeys.packages.detail(result.packageCode) });
+    },
+    onError: (e: NetworkError) => notify.networkFailure(e.message),
+  });
+}
+
 export function useCompanyAssignments(companyId: string) {
   return useQuery({
     queryKey: queryKeys.packageAssignments.company(companyId),
@@ -58,6 +93,7 @@ export function useRetryInstallation() {
     onSuccess: (_res, installation) => {
       notify.recordUpdated('Installation');
       invalidate(qc, invalidationTargets.recoverInstallation(installation.companyId));
+      qc.invalidateQueries({ queryKey: queryKeys.releases.detail(installation.releaseId) });
     },
     onError: (e: NetworkError) => notify.networkFailure(e.message),
   });
@@ -70,6 +106,7 @@ export function useRollbackInstallation() {
     onSuccess: (_res, installation) => {
       notify.recordUpdated('Installation');
       invalidate(qc, invalidationTargets.recoverInstallation(installation.companyId));
+      qc.invalidateQueries({ queryKey: queryKeys.releases.detail(installation.releaseId) });
     },
     onError: (e: NetworkError) => notify.networkFailure(e.message),
   });

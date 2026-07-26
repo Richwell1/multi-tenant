@@ -19,13 +19,34 @@ import {
   packageReleaseRepository,
   packageRepository,
   type InstallationFilters,
-  type PublishReleaseResult,
 } from '@/data/packages';
+import type {
+  CreatePackageInput,
+  CreateVersionInput,
+  CreatedPackage,
+  PackageVersion,
+  ReleasePlanResult,
+} from '@/data/packages';
+
+const SEMVER = /^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$/;
+const PACKAGE_KEY = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
 export const packageService = {
   list: () => packageRepository.list(),
   getByCode: (code: string) => packageRepository.getByCode(code),
   listVersions: (code: string) => packageRepository.listVersions(code),
+  createPackage: async (input: CreatePackageInput): Promise<CreatedPackage> => {
+    if (!input.name.trim()) throw new RepositoryError('Package name is required.', 'validation');
+    if (!PACKAGE_KEY.test(input.code)) throw new RepositoryError('Use a lowercase kebab-case package key.', 'validation');
+    if (!SEMVER.test(input.version)) throw new RepositoryError('Enter a valid semantic version.', 'validation');
+    if (!input.releaseNotes.trim()) throw new RepositoryError('Release notes are required.', 'validation');
+    return packageRepository.createPackage({ ...input, name: input.name.trim(), releaseNotes: input.releaseNotes.trim() });
+  },
+  createVersion: async (input: CreateVersionInput): Promise<PackageVersion> => {
+    if (!SEMVER.test(input.version)) throw new RepositoryError('Enter a valid semantic version.', 'validation');
+    if (!input.releaseNotes.trim()) throw new RepositoryError('Release notes are required.', 'validation');
+    return packageRepository.createVersion({ ...input, releaseNotes: input.releaseNotes.trim() });
+  },
 };
 
 export interface PublishReleaseParams {
@@ -36,8 +57,9 @@ export interface PublishReleaseParams {
 }
 
 export const releaseService = {
+  getDetails: (id: string) => packageReleaseRepository.getDetails(id),
   /** Validate classification→target compatibility, normalize, then publish. */
-  publish: async (params: PublishReleaseParams): Promise<PublishReleaseResult> => {
+  publish: async (params: PublishReleaseParams): Promise<ReleasePlanResult> => {
     if (!params.packageVersionId) {
       throw new RepositoryError('Select a package version to publish.', 'validation');
     }
@@ -47,12 +69,29 @@ export const releaseService = {
       throw new RepositoryError(parsed.error.issues[0]?.message ?? 'Invalid company target', 'validation');
     }
     const payload = toCompanyTargetPayload(params.target);
-    return packageReleaseRepository.publish({
+    const plan = await packageReleaseRepository.createPlan({
       packageVersionId: params.packageVersionId,
       mode: payload.target,
       companyIds: payload.targetCompanyIds,
       automaticInstall: params.automaticInstall,
     });
+    if (!params.automaticInstall) return plan;
+
+    const results = await Promise.allSettled(
+      plan.installations.map((installation) => packageReleaseRepository.processInstallation(installation.id)),
+    );
+    return {
+      ...plan,
+      installations: plan.installations.map((installation, index) => {
+        const result = results[index];
+        if (result?.status === 'fulfilled') return result.value;
+        return {
+          ...installation,
+          status: 'failed' as const,
+          error: 'Installation could not be completed.',
+        };
+      }),
+    };
   },
 };
 

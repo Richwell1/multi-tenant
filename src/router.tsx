@@ -96,10 +96,17 @@ const adminRequestDetail = createRoute({
 });
 const adminPackages = createRoute({ getParentRoute: () => adminLayout, path: 'packages', component: adminPage('PackagesList') });
 const adminPackageNew = createRoute({ getParentRoute: () => adminLayout, path: 'packages/new', component: adminPage('CreatePackage') });
+const adminPackageReleaseNew = createRoute({ getParentRoute: () => adminLayout, path: 'packages/releases/new', component: adminPage('CreatePackageRelease') });
+const adminPackageVersionNew = createRoute({ getParentRoute: () => adminLayout, path: 'packages/$packageKey/versions/new', component: adminPage('CreatePackageVersion') });
 const adminPackageDetail = createRoute({
   getParentRoute: () => adminLayout,
   path: 'packages/$packageId',
   component: adminPage('PackageDetails'),
+});
+const adminReleaseDetail = createRoute({
+  getParentRoute: () => adminLayout,
+  path: 'releases/$releaseId',
+  component: adminPage('ReleaseDetails'),
 });
 const adminDiagnostic = createRoute({
   getParentRoute: () => adminLayout,
@@ -164,7 +171,10 @@ export const routeTree = rootRoute.addChildren([
     adminRequestDetail,
     adminPackages,
     adminPackageNew,
+    adminPackageReleaseNew,
+    adminPackageVersionNew,
     adminPackageDetail,
+    adminReleaseDetail,
     adminDiagnostic,
     adminDiagnostics,
     adminInstallations,

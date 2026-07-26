@@ -4,15 +4,15 @@
 // Package entitlements live in '@/lib/entitlements' + '@/hooks/entitlements'
 // (sourced from the membership context), not here.
 //
-// Context is derived from the hostname:
-//   admin.multi-tenants-hr.com  -> Platform Super Admin portal
-//   alpha.multi-tenants-hr.com  -> Alpha Trading workspace
-//   beta.multi-tenants-hr.com   -> Beta Manufacturing workspace
+// Context is derived from the hostname and query string:
+//   admin.<domain>              -> Platform Super Admin portal
+//   /login?portal=admin         -> Platform Super Admin portal
+//   /login?tenant=<company-slug> -> that company's workspace (dynamic)
 //
-// For local dev the same context can be forced via query params:
-//   /login?portal=admin
-//   /login?tenant=alpha
-//   /login?tenant=your-company-slug
+// Company selection is driven by the dynamic `?tenant=<slug>` parameter — the
+// slug of a company created through registration. Wildcard-subdomain tenant
+// resolution is deferred, so no company slug is hardcoded here; unknown hosts
+// default to the admin portal.
 // ---------------------------------------------------------------------------
 
 import type { Company, Portal } from '@/data/types';
@@ -24,15 +24,10 @@ export interface ResolvedContext {
   tenantId: string | null;
 }
 
-const SUBDOMAIN_TO_TENANT: Record<string, string> = {
-  alpha: 'alpha',
-  beta: 'beta',
-  gamma: 'gamma',
-};
-
 /**
  * Resolve portal + tenant from a hostname and optional query string.
- * Query params win in local development so subdomains are not required.
+ * The tenant is selected dynamically via `?tenant=<slug>`; no company identity
+ * is hardcoded.
  */
 export function resolveContext(hostname: string, search = ''): ResolvedContext {
   const params = new URLSearchParams(search);
@@ -42,18 +37,15 @@ export function resolveContext(hostname: string, search = ''): ResolvedContext {
 
   const tenantParam = params.get('tenant')?.trim().toLowerCase();
   if (tenantParam) {
-    // Query-based tenant resolution is also used by the Vercel deployment, so
-    // it must support production-created company slugs, not only mock tenants.
+    // Dynamic tenant resolution — supports any registration-created company slug.
     return { portal: 'company', tenantId: tenantParam };
   }
 
   const sub = hostname.split('.')[0]?.toLowerCase() ?? '';
   if (sub === 'admin') return { portal: 'admin', tenantId: null };
-  if (SUBDOMAIN_TO_TENANT[sub]) {
-    return { portal: 'company', tenantId: SUBDOMAIN_TO_TENANT[sub] };
-  }
 
-  // Default (bare localhost / unknown host) -> admin portal.
+  // Wildcard-subdomain tenant resolution is deferred; unknown hosts default to
+  // the admin portal. Companies are selected via `?tenant=<slug>`.
   return { portal: 'admin', tenantId: null };
 }
 

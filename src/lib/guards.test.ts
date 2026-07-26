@@ -54,13 +54,13 @@ describe('validateMembershipForTenant', () => {
 });
 
 describe('resolveTenantContext', () => {
-  it('company subdomain yields the tenant slug', () => {
-    expect(resolveTenantContext('alpha.multi-tenants-hr.com')).toEqual({ tenantSlug: 'alpha' });
+  it('a bare company subdomain yields no tenant (wildcard subdomains deferred)', () => {
+    expect(resolveTenantContext('anycompany.multi-tenants-hr.com')).toEqual({ tenantSlug: null });
   });
   it('admin context yields no tenant', () => {
     expect(resolveTenantContext('admin.multi-tenants-hr.com')).toEqual({ tenantSlug: null });
   });
-  it('local dev ?tenant=beta yields beta', () => {
-    expect(resolveTenantContext('localhost', '?tenant=beta')).toEqual({ tenantSlug: 'beta' });
+  it('a dynamic ?tenant= slug yields that tenant', () => {
+    expect(resolveTenantContext('localhost', '?tenant=other-co')).toEqual({ tenantSlug: 'other-co' });
   });
 });

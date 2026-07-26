@@ -123,6 +123,11 @@ const adminInstallations = createRoute({
   path: 'installations',
   component: adminPage('InstallationsPage'),
 });
+const adminAdoption = createRoute({
+  getParentRoute: () => adminLayout,
+  path: 'packages/adoption',
+  component: adminPage('AdoptionPage'),
+});
 const adminUsage = createRoute({ getParentRoute: () => adminLayout, path: 'usage', component: adminPage('UsagePage') });
 const adminHealth = createRoute({ getParentRoute: () => adminLayout, path: 'health', component: adminPage('HealthPage') });
 const adminAudit = createRoute({ getParentRoute: () => adminLayout, path: 'audit', component: adminPage('AuditPage') });
@@ -155,6 +160,9 @@ const wsUsers = createRoute({ getParentRoute: () => workspaceLayout, path: '/use
 const wsSettings = createRoute({ getParentRoute: () => workspaceLayout, path: '/settings', component: workspacePage('SettingsPage') });
 const wsLeave = createRoute({ getParentRoute: () => workspaceLayout, path: '/leave', component: workspacePage('LeavePage') });
 const wsAttendance = createRoute({ getParentRoute: () => workspaceLayout, path: '/attendance', component: workspacePage('AttendancePage') });
+const wsMarketplace = createRoute({ getParentRoute: () => workspaceLayout, path: '/extensions/marketplace', component: workspacePage('MarketplacePage') });
+const wsDocumentNotes = createRoute({ getParentRoute: () => workspaceLayout, path: '/extensions/document-notes', component: workspacePage('DocumentNotesPage') });
+const wsExpenseRequests = createRoute({ getParentRoute: () => workspaceLayout, path: '/extensions/expense-requests', component: workspacePage('ExpenseRequestsPage') });
 
 export const routeTree = rootRoute.addChildren([
   indexRoute,
@@ -178,6 +186,7 @@ export const routeTree = rootRoute.addChildren([
     adminDiagnostic,
     adminDiagnostics,
     adminInstallations,
+    adminAdoption,
     adminUsage,
     adminHealth,
     adminAudit,
@@ -195,6 +204,9 @@ export const routeTree = rootRoute.addChildren([
     wsSettings,
     wsLeave,
     wsAttendance,
+    wsMarketplace,
+    wsDocumentNotes,
+    wsExpenseRequests,
   ]),
 ]);
 

@@ -37,6 +37,7 @@ import {
   useRetryInstallation,
   useRollbackInstallation,
 } from '@/hooks/packages';
+import { useMarketplaceAdoption } from '@/hooks/marketplace';
 import { useRequests, useRequest, useCreateRequest, useChangeRequestStatus } from '@/hooks/requests';
 import { requestFormSchema, type RequestFormValues } from '@/services/request-service';
 import { allowedNextStatuses } from '@/data/requests';
@@ -1451,5 +1452,33 @@ function ListCard({ title, items }: { title: string; items: string[] }) {
         </ul>
       </CardContent>
     </Card>
+  );
+}
+
+export function AdoptionPage() {
+  const query = useMarketplaceAdoption();
+  const rows = query.data ?? [];
+  return (
+    <>
+      <PageHeader title="Marketplace Adoption" description="How many companies installed each marketplace extension" />
+      <TableBoundary query={query} filtered={rows} cols={3} emptyTitle="No marketplace extensions" emptyDescription="Adoption appears once marketplace extensions are published.">
+        <DataTable>
+          <THead>
+            <TH>Extension</TH>
+            <TH>Installs</TH>
+            <TH>Companies</TH>
+          </THead>
+          <TBody>
+            {rows.map((r) => (
+              <TR key={r.packageKey}>
+                <TD className="font-medium">{r.packageName}<span className="ml-2 text-content-variant">{r.packageKey}</span></TD>
+                <TD>{r.installCount}</TD>
+                <TD>{r.distinctCompanies}</TD>
+              </TR>
+            ))}
+          </TBody>
+        </DataTable>
+      </TableBoundary>
+    </>
   );
 }

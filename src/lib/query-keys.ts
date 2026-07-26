@@ -99,4 +99,14 @@ export const queryKeys = {
     record: (companyId: string, attendanceId: string) =>
       ['attendance', companyId, 'record', attendanceId] as const,
   },
+  marketplace: {
+    all: ['marketplace'] as const,
+    adoption: ['marketplace', 'adoption'] as const,
+  },
+  documentNotes: {
+    list: (companyId: string) => ['document-notes', companyId] as const,
+  },
+  expenseRequests: {
+    list: (companyId: string) => ['expense-requests', companyId] as const,
+  },
 } as const;

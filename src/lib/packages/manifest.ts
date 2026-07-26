@@ -31,7 +31,7 @@ export interface PackageManifestEntry {
  *   HR Core 1.0.0 → Departments; 1.1.0 → Departments + Employees
  *   Attendance Management 1.0.0 → Attendance
  */
-export const PACKAGE_MANIFEST: Record<PackageKey, PackageManifestEntry> = {
+export const PACKAGE_MANIFEST: Partial<Record<PackageKey, PackageManifestEntry>> = {
   [PACKAGE_CODES.hrCore]: {
     code: PACKAGE_CODES.hrCore,
     name: 'HR Core',
@@ -49,6 +49,19 @@ export const PACKAGE_MANIFEST: Record<PackageKey, PackageManifestEntry> = {
     code: PACKAGE_CODES.leave,
     name: 'Leave Management',
     features: [{ label: 'Leave', minVersion: '1.0.0', route: '/leave' }],
+  },
+  [PACKAGE_CODES.documentNotes]: {
+    code: PACKAGE_CODES.documentNotes,
+    name: 'Document Notes',
+    features: [
+      { label: 'Document Notes', minVersion: '1.0.0', route: '/extensions/document-notes' },
+      { label: 'Note categories', minVersion: '1.1.0', route: '/extensions/document-notes' },
+    ],
+  },
+  [PACKAGE_CODES.expenseRequests]: {
+    code: PACKAGE_CODES.expenseRequests,
+    name: 'Expense Requests',
+    features: [{ label: 'Expense Requests', minVersion: '1.0.0', route: '/extensions/expense-requests' }],
   },
 };
 

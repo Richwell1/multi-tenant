@@ -297,7 +297,7 @@
 | Minimal package-version demo | ✅ | ✅ | ✅ | 251 | ✅ (486.56 kB / 147.73 kB gzip) | ✅ 11 SQL/RLS suites (incl. 9-scenario minimal suite) | version-gated features; seed branch-local; hosted push + browser dry-run remain |
 | Marketplace + private packages | ✅ | ✅ | ✅ | 273 | ✅ | ✅ 15 SQL/RLS suites (+31 marketplace/private scenarios) | 4 branch-local migrations; hosted push + browser smoke remain |
 | Marketplace entitlement + UI fix | ✅ | ✅ | ✅ | 275 | ✅ (491.64 kB) | ✅ 16 SQL/RLS suites (+9 Document Notes authz scenarios) | grant migration `20260730010000` branch-local (hosted push needed to fix live insert) |
-| Tenant-fixture hygiene audit | ✅ | ✅ | ✅ | 297 | ✅ | ✅ 16 suites | production migrations create no demo companies (guard test); `tenant.ts` no longer hardcodes company slugs; test fixtures remain isolated in rollback blocks |
+| Tenant-fixture hygiene audit | ✅ | ✅ | ✅ | 297 | ✅ | ✅ 16 suites | production migrations create no demo companies (guard test); `tenant.ts` no longer hardcodes company slugs; SQL test fixtures renamed Alpha/Beta/Gamma → TestOne/TestTwo/TestThree (isolated, rolled back) |
 
 ## Current risks
 - Mock is default; Supabase HR-Core path verified at DB/RLS level, **not yet exercised end-to-end in the browser**.

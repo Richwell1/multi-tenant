@@ -15,11 +15,11 @@ begin;
 
 -- Fixtures ------------------------------------------------------------------
 insert into public.companies (id, name, slug, status) values
-  ('a0000000-0000-0000-0000-000000000001', 'Alpha', 'alpha', 'active');
+  ('a0000000-0000-0000-0000-000000000001', 'TestOne', 'testone', 'active');
 
 insert into auth.users (id, email) values
   ('55555555-5555-5555-5555-555555555555', 'super@x.com'),
-  ('11111111-1111-1111-1111-111111111111', 'admin.alpha@x.com');
+  ('11111111-1111-1111-1111-111111111111', 'admin.testone@x.com');
 
 insert into public.platform_admins (user_id) values ('55555555-5555-5555-5555-555555555555');
 insert into public.company_memberships (company_id, user_id, role, status) values
@@ -67,7 +67,7 @@ select pg_temp.check(2, 'actor resolved to email',
 
 -- 3. The target resolves to the affected company name.
 select pg_temp.check(3, 'target resolves to company name',
-  (select target = 'Alpha' from public.platform_audit_log(null) where action = 'leave.approved' limit 1));
+  (select target = 'TestOne' from public.platform_audit_log(null) where action = 'leave.approved' limit 1));
 
 -- 4. A system (null-actor) row shows 'system'.
 select pg_temp.check(4, 'null actor shown as system',

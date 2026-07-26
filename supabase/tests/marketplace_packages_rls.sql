@@ -5,13 +5,13 @@
 begin;
 
 insert into public.companies (id, name, slug, status) values
-  ('a0000000-0000-0000-0000-000000000001', 'Alpha Co', 'alpha-mp', 'active'),
-  ('b0000000-0000-0000-0000-000000000002', 'Beta Co',  'beta-mp',  'active');
+  ('a0000000-0000-0000-0000-000000000001', 'TestOne Co', 'testone-mp', 'active'),
+  ('b0000000-0000-0000-0000-000000000002', 'TestTwo Co',  'testtwo-mp',  'active');
 insert into auth.users (id, email) values
   ('a1111111-1111-1111-1111-111111111111', 'admin@x.com'),
-  ('a2222222-2222-2222-2222-222222222222', 'alpha-admin@x.com'),
-  ('a3333333-3333-3333-3333-333333333333', 'alpha-user@x.com'),
-  ('b2222222-2222-2222-2222-222222222222', 'beta-admin@x.com');
+  ('a2222222-2222-2222-2222-222222222222', 'testone-admin@x.com'),
+  ('a3333333-3333-3333-3333-333333333333', 'testone-user@x.com'),
+  ('b2222222-2222-2222-2222-222222222222', 'testtwo-admin@x.com');
 insert into public.platform_admins (user_id) values ('a1111111-1111-1111-1111-111111111111');
 insert into public.company_memberships (company_id, user_id, role, status) values
   ('a0000000-0000-0000-0000-000000000001', 'a2222222-2222-2222-2222-222222222222', 'company_admin', 'active'),
@@ -71,7 +71,7 @@ select pg_temp.check(6, 'non-installer cannot add notes (no entitlement)',
   pg_temp.denied('b2222222-2222-2222-2222-222222222222',
     $$insert into public.document_notes (company_id, title) values ('b0000000-0000-0000-0000-000000000002','x')$$));
 
--- Admin pushes Document Notes 1.1.0 → only the installer (Alpha) moves.
+-- Admin pushes Document Notes 1.1.0 → only the installer (TestOne) moves.
 select pg_temp.actor('a1111111-1111-1111-1111-111111111111');
 set local role authenticated;
 select public.publish_update_to_installers((select id from public.package_versions where package_key = 'document-notes' and version = '1.1.0'));

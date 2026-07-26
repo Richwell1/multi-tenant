@@ -17,18 +17,18 @@ delete from public.audit_logs;
 
 -- Fixtures ------------------------------------------------------------------
 insert into public.companies (id, name, slug, status) values
-  ('a0000000-0000-0000-0000-000000000001', 'Alpha', 'alpha', 'active'),
-  ('b0000000-0000-0000-0000-000000000002', 'Beta',  'beta',  'active');
+  ('a0000000-0000-0000-0000-000000000001', 'TestOne', 'testone', 'active'),
+  ('b0000000-0000-0000-0000-000000000002', 'TestTwo',  'testtwo',  'active');
 
 insert into auth.users (id, email) values
   ('55555555-5555-5555-5555-555555555555', 'super@x.com'),
-  ('11111111-1111-1111-1111-111111111111', 'admin.alpha@x.com');
+  ('11111111-1111-1111-1111-111111111111', 'admin.testone@x.com');
 
 insert into public.platform_admins (user_id) values ('55555555-5555-5555-5555-555555555555');
 insert into public.company_memberships (company_id, user_id, role, status) values
   ('a0000000-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111', 'company_admin', 'active');
 
--- Audit trail to aggregate: leave (alpha×2, beta×1), employee (alpha×1),
+-- Audit trail to aggregate: leave (testone×2, testtwo×1), employee (testone×1),
 -- release (company-less×1 — must not inflate companies_using).
 insert into public.audit_logs (company_id, actor_user_id, action, entity_type) values
   ('a0000000-0000-0000-0000-000000000001', '55555555-5555-5555-5555-555555555555', 'leave.approved',   'leave_request'),
@@ -62,7 +62,7 @@ select pg_temp.check(1, 'aggregates three modules (leave, employee, release)',
 select pg_temp.check(2, 'leave action_count = 3',
   (select action_count = 3 from public.usage_metrics(null) where module = 'leave'));
 
--- 3. companies_using counts distinct companies (leave spans alpha + beta).
+-- 3. companies_using counts distinct companies (leave spans testone + testtwo).
 select pg_temp.check(3, 'leave companies_using = 2',
   (select companies_using = 2 from public.usage_metrics(null) where module = 'leave'));
 
@@ -70,8 +70,8 @@ select pg_temp.check(3, 'leave companies_using = 2',
 select pg_temp.check(4, 'release companies_using = 0 (null company)',
   (select companies_using = 0 from public.usage_metrics(null) where module = 'release'));
 
--- 5. The company filter scopes the aggregate (alpha-only → leave count drops to 2).
-select pg_temp.check(5, 'company filter scopes leave to alpha (2)',
+-- 5. The company filter scopes the aggregate (testone-only → leave count drops to 2).
+select pg_temp.check(5, 'company filter scopes leave to testone (2)',
   (select action_count = 2 from public.usage_metrics(array['a0000000-0000-0000-0000-000000000001']::uuid[])
      where module = 'leave'));
 

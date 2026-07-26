@@ -10,13 +10,13 @@ begin;
 
 -- --- Fixtures ----------------------------------------------------------------
 insert into public.companies (id, name, slug, status) values
-  ('a1000000-0000-0000-0000-000000000001', 'Alpha Co', 'alpha-demo', 'active'),
-  ('b1000000-0000-0000-0000-000000000002', 'Beta Co',  'beta-demo',  'active'),
-  ('c1000000-0000-0000-0000-000000000003', 'Gamma Co', 'gamma-demo', 'suspended');
+  ('a1000000-0000-0000-0000-000000000001', 'TestOne Co', 'testone-demo', 'active'),
+  ('b1000000-0000-0000-0000-000000000002', 'TestTwo Co',  'testtwo-demo',  'active'),
+  ('c1000000-0000-0000-0000-000000000003', 'TestThree Co', 'testthree-demo', 'suspended');
 insert into auth.users (id, email) values
   ('a1111111-1111-1111-1111-111111111111', 'admin@x.com'),
-  ('a2222222-2222-2222-2222-222222222222', 'alpha-user@x.com'),
-  ('b2222222-2222-2222-2222-222222222222', 'beta-user@x.com'),
+  ('a2222222-2222-2222-2222-222222222222', 'testone-user@x.com'),
+  ('b2222222-2222-2222-2222-222222222222', 'testtwo-user@x.com'),
   ('d0000000-0000-0000-0000-000000000000', 'reg0@x.com'),
   ('d2000000-0000-0000-0000-000000000002', 'reg2@x.com'),
   ('d3000000-0000-0000-0000-000000000003', 'reg3@x.com');
@@ -149,56 +149,56 @@ select pg_temp.check(20, 'retrying provisioning does not duplicate entitlement/i
 select pg_temp.actor('a1111111-1111-1111-1111-111111111111');
 set local role authenticated;
 
--- Base package (Attendance Management) + enable it for Alpha only.
+-- Base package (Attendance Management) + enable it for TestOne only.
 select public.create_package_with_version('demo-attend-base', 'Demo Attendance Base', 'standard_update', 'Attendance base', '1.0.0', 'Attendance base release');
 select public.create_package_release(
   (select id from public.package_versions where package_key = 'demo-attend-base' and version = '1.0.0'),
   'one_company', array['a1000000-0000-0000-0000-000000000001']::uuid[], true);
 
 select pg_temp.check(5, 'private extension is created with a base package',
-  (public.create_package_with_version('alpha-attendance-approval', 'Alpha Attendance Approval Rules', 'private_extension',
+  (public.create_package_with_version('testone-attendance-approval', 'TestOne Attendance Approval Rules', 'private_extension',
      'Approval rules', '1.0.0', 'Initial private extension', 'demo-attend-base')->'package'->>'base_package_key') = 'demo-attend-base');
 select pg_temp.check(6, 'private extension without a base package is rejected',
   pg_temp.denied('a1111111-1111-1111-1111-111111111111',
     $$select public.create_package_with_version('bad-extension', 'Bad Extension', 'private_extension', 'x', '1.0.0', 'notes')$$));
 select pg_temp.check(7, 'private extension can only target one company',
   pg_temp.denied('a1111111-1111-1111-1111-111111111111',
-    $$select public.create_package_release((select id from public.package_versions where package_key = 'alpha-attendance-approval'), 'all_companies', '{}', true)$$));
+    $$select public.create_package_release((select id from public.package_versions where package_key = 'testone-attendance-approval'), 'all_companies', '{}', true)$$));
 select pg_temp.check(8, 'target company must already have the base package enabled',
   pg_temp.denied('a1111111-1111-1111-1111-111111111111',
-    $$select public.create_package_release((select id from public.package_versions where package_key = 'alpha-attendance-approval'), 'one_company', array['b1000000-0000-0000-0000-000000000002']::uuid[], true)$$));
+    $$select public.create_package_release((select id from public.package_versions where package_key = 'testone-attendance-approval'), 'one_company', array['b1000000-0000-0000-0000-000000000002']::uuid[], true)$$));
 
--- Publish the extension to Alpha (which has the base) — enables it.
+-- Publish the extension to TestOne (which has the base) — enables it.
 select public.create_package_release(
-  (select id from public.package_versions where package_key = 'alpha-attendance-approval'),
+  (select id from public.package_versions where package_key = 'testone-attendance-approval'),
   'one_company', array['a1000000-0000-0000-0000-000000000001']::uuid[], true);
 select pg_temp.check(11, 'successful installation enables the extension entitlement',
   (select enabled and status = 'installed' from public.company_packages
-     where company_id = 'a1000000-0000-0000-0000-000000000001' and package_key = 'alpha-attendance-approval'));
+     where company_id = 'a1000000-0000-0000-0000-000000000001' and package_key = 'testone-attendance-approval'));
 select pg_temp.check(12, 'non-target company has no access to the extension',
   not exists (select 1 from public.company_packages
-              where company_id = 'b1000000-0000-0000-0000-000000000002' and package_key = 'alpha-attendance-approval'));
+              where company_id = 'b1000000-0000-0000-0000-000000000002' and package_key = 'testone-attendance-approval'));
 
 -- ============================================================================
 -- Workflow 3 — standalone private package (private_customization), one company.
 -- ============================================================================
 select pg_temp.check(9, 'standalone private package is created',
-  (public.create_package_with_version('alpha-payroll-loans', 'Alpha Payroll Loans', 'private_customization',
+  (public.create_package_with_version('testone-payroll-loans', 'TestOne Payroll Loans', 'private_customization',
      'Payroll loans', '1.0.0', 'Initial standalone release')->'package'->>'type') = 'private_customization');
 select pg_temp.check(10, 'standalone private package can only target one company',
   pg_temp.denied('a1111111-1111-1111-1111-111111111111',
-    $$select public.create_package_release((select id from public.package_versions where package_key = 'alpha-payroll-loans'), 'all_companies', '{}', true)$$));
+    $$select public.create_package_release((select id from public.package_versions where package_key = 'testone-payroll-loans'), 'all_companies', '{}', true)$$));
 
 select public.create_package_release(
-  (select id from public.package_versions where package_key = 'alpha-payroll-loans'),
+  (select id from public.package_versions where package_key = 'testone-payroll-loans'),
   'one_company', array['a1000000-0000-0000-0000-000000000001']::uuid[], true);
 
 -- ============================================================================
 -- Access enforcement (DB mirror of route/nav guards) + safe-fail registration.
 -- ============================================================================
 select pg_temp.check(15, 'entitlement gate allows the target and blocks others',
-  public.can_use_company_package('a1000000-0000-0000-0000-000000000001', 'alpha-attendance-approval', 'a2222222-2222-2222-2222-222222222222')
-  and not public.can_use_company_package('b1000000-0000-0000-0000-000000000002', 'alpha-attendance-approval', 'b2222222-2222-2222-2222-222222222222'));
+  public.can_use_company_package('a1000000-0000-0000-0000-000000000001', 'testone-attendance-approval', 'a2222222-2222-2222-2222-222222222222')
+  and not public.can_use_company_package('b1000000-0000-0000-0000-000000000002', 'testone-attendance-approval', 'b2222222-2222-2222-2222-222222222222'));
 
 reset role;
 update public.packages set is_active = false where key = 'hr-core';

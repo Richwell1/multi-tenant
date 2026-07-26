@@ -14,17 +14,17 @@ begin;
 
 -- Fixtures ------------------------------------------------------------------
 insert into public.companies (id, name, slug, status) values
-  ('a0000000-0000-0000-0000-000000000001', 'Alpha', 'alpha', 'active'),
-  ('b0000000-0000-0000-0000-000000000002', 'Beta',  'beta',  'active'),
-  ('c0000000-0000-0000-0000-000000000003', 'Gamma', 'gamma', 'suspended');
+  ('a0000000-0000-0000-0000-000000000001', 'TestOne', 'testone', 'active'),
+  ('b0000000-0000-0000-0000-000000000002', 'TestTwo',  'testtwo',  'active'),
+  ('c0000000-0000-0000-0000-000000000003', 'TestThree', 'testthree', 'suspended');
 
 insert into auth.users (id, email) values
-  ('11111111-1111-1111-1111-111111111111', 'admin.alpha@x.com'),
-  ('22222222-2222-2222-2222-222222222222', 'user.alpha@x.com'),
-  ('33333333-3333-3333-3333-333333333333', 'admin.beta@x.com'),
-  ('44444444-4444-4444-4444-444444444444', 'admin.gamma@x.com'),
+  ('11111111-1111-1111-1111-111111111111', 'admin.testone@x.com'),
+  ('22222222-2222-2222-2222-222222222222', 'user.testone@x.com'),
+  ('33333333-3333-3333-3333-333333333333', 'admin.testtwo@x.com'),
+  ('44444444-4444-4444-4444-444444444444', 'admin.testthree@x.com'),
   ('55555555-5555-5555-5555-555555555555', 'super@x.com'),
-  ('66666666-6666-6666-6666-666666666666', 'inactive.alpha@x.com');
+  ('66666666-6666-6666-6666-666666666666', 'inactive.testone@x.com');
 
 insert into public.platform_admins (user_id) values ('55555555-5555-5555-5555-555555555555');
 
@@ -35,8 +35,8 @@ insert into public.company_memberships (company_id, user_id, role, status) value
   ('b0000000-0000-0000-0000-000000000002', '33333333-3333-3333-3333-333333333333', 'company_admin', 'active'),
   ('c0000000-0000-0000-0000-000000000003', '44444444-4444-4444-4444-444444444444', 'company_admin', 'active');
 
--- attendance-management globally active; entitle alpha and gamma (gamma suspended,
--- must still be denied). Beta is NOT entitled (until scenario 18 assigns it).
+-- attendance-management globally active; entitle testone and testthree (testthree suspended,
+-- must still be denied). TestTwo is NOT entitled (until scenario 18 assigns it).
 insert into public.packages (key, name, type, is_active) values
   ('attendance-management', 'Attendance Management', 'standard_update', true)
 on conflict (key) do update set is_active = excluded.is_active;
@@ -50,9 +50,9 @@ insert into public.company_packages (company_id, package_key, enabled) values
   ('c0000000-0000-0000-0000-000000000003', 'attendance-management', true);
 
 insert into public.employees (id, company_id, employee_number, full_name) values
-  ('e0000000-0000-0000-0000-0000000000a1', 'a0000000-0000-0000-0000-000000000001', 'A-001', 'Alpha One'),
-  ('e0000000-0000-0000-0000-0000000000b1', 'b0000000-0000-0000-0000-000000000002', 'B-001', 'Beta One'),
-  ('e0000000-0000-0000-0000-0000000000c1', 'c0000000-0000-0000-0000-000000000003', 'C-001', 'Gamma One');
+  ('e0000000-0000-0000-0000-0000000000a1', 'a0000000-0000-0000-0000-000000000001', 'A-001', 'TestOne One'),
+  ('e0000000-0000-0000-0000-0000000000b1', 'b0000000-0000-0000-0000-000000000002', 'B-001', 'TestTwo One'),
+  ('e0000000-0000-0000-0000-0000000000c1', 'c0000000-0000-0000-0000-000000000003', 'C-001', 'TestThree One');
 
 create or replace function pg_temp.check(n int, name text, cond boolean) returns void
 language plpgsql as $$
@@ -102,9 +102,9 @@ select pg_temp.check(11, 'company_admin can create + check out',
   (select check_out_time = '17:00' from public.attendance_records
      where company_id = 'a0000000-0000-0000-0000-000000000001' limit 1));
 
--- 1. entitled Alpha admin reads Alpha attendance.
+-- 1. entitled TestOne admin reads TestOne attendance.
 select pg_temp.as_user('11111111-1111-1111-1111-111111111111');
-select pg_temp.check(1, 'entitled alpha reads alpha attendance',
+select pg_temp.check(1, 'entitled testone reads testone attendance',
   (select count(*) = 1 from public.attendance_records where company_id = 'a0000000-0000-0000-0000-000000000001'));
 reset role;
 
@@ -141,14 +141,14 @@ select pg_temp.check(12, 'company_user cannot insert attendance (role)',
     values ('a0000000-0000-0000-0000-000000000001', 'e0000000-0000-0000-0000-0000000000a1', '2026-07-21', '09:00')
   $q$));
 
--- 5. Alpha admin cannot insert for Beta company_id (matching company_id enforced).
-select pg_temp.check(5, 'alpha admin cannot write to beta company_id',
+-- 5. TestOne admin cannot insert for TestTwo company_id (matching company_id enforced).
+select pg_temp.check(5, 'testone admin cannot write to testtwo company_id',
   pg_temp.denied('11111111-1111-1111-1111-111111111111', $q$
     insert into public.attendance_records (company_id, employee_id, attendance_date, check_in_time)
     values ('b0000000-0000-0000-0000-000000000002', 'e0000000-0000-0000-0000-0000000000b1', '2026-07-21', '09:00')
   $q$));
 
--- 6. Alpha admin cannot attach a Beta employee to an Alpha record (composite FK).
+-- 6. TestOne admin cannot attach a TestTwo employee to a TestOne record (composite FK).
 select pg_temp.check(6, 'cross-company employee FK rejected',
   pg_temp.denied('11111111-1111-1111-1111-111111111111', $q$
     insert into public.attendance_records (company_id, employee_id, attendance_date, check_in_time)
@@ -162,24 +162,24 @@ select pg_temp.check(14, 'check-out before check-in rejected',
     values ('a0000000-0000-0000-0000-000000000001', 'e0000000-0000-0000-0000-0000000000a1', '2026-07-22', '17:00')
   $q$));
 
--- 4. Beta admin (no attendance package) cannot insert.
+-- 4. TestTwo admin (no attendance package) cannot insert.
 select pg_temp.check(4, 'company without package cannot insert',
   pg_temp.denied('33333333-3333-3333-3333-333333333333', $q$
     insert into public.attendance_records (company_id, employee_id, attendance_date, check_in_time)
     values ('b0000000-0000-0000-0000-000000000002', 'e0000000-0000-0000-0000-0000000000b1', '2026-07-21', '09:00')
   $q$));
 
--- Seed a Beta attendance row (bypass RLS as owner) for read-isolation checks.
+-- Seed a TestTwo attendance row (bypass RLS as owner) for read-isolation checks.
 insert into public.attendance_records (company_id, employee_id, attendance_date, check_in_time)
   values ('b0000000-0000-0000-0000-000000000002', 'e0000000-0000-0000-0000-0000000000b1', '2026-07-20', '08:15');
 
--- 2. Beta admin cannot see Alpha's rows.
+-- 2. TestTwo admin cannot see TestOne's rows.
 select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
-select pg_temp.check(2, 'beta cannot read alpha attendance',
+select pg_temp.check(2, 'testtwo cannot read testone attendance',
   (select count(*) = 0 from public.attendance_records where company_id = 'a0000000-0000-0000-0000-000000000001'));
 reset role;
 
--- 3. Beta admin (no package) cannot read its OWN attendance either.
+-- 3. TestTwo admin (no package) cannot read its OWN attendance either.
 select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
 select pg_temp.check(3, 'company without package reads zero attendance',
   (select count(*) = 0 from public.attendance_records));
@@ -220,7 +220,7 @@ select pg_temp.check(10, 'disabled company package blocks insert',
 rollback to savepoint s10;
 
 -- 18. Tenant-safe SELECT remains intact after a package release assignment.
---     Assign attendance to Beta via the publish RPC, then confirm each company
+--     Assign attendance to TestTwo via the publish RPC, then confirm each company
 --     still sees only its own rows.
 savepoint s18;
 select pg_temp.actor('55555555-5555-5555-5555-555555555555');

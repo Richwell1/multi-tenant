@@ -6,15 +6,15 @@
 begin;
 
 insert into public.companies (id, name, slug, status) values
-  ('a0000000-0000-0000-0000-000000000001', 'Alpha Co', 'alpha-dn', 'active'),
-  ('b0000000-0000-0000-0000-000000000002', 'Beta Co',  'beta-dn',  'active');
+  ('a0000000-0000-0000-0000-000000000001', 'TestOne Co', 'testone-dn', 'active'),
+  ('b0000000-0000-0000-0000-000000000002', 'TestTwo Co',  'testtwo-dn',  'active');
 insert into auth.users (id, email) values
-  ('a2222222-2222-2222-2222-222222222222', 'alpha-admin@x.com'),
-  ('b2222222-2222-2222-2222-222222222222', 'beta-admin@x.com');
+  ('a2222222-2222-2222-2222-222222222222', 'testone-admin@x.com'),
+  ('b2222222-2222-2222-2222-222222222222', 'testtwo-admin@x.com');
 insert into public.company_memberships (company_id, user_id, role, status) values
   ('a0000000-0000-0000-0000-000000000001', 'a2222222-2222-2222-2222-222222222222', 'company_admin', 'active'),
   ('b0000000-0000-0000-0000-000000000002', 'b2222222-2222-2222-2222-222222222222', 'company_admin', 'active');
--- Alpha has Document Notes enabled via a marketplace install; Beta does not.
+-- TestOne has Document Notes enabled via a marketplace install; TestTwo does not.
 insert into public.company_packages (company_id, package_key, package_version, enabled, status, activated_at, installation_source) values
   ('a0000000-0000-0000-0000-000000000001', 'document-notes', '1.0.0', true, 'installed', now(), 'company_marketplace');
 
@@ -85,7 +85,7 @@ select pg_temp.check(8, 'globally inactive package cannot insert',
     $$insert into public.document_notes (company_id, title) values ('a0000000-0000-0000-0000-000000000001','X')$$));
 update public.packages set is_active = true where key = 'document-notes';
 
--- Tenant isolation: Beta cannot read Alpha's note.
+-- Tenant isolation: TestTwo cannot read TestOne's note.
 select set_config('request.jwt.claims', json_build_object('sub','b2222222-2222-2222-2222-222222222222','role','authenticated')::text, true);
 set local role authenticated;
 select pg_temp.check(9, 'another company cannot read the notes',

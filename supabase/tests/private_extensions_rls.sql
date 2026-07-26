@@ -6,17 +6,17 @@
 begin;
 
 insert into public.companies (id, name, slug, status) values
-  ('a0000000-0000-0000-0000-000000000001', 'Alpha Co', 'alpha-pe', 'active'),
-  ('b0000000-0000-0000-0000-000000000002', 'Beta Co',  'beta-pe',  'active');
+  ('a0000000-0000-0000-0000-000000000001', 'TestOne Co', 'testone-pe', 'active'),
+  ('b0000000-0000-0000-0000-000000000002', 'TestTwo Co',  'testtwo-pe',  'active');
 insert into auth.users (id, email) values
   ('a1111111-1111-1111-1111-111111111111', 'admin@x.com'),
-  ('a2222222-2222-2222-2222-222222222222', 'alpha-member@x.com'),
-  ('b2222222-2222-2222-2222-222222222222', 'beta-member@x.com');
+  ('a2222222-2222-2222-2222-222222222222', 'testone-member@x.com'),
+  ('b2222222-2222-2222-2222-222222222222', 'testtwo-member@x.com');
 insert into public.platform_admins (user_id) values ('a1111111-1111-1111-1111-111111111111');
 insert into public.company_memberships (company_id, user_id, role, status) values
   ('a0000000-0000-0000-0000-000000000001', 'a2222222-2222-2222-2222-222222222222', 'company_admin', 'active'),
   ('b0000000-0000-0000-0000-000000000002', 'b2222222-2222-2222-2222-222222222222', 'company_admin', 'active');
--- Alpha is on HR Core 1.1.0 (meets the Employee Approval min base); Beta on 1.0.0.
+-- TestOne is on HR Core 1.1.0 (meets the Employee Approval min base); TestTwo on 1.0.0.
 insert into public.company_packages (company_id, package_key, package_version, enabled, status, activated_at, installation_source) values
   ('a0000000-0000-0000-0000-000000000001', 'hr-core', '1.1.0', true, 'installed', now(), 'platform_push'),
   ('b0000000-0000-0000-0000-000000000002', 'hr-core', '1.0.0', true, 'installed', now(), 'registration_default');
@@ -46,12 +46,12 @@ select pg_temp.check(1, 'private extension cannot target all companies',
   pg_temp.denied('a1111111-1111-1111-1111-111111111111',
     $$select public.create_package_release((select id from public.package_versions where package_key='custom-employee-approval'), 'all_companies', '{}', true)$$));
 
--- Base version gate: Beta (HR Core 1.0.0) is below the 1.1.0 minimum.
+-- Base version gate: TestTwo (HR Core 1.0.0) is below the 1.1.0 minimum.
 select pg_temp.check(2, 'Employee Approval blocked when base HR Core version is too low',
   pg_temp.denied('a1111111-1111-1111-1111-111111111111',
     $$select public.create_package_release((select id from public.package_versions where package_key='custom-employee-approval'), 'one_company', array['b0000000-0000-0000-0000-000000000002']::uuid[], true)$$));
 
--- Assign Employee Approval to Alpha (HR Core 1.1.0).
+-- Assign Employee Approval to TestOne (HR Core 1.1.0).
 select public.create_package_release((select id from public.package_versions where package_key='custom-employee-approval'), 'one_company', array['a0000000-0000-0000-0000-000000000001']::uuid[], true);
 reset role;
 select pg_temp.check(3, 'Employee Approval enabled for the target with private_assignment source',
@@ -67,7 +67,7 @@ select pg_temp.check(5, 'private extension is not discoverable by other companie
   (select count(*) = 0 from public.packages where key = 'custom-employee-approval'));
 reset role;
 
--- Department Code (no min base version) assigns to Beta (HR Core 1.0.0).
+-- Department Code (no min base version) assigns to TestTwo (HR Core 1.0.0).
 select pg_temp.actor('a1111111-1111-1111-1111-111111111111');
 set local role authenticated;
 select public.create_package_release((select id from public.package_versions where package_key='custom-department-code'), 'one_company', array['b0000000-0000-0000-0000-000000000002']::uuid[], true);

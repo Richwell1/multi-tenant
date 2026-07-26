@@ -6,13 +6,13 @@
 begin;
 
 insert into public.companies (id, name, slug, status) values
-  ('a1000000-0000-0000-0000-000000000001', 'Alpha Co', 'alpha-min', 'active'),
-  ('b1000000-0000-0000-0000-000000000002', 'Beta Co',  'beta-min',  'active'),
-  ('c1000000-0000-0000-0000-000000000003', 'Gamma Co', 'gamma-min', 'suspended');
+  ('a1000000-0000-0000-0000-000000000001', 'TestOne Co', 'testone-min', 'active'),
+  ('b1000000-0000-0000-0000-000000000002', 'TestTwo Co',  'testtwo-min',  'active'),
+  ('c1000000-0000-0000-0000-000000000003', 'TestThree Co', 'testthree-min', 'suspended');
 insert into auth.users (id, email) values
   ('a1111111-1111-1111-1111-111111111111', 'admin@x.com'),
-  ('a2222222-2222-2222-2222-222222222222', 'alpha-user@x.com'),
-  ('c2222222-2222-2222-2222-222222222222', 'gamma-user@x.com'),
+  ('a2222222-2222-2222-2222-222222222222', 'testone-user@x.com'),
+  ('c2222222-2222-2222-2222-222222222222', 'testthree-user@x.com'),
   ('d0000000-0000-0000-0000-000000000000', 'early@x.com'),
   ('d2000000-0000-0000-0000-000000000002', 'late@x.com');
 insert into public.platform_admins (user_id) values ('a1111111-1111-1111-1111-111111111111');
@@ -32,7 +32,7 @@ language sql as $$
   select set_config('request.jwt.claims', json_build_object('sub', uid, 'role', 'authenticated')::text, true)::void;
 $$;
 
--- Give Alpha the seeded HR Core 1.0.0 baseline (as onboarding would).
+-- Give TestOne the seeded HR Core 1.0.0 baseline (as onboarding would).
 insert into public.company_packages (company_id, package_key, package_version, enabled, status, activated_at)
 values ('a1000000-0000-0000-0000-000000000001', 'hr-core', '1.0.0', true, 'installed', now()),
        ('b1000000-0000-0000-0000-000000000002', 'hr-core', '1.0.0', true, 'installed', now());

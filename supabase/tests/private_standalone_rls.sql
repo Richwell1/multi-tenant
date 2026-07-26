@@ -5,12 +5,12 @@
 begin;
 
 insert into public.companies (id, name, slug, status) values
-  ('a0000000-0000-0000-0000-000000000001', 'Alpha Co', 'alpha-ps', 'active'),
-  ('b0000000-0000-0000-0000-000000000002', 'Beta Co',  'beta-ps',  'active');
+  ('a0000000-0000-0000-0000-000000000001', 'TestOne Co', 'testone-ps', 'active'),
+  ('b0000000-0000-0000-0000-000000000002', 'TestTwo Co',  'testtwo-ps',  'active');
 insert into auth.users (id, email) values
   ('a1111111-1111-1111-1111-111111111111', 'admin@x.com'),
-  ('a2222222-2222-2222-2222-222222222222', 'alpha-member@x.com'),
-  ('b2222222-2222-2222-2222-222222222222', 'beta-member@x.com');
+  ('a2222222-2222-2222-2222-222222222222', 'testone-member@x.com'),
+  ('b2222222-2222-2222-2222-222222222222', 'testtwo-member@x.com');
 insert into public.platform_admins (user_id) values ('a1111111-1111-1111-1111-111111111111');
 insert into public.company_memberships (company_id, user_id, role, status) values
   ('a0000000-0000-0000-0000-000000000001', 'a2222222-2222-2222-2222-222222222222', 'company_admin', 'active'),

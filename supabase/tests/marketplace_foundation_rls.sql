@@ -5,19 +5,19 @@
 begin;
 
 insert into public.companies (id, name, slug, status) values
-  ('a0000000-0000-0000-0000-000000000001', 'Alpha Co', 'alpha-mkt', 'active'),
-  ('b0000000-0000-0000-0000-000000000002', 'Beta Co',  'beta-mkt',  'active');
+  ('a0000000-0000-0000-0000-000000000001', 'TestOne Co', 'testone-mkt', 'active'),
+  ('b0000000-0000-0000-0000-000000000002', 'TestTwo Co',  'testtwo-mkt',  'active');
 insert into auth.users (id, email) values
   ('a1111111-1111-1111-1111-111111111111', 'admin@x.com'),
-  ('a2222222-2222-2222-2222-222222222222', 'alpha-admin@x.com'),
-  ('a3333333-3333-3333-3333-333333333333', 'alpha-user@x.com'),
-  ('b2222222-2222-2222-2222-222222222222', 'beta-admin@x.com');
+  ('a2222222-2222-2222-2222-222222222222', 'testone-admin@x.com'),
+  ('a3333333-3333-3333-3333-333333333333', 'testone-user@x.com'),
+  ('b2222222-2222-2222-2222-222222222222', 'testtwo-admin@x.com');
 insert into public.platform_admins (user_id) values ('a1111111-1111-1111-1111-111111111111');
 insert into public.company_memberships (company_id, user_id, role, status) values
   ('a0000000-0000-0000-0000-000000000001', 'a2222222-2222-2222-2222-222222222222', 'company_admin', 'active'),
   ('a0000000-0000-0000-0000-000000000001', 'a3333333-3333-3333-3333-333333333333', 'company_user', 'active'),
   ('b0000000-0000-0000-0000-000000000002', 'b2222222-2222-2222-2222-222222222222', 'company_admin', 'active');
--- Alpha has HR Core (base for a dependent marketplace package); Beta does not.
+-- TestOne has HR Core (base for a dependent marketplace package); TestTwo does not.
 insert into public.company_packages (company_id, package_key, package_version, enabled, status, activated_at, installation_source) values
   ('a0000000-0000-0000-0000-000000000001', 'hr-core', '1.0.0', true, 'installed', now(), 'registration_default');
 
@@ -83,7 +83,7 @@ select pg_temp.check(5, 'private package cannot be company-installed by key',
   pg_temp.denied('a2222222-2222-2222-2222-222222222222', $$select public.install_marketplace_extension('priv-a')$$));
 select pg_temp.check(6, 'already-installed package cannot be reinstalled',
   pg_temp.denied('a2222222-2222-2222-2222-222222222222', $$select public.install_marketplace_extension('mkt-a')$$));
-select pg_temp.check(7, 'dependency enforced — Beta without HR Core cannot install a dependent package',
+select pg_temp.check(7, 'dependency enforced — TestTwo without HR Core cannot install a dependent package',
   pg_temp.denied('b2222222-2222-2222-2222-222222222222', $$select public.install_marketplace_extension('mkt-dep')$$));
 
 -- Update pushed only to installers.

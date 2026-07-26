@@ -14,11 +14,11 @@ begin;
 
 -- Fixtures ------------------------------------------------------------------
 insert into public.companies (id, name, slug, status) values
-  ('a0000000-0000-0000-0000-000000000001', 'Alpha', 'alpha', 'active');
+  ('a0000000-0000-0000-0000-000000000001', 'TestOne', 'testone', 'active');
 
 insert into auth.users (id, email) values
   ('55555555-5555-5555-5555-555555555555', 'super@x.com'),
-  ('11111111-1111-1111-1111-111111111111', 'admin.alpha@x.com');
+  ('11111111-1111-1111-1111-111111111111', 'admin.testone@x.com');
 
 insert into public.platform_admins (user_id) values ('55555555-5555-5555-5555-555555555555');
 insert into public.company_memberships (company_id, user_id, role, status) values

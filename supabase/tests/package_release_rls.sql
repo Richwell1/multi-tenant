@@ -14,13 +14,13 @@ begin;
 
 -- Fixtures ------------------------------------------------------------------
 insert into public.companies (id, name, slug, status) values
-  ('a0000000-0000-0000-0000-000000000001', 'Alpha', 'alpha', 'active'),
-  ('b0000000-0000-0000-0000-000000000002', 'Beta',  'beta',  'active'),
-  ('c0000000-0000-0000-0000-000000000003', 'Gamma', 'gamma', 'suspended');
+  ('a0000000-0000-0000-0000-000000000001', 'TestOne', 'testone', 'active'),
+  ('b0000000-0000-0000-0000-000000000002', 'TestTwo',  'testtwo',  'active'),
+  ('c0000000-0000-0000-0000-000000000003', 'TestThree', 'testthree', 'suspended');
 
 insert into auth.users (id, email) values
   ('55555555-5555-5555-5555-555555555555', 'super@x.com'),
-  ('22222222-2222-2222-2222-222222222222', 'user.alpha@x.com');
+  ('22222222-2222-2222-2222-222222222222', 'user.testone@x.com');
 
 insert into public.platform_admins (user_id) values
   ('55555555-5555-5555-5555-555555555555');
@@ -103,7 +103,7 @@ select pg_temp.check(4, 'selected_companies requires two targets',
           array['a0000000-0000-0000-0000-000000000001']::uuid[]) $q$));
 
 -- 5. Platform admin publishes std → all_companies; only the 2 ACTIVE companies
---    get installations (gamma is suspended and excluded).
+--    get installations (testthree is suspended and excluded).
 select pg_temp.actor('55555555-5555-5555-5555-555555555555');
 select public.publish_package_release('11111111-0000-0000-0000-0000000000f1', 'all_companies');
 reset role;
@@ -125,7 +125,7 @@ reset role;
 select pg_temp.check(7, 'private customization installs to exactly one company',
   (select count(*) = 1 from public.package_installations where package_key = 'pkg-priv'));
 
--- 8. Tenant-safe installations: alpha member sees only alpha's install rows.
+-- 8. Tenant-safe installations: testone member sees only testone's install rows.
 select pg_temp.as_user('22222222-2222-2222-2222-222222222222');
 select pg_temp.check(8, 'company member sees only own-company installations',
   (select count(*) = count(*) filter (where company_id = 'a0000000-0000-0000-0000-000000000001')

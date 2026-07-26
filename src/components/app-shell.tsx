@@ -4,6 +4,7 @@ import { PanelLeftClose, PanelLeftOpen, LogOut, Menu, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { useSession } from '@/lib/session';
+import { isNavItemActive } from './app-shell-nav';
 
 export interface NavItem {
   to: string;
@@ -80,7 +81,7 @@ export function AppShell({ portal, brandLine, portalBadge, nav, children }: AppS
 
         <nav className="flex-1 space-y-1 overflow-y-auto px-2 py-2">
           {nav.map((item) => {
-            const active = pathname === item.to || pathname.startsWith(item.to + '/');
+            const active = isNavItemActive(pathname, item.to);
             return (
               <Link
                 key={item.to}
@@ -92,6 +93,7 @@ export function AppShell({ portal, brandLine, portalBadge, nav, children }: AppS
                     : 'text-content-variant hover:bg-surface-subtle hover:text-content',
                   collapsed && 'justify-center',
                 )}
+                aria-current={active ? 'page' : undefined}
                 title={collapsed ? item.label : undefined}
                 onClick={() => setMobileOpen(false)}
               >

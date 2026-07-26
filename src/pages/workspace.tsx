@@ -122,6 +122,9 @@ export function EmployeesList() {
 function EmployeesListContent() {
   const [q, setQ] = useState('');
   const query = useEmployees();
+  const { packages } = usePackageEntitlements();
+  // Private extension: only the assigned company (with HR Core >= 1.1.0) sees this card.
+  const hasApproval = hasFeature(packages, PACKAGE_CODES.employeeApproval, '1.0.0');
   const filtered = (query.data ?? []).filter((e) =>
     `${e.fullName} ${e.employeeNumber} ${e.department}`.toLowerCase().includes(q.toLowerCase()),
   );
@@ -139,6 +142,16 @@ function EmployeesListContent() {
           </>
         }
       />
+      {hasApproval && (
+        <Card className="mb-6 max-w-md">
+          <CardHeader>
+            <CardTitle>Employee Approval</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Badge tone="healthy">Enabled</Badge>
+          </CardContent>
+        </Card>
+      )}
       <TableBoundary
         query={query}
         filtered={filtered}
@@ -321,9 +334,11 @@ export function EmployeeProfile() {
 
 // --- Departments / Positions --------------------------------------------------
 
+// Code is an optional field provided by the Custom Department Code Field
+// extension; baseline HR Core departments do not require it.
 const departmentSchema = z.object({
   name: z.string().min(2, 'Name is required'),
-  code: z.string().min(1, 'Code is required'),
+  code: z.string().trim().max(40).optional(),
   head: z.string().optional(),
 });
 type DepartmentForm = z.infer<typeof departmentSchema>;
@@ -341,6 +356,9 @@ function DepartmentsContent() {
   const query = useDepartments();
   const createMutation = useCreateDepartment();
   const disableMutation = useDisableDepartment();
+  const { packages } = usePackageEntitlements();
+  // Private extension: only the assigned company surfaces the Department Code field.
+  const hasDeptCode = hasFeature(packages, PACKAGE_CODES.departmentCode, '1.0.0');
   const [target, setTarget] = useState<{ id: string; name: string } | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const filtered = query.data ?? [];
@@ -373,9 +391,11 @@ function DepartmentsContent() {
               <Field label="Name" htmlFor="dept-name" error={errors.name?.message}>
                 <Input id="dept-name" aria-invalid={!!errors.name} {...register('name')} />
               </Field>
-              <Field label="Code" htmlFor="dept-code" error={errors.code?.message}>
-                <Input id="dept-code" aria-invalid={!!errors.code} {...register('code')} />
-              </Field>
+              {hasDeptCode && (
+                <Field label="Code" htmlFor="dept-code" error={errors.code?.message}>
+                  <Input id="dept-code" aria-invalid={!!errors.code} {...register('code')} />
+                </Field>
+              )}
               <Field label="Head" htmlFor="dept-head">
                 <Input id="dept-head" {...register('head')} />
               </Field>
@@ -398,11 +418,11 @@ function DepartmentsContent() {
           </CardContent>
         </Card>
       )}
-      <TableBoundary query={query} filtered={filtered} cols={4}>
+      <TableBoundary query={query} filtered={filtered} cols={hasDeptCode ? 4 : 3}>
         <DataTable>
           <THead>
             <TH>Name</TH>
-            <TH>Code</TH>
+            {hasDeptCode && <TH>Code</TH>}
             <TH>Head</TH>
             <TH>Status</TH>
           </THead>
@@ -410,7 +430,7 @@ function DepartmentsContent() {
             {filtered.map((d) => (
               <TR key={d.id}>
                 <TD className="font-medium">{d.name}</TD>
-                <TD className="text-content-variant">{d.code}</TD>
+                {hasDeptCode && <TD className="text-content-variant">{d.code}</TD>}
                 <TD>{d.head}</TD>
                 <TD>
                   <div className="flex items-center justify-between gap-3">

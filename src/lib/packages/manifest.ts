@@ -63,6 +63,17 @@ export const PACKAGE_MANIFEST: Partial<Record<PackageKey, PackageManifestEntry>>
     name: 'Expense Requests',
     features: [{ label: 'Expense Requests', minVersion: '1.0.0', route: '/extensions/expense-requests' }],
   },
+  // Private extensions render inside existing HR Core surfaces for the assigned company.
+  [PACKAGE_CODES.employeeApproval]: {
+    code: PACKAGE_CODES.employeeApproval,
+    name: 'Custom Employee Approval Card',
+    features: [{ label: 'Employee Approval', minVersion: '1.0.0', route: '/employees' }],
+  },
+  [PACKAGE_CODES.departmentCode]: {
+    code: PACKAGE_CODES.departmentCode,
+    name: 'Custom Department Code Field',
+    features: [{ label: 'Department Code', minVersion: '1.0.0', route: '/departments' }],
+  },
 };
 
 /** Installed version of a package for the company, or null when not entitled. */

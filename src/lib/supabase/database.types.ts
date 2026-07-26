@@ -303,7 +303,7 @@ export type Database = {
       }
       departments: {
         Row: {
-          code: string
+          code: string | null
           company_id: string
           created_at: string
           head: string | null
@@ -313,7 +313,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          code: string
+          code?: string | null
           company_id: string
           created_at?: string
           head?: string | null
@@ -323,7 +323,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          code?: string
+          code?: string | null
           company_id?: string
           created_at?: string
           head?: string | null

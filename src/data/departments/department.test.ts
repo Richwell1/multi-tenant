@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { MockDepartmentRepository } from './mock-department-repository';
 import { departmentService } from '@/services/department-service';
-import { RepositoryError } from '@/data/errors';
 
 describe('MockDepartmentRepository', () => {
   const repo = new MockDepartmentRepository();
@@ -33,9 +32,9 @@ describe('departmentService', () => {
     });
   });
 
-  it('rejects an empty code', async () => {
-    await expect(departmentService.create('alpha', { name: 'Valid', code: '   ' })).rejects.toBeInstanceOf(
-      RepositoryError,
-    );
+  it('allows an omitted/blank code (optional extension field)', async () => {
+    const d = await departmentService.create('alpha', { name: 'Valid', code: '   ' });
+    expect(d.name).toBe('Valid');
+    expect(d.code).toBe('');
   });
 });

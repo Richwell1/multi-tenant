@@ -14,6 +14,7 @@ import {
   Activity,
   ScrollText,
   Stethoscope,
+  CheckCircle2,
 } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import { StatCard } from '@/components/stat-card';
@@ -168,10 +169,10 @@ export function AdminDashboard() {
         actions={<RefreshingIndicator show={companies.isFetching} />}
       />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Total Companies" value={companies.data.length} />
-        <StatCard label="Active Companies" value={active} />
-        <StatCard label="Using HR Core" value={companies.data.length} hint="Auto-assigned" />
-        <StatCard label="Most-used Module" value="Employees" />
+        <StatCard label="Total Companies" value={companies.data.length} icon={<Building2 className="size-5" />} />
+        <StatCard label="Active Companies" value={active} icon={<CheckCircle2 className="size-5" />} />
+        <StatCard label="Using HR Core" value={companies.data.length} hint="Auto-assigned" icon={<Package className="size-5" />} />
+        <StatCard label="Most-used Module" value="Employees" icon={<BarChart3 className="size-5" />} />
       </div>
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <Card>

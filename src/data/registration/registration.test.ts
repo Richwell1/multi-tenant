@@ -20,10 +20,16 @@ describe('MockRegistrationRepository', () => {
     expect(res.subdomain).toBe('acme-hq');
   });
 
-  it('maps duplicate email / slug / subdomain to distinct conflicts', async () => {
-    await expect(repo.register({ ...base, email: 'taken@x.com' })).rejects.toMatchObject({ kind: 'conflict' });
-    await expect(repo.register({ ...base, slug: 'taken' })).rejects.toMatchObject({ kind: 'conflict' });
-    await expect(repo.register({ ...base, requestedSubdomain: 'taken' })).rejects.toMatchObject({ kind: 'conflict' });
+  it('maps duplicate email / slug / subdomain to distinct conflicts with a field', async () => {
+    await expect(repo.register({ ...base, email: 'taken@x.com' })).rejects.toMatchObject({ kind: 'conflict', field: 'email' });
+    await expect(repo.register({ ...base, slug: 'taken' })).rejects.toMatchObject({ kind: 'conflict', field: 'slug' });
+    await expect(repo.register({ ...base, requestedSubdomain: 'taken' })).rejects.toMatchObject({ kind: 'conflict', field: 'subdomain' });
+  });
+
+  it('reports slug availability: reserved slugs are unavailable, others are available', async () => {
+    await expect(repo.checkSlugAvailability('taken')).resolves.toMatchObject({ available: false, verified: true });
+    await expect(repo.checkSlugAvailability('www')).resolves.toMatchObject({ available: false, verified: true });
+    await expect(repo.checkSlugAvailability('rich-co')).resolves.toMatchObject({ available: true, verified: true });
   });
 });
 
@@ -32,6 +38,11 @@ describe('mapRegistrationError (Edge → RepositoryError)', () => {
     for (const code of ['duplicate_email', 'duplicate_slug', 'duplicate_subdomain', 'conflict']) {
       expect(mapRegistrationError(code, 'x')).toMatchObject({ kind: 'conflict' });
     }
+  });
+  it('carries the conflicting field so the UI can surface it inline', () => {
+    expect(mapRegistrationError('duplicate_slug', 'x').field).toBe('slug');
+    expect(mapRegistrationError('duplicate_subdomain', 'x').field).toBe('subdomain');
+    expect(mapRegistrationError('duplicate_email', 'x').field).toBe('email');
   });
   it('maps validation to validation', () => {
     expect(mapRegistrationError('validation', 'bad').kind).toBe('validation');

@@ -1,6 +1,6 @@
 import { RepositoryError, type RepositoryErrorKind } from '@/data/errors';
 import type { RegistrationRepository } from './registration-repository';
-import type { RegisterCompanyInput, RegisterCompanyResult } from './types';
+import type { RegisterCompanyInput, RegisterCompanyResult, SlugAvailability } from './types';
 
 interface EdgeErrorBody {
   error?: { code?: string; message?: string };
@@ -15,6 +15,14 @@ interface EdgeSuccessBody {
   };
 }
 
+/** The form field an Edge Function conflict code maps to (for inline errors). */
+function conflictField(code: string | undefined): 'slug' | 'subdomain' | 'email' | undefined {
+  if (code === 'duplicate_slug') return 'slug';
+  if (code === 'duplicate_subdomain') return 'subdomain';
+  if (code === 'duplicate_email') return 'email';
+  return undefined;
+}
+
 /** Pure mapping of an Edge Function error response → RepositoryError. */
 export function mapRegistrationError(code: string | undefined, message: string | undefined): RepositoryError {
   const kind: RepositoryErrorKind =
@@ -23,7 +31,7 @@ export function mapRegistrationError(code: string | undefined, message: string |
       : code === 'validation'
         ? 'validation'
         : 'unknown';
-  return new RepositoryError(message ?? 'Registration failed. Please try again.', kind);
+  return new RepositoryError(message ?? 'Registration failed. Please try again.', kind, undefined, conflictField(code));
 }
 
 /**
@@ -31,6 +39,15 @@ export function mapRegistrationError(code: string | undefined, message: string |
  * The service-role key never appears here (it lives inside the Edge Function).
  */
 export class EdgeRegistrationRepository implements RegistrationRepository {
+  /**
+   * No hosted slug-lookup endpoint exists; uniqueness is enforced transactionally
+   * by the Edge Function on submit. We answer best-effort (available, unverified)
+   * so the UI never shows a false "taken" — the authoritative check is at submit.
+   */
+  async checkSlugAvailability(slug: string): Promise<SlugAvailability> {
+    return { slug, available: true, verified: false };
+  }
+
   async register(input: RegisterCompanyInput): Promise<RegisterCompanyResult> {
     const baseUrl = import.meta.env.VITE_SUPABASE_URL;
     const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;

@@ -16,6 +16,8 @@ export class RepositoryError extends Error {
     message: string,
     readonly kind: RepositoryErrorKind = 'unknown',
     readonly cause?: unknown,
+    /** Optional form field this error maps to (e.g. a 'conflict' on 'slug'). */
+    readonly field?: string,
   ) {
     super(message);
     this.name = 'RepositoryError';

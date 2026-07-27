@@ -38,9 +38,18 @@ items. No business logic, RLS, or migrations changed.
 - More consistent, actionable empty-state copy (Requests, Diagnostics).
 - Tests: CompaniesList (avatars, summary, status filter). 324 tests.
 
-_Remaining phases (further per-page table polish, login/logout feedback, dialog
-focus sweep, responsive/accessibility audit, design tokens) are scoped in
-`docs/UI_UX_PROGRESS.md`._
+**Phase 4 (Installations + Adoption):**
+- **Installation Monitoring** — summary count cards (Installed / Pending /
+  Installing / Failed) and a status icon per row (installing spins, respecting
+  reduced-motion) alongside the status badge.
+- **Marketplace Adoption** — summary cards (extensions, total installs, most
+  installed) and a per-row adoption progress bar (`role="progressbar"`) showing
+  distinct companies as a percentage of active companies.
+- Tests: Adoption progress-bar percentage. 325 tests.
+
+_Remaining phases (login/logout one-toast feedback, dialog focus sweep,
+responsive/accessibility audit, design-token centralization, optional Framer
+Motion) are scoped in `docs/UI_UX_PROGRESS.md`._
 
 ## Unreleased — Company update notifications (branch `feat/company-update-notifications`)
 

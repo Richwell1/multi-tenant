@@ -42,6 +42,7 @@ import {
 } from '@/components/states';
 import { useSession } from '@/lib/session';
 import { useCompanyId } from '@/hooks/use-company-id';
+import { useCompanySlug } from '@/hooks/use-company-slug';
 import { useCompanyContext } from '@/hooks/context';
 import { PackageGuard } from '@/components/guards';
 import { usePackageEntitlements } from '@/hooks/entitlements';
@@ -147,6 +148,7 @@ export function EmployeesList() {
 
 function EmployeesListContent() {
   const [q, setQ] = useState('');
+  const companySlug = useCompanySlug();
   const query = useEmployees();
   const { packages } = usePackageEntitlements();
   // Private extension: only the assigned company (with HR Core >= 1.1.0) sees this card.
@@ -162,7 +164,7 @@ function EmployeesListContent() {
           <>
             <RefreshingIndicator show={query.isFetching && !query.isPending} />
             <Input className="w-full sm:w-56" placeholder="Search employees…" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search employees" />
-            <Link to="/employees/new">
+            <Link to="/$companySlug/employees/new" params={{ companySlug }}>
               <Button>Add Employee</Button>
             </Link>
           </>
@@ -200,7 +202,7 @@ function EmployeesListContent() {
               <TR key={e.id}>
                 <TD className="text-content-variant">{e.employeeNumber}</TD>
                 <TD>
-                  <Link to="/employees/$employeeId" params={{ employeeId: e.id }} className="font-medium text-company hover:underline">
+                  <Link to="/$companySlug/employees/$employeeId" params={{ companySlug, employeeId: e.id }} className="font-medium text-company hover:underline">
                     {e.fullName}
                   </Link>
                 </TD>
@@ -223,6 +225,7 @@ function EmployeesListContent() {
 
 export function AddEmployee() {
   const navigate = useNavigate();
+  const companySlug = useCompanySlug();
   const mutation = useCreateEmployee();
   const departmentsQuery = useDepartments();
   const positionsQuery = usePositions();
@@ -238,7 +241,7 @@ export function AddEmployee() {
   });
 
   const onValid = (values: EmployeeFormValues) =>
-    mutation.mutate(values, { onSuccess: () => navigate({ to: '/employees' }) });
+    mutation.mutate(values, { onSuccess: () => navigate({ to: '/$companySlug/employees', params: { companySlug } }) });
 
   return (
     <>
@@ -286,7 +289,7 @@ export function AddEmployee() {
               <SubmitButton pending={mutation.isPending} pendingLabel="Saving…">
                 Save Employee
               </SubmitButton>
-              <Link to="/employees">
+              <Link to="/$companySlug/employees" params={{ companySlug }}>
                 <Button variant="secondary" type="button">
                   Cancel
                 </Button>
@@ -650,6 +653,7 @@ const UPDATE_CATEGORY_TONE: Record<PackageCategory, 'platform' | 'company' | 'wa
 };
 
 export function UpdatesPage() {
+  const companySlug = useCompanySlug();
   const query = useAvailableUpdates();
   const install = useInstallCompanyUpdate();
   // Per-card pending state: only the update being installed shows "Installing…".
@@ -668,7 +672,7 @@ export function UpdatesPage() {
           title="Your packages are up to date"
           description="There are no pending system, marketplace, or private package updates."
           action={
-            <Link to="/packages">
+            <Link to="/$companySlug/packages" params={{ companySlug }}>
               <Button variant="outline">View Installed Packages</Button>
             </Link>
           }

@@ -21,23 +21,22 @@ const EXPECTED_ROUTES = [
   '/admin/usage',
   '/admin/health',
   '/admin/audit',
-  '/dashboard',
-  '/employees',
-  '/employees/new',
-  '/employees/$employeeId',
-  '/departments',
-  '/positions',
-  '/updates',
-  '/packages',
-  '/users',
-  '/settings',
-  '/leave',
-  '/attendance',
+  // Company workspace routes are prefixed with the tenant slug segment.
+  '/$companySlug/dashboard',
+  '/$companySlug/employees',
+  '/$companySlug/employees/new',
+  '/$companySlug/employees/$employeeId',
+  '/$companySlug/departments',
+  '/$companySlug/positions',
+  '/$companySlug/updates',
+  '/$companySlug/packages',
+  '/$companySlug/users',
+  '/$companySlug/settings',
+  '/$companySlug/leave',
+  '/$companySlug/attendance',
 ];
 
 describe('route inventory', () => {
-  // Assert on navigable fullPath (URL), not internal route ids — the pathless
-  // workspace layout prefixes ids with "/workspace" but does not affect the URL.
   const paths = new Set(
     Object.values(router.routesById)
       .map((r) => r.fullPath as string)
@@ -52,6 +51,17 @@ describe('route inventory', () => {
 
   it('registers all 30 app routes', () => {
     expect(EXPECTED_ROUTES.length).toBe(30);
+  });
+
+  it('scopes every company workspace route under the tenant slug, and no admin route', () => {
+    const companyRoutes = [...paths].filter((p) => p.startsWith('/$companySlug/'));
+    // The workspace page group (dashboard, employees, extensions, …) is prefixed.
+    expect(companyRoutes.length).toBeGreaterThanOrEqual(12);
+    // Platform Admin routes must never live under a company slug.
+    expect([...paths].some((p) => p.startsWith('/$companySlug/admin'))).toBe(false);
+    for (const p of paths) {
+      if (p.startsWith('/admin')) expect(p.startsWith('/$companySlug')).toBe(false);
+    }
   });
 });
 

@@ -16,6 +16,8 @@ Branch: `feat/ui-ux-polish`
 | Admin top-bar profile menu | Complete (phase 2) | Accessible account dropdown (identity, role/context, app version, logout) replacing the plain email + logout link; Escape + outside-click close, `aria-haspopup`/`aria-expanded` | AppShell profile-menu test |
 | Admin Companies page | Complete (phase 3) | Avatar initials, status filter (All/Active/Suspended), total/active summary, package-count badge, tabular numerals, search across name+subdomain | CompaniesList test |
 | Admin dashboard metrics | Complete (phase 2) | `StatCard` optional portal-tinted icon + tabular numerals; dashboard metric cards now carry icons | StatCard test |
+| Admin Installations page | Complete (phase 4) | Summary count cards + per-row status icon (installing spins, reduced-motion aware) alongside the badge | build/visual |
+| Admin Adoption page | Complete (phase 4) | Summary cards (extensions/total installs/most installed) + per-row adoption progress bar (role=progressbar) as % of active companies | Adoption test |
 | Admin UI polish — remaining | Planned | Per-page card/table/filter polish; login/logout feedback + one-toast sequencing; dialog focus/return sweep; responsive + a11y audit; design-token centralization; optional Framer Motion (deferred — dependency/bundle) | Phased on `feat/platform-admin-ui-polish` |
 | Shared buttons, badges, cards | Complete | Added outline/icon sizing, richer status tones, calmer borders/shadows, responsive padding | Typecheck/lint/tests/build pass |
 | Forms and fields | Complete | Linked hints/errors with `aria-describedby`, clearer labels, shared select/textarea styling, autofill treatment | Full route form smoke test deferred |

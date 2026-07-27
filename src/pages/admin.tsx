@@ -15,6 +15,9 @@ import {
   ScrollText,
   Stethoscope,
   CheckCircle2,
+  Clock,
+  Loader2,
+  CircleX,
 } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import { StatCard } from '@/components/stat-card';
@@ -106,6 +109,22 @@ const diagTone = (r: DiagnosticResult) =>
   r === 'PASS' ? 'healthy' : r === 'WARN' ? 'degraded' : 'offline';
 const installTone = (s: PackageInstallationStatus) =>
   s === 'installed' ? 'healthy' : s === 'failed' ? 'offline' : s === 'rolled_back' ? 'neutral' : 'degraded';
+
+/** Status icon for an installation row (installing spins, respecting reduced-motion). */
+function InstallStatusIcon({ status }: { status: PackageInstallationStatus }) {
+  switch (status) {
+    case 'installed':
+      return <CheckCircle2 className="size-4 text-status-healthy" aria-hidden />;
+    case 'failed':
+      return <CircleX className="size-4 text-status-offline" aria-hidden />;
+    case 'installing':
+      return <Loader2 className="size-4 text-status-degraded motion-safe:animate-spin" aria-hidden />;
+    case 'rolled_back':
+      return <CircleX className="size-4 text-content-variant" aria-hidden />;
+    default:
+      return <Clock className="size-4 text-status-degraded" aria-hidden />;
+  }
+}
 const requestTone = (s: RequestStatus) =>
   s === 'released' || s === 'installed' || s === 'closed'
     ? 'healthy'
@@ -1362,6 +1381,12 @@ export function InstallationsPage() {
         description="Package installations across companies"
         actions={<RefreshingIndicator show={query.isFetching && !query.isPending} />}
       />
+      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard label="Installed" value={filtered.filter((i) => i.status === 'installed').length} icon={<CheckCircle2 className="size-5" />} />
+        <StatCard label="Pending" value={filtered.filter((i) => i.status === 'pending' || i.status === 'retrying').length} icon={<Clock className="size-5" />} />
+        <StatCard label="Installing" value={filtered.filter((i) => i.status === 'installing').length} icon={<Loader2 className="size-5" />} />
+        <StatCard label="Failed" value={filtered.filter((i) => i.status === 'failed').length} icon={<CircleX className="size-5" />} />
+      </div>
       <TargetFilter value={target} onChange={setTarget} />
       <Card className="mb-6 max-w-xs">
         <CardContent className="pt-6">
@@ -1405,7 +1430,10 @@ export function InstallationsPage() {
                 <TD>{i.packageCode}</TD>
                 <TD>{i.version}</TD>
                 <TD>
-                  <Badge tone={installTone(i.status)}>{i.status.replace(/_/g, ' ')}</Badge>
+                  <span className="flex items-center gap-2">
+                    <InstallStatusIcon status={i.status} />
+                    <Badge tone={installTone(i.status)}>{i.status.replace(/_/g, ' ')}</Badge>
+                  </span>
                 </TD>
                 <TD className="text-content-variant">{i.completedAt ? formatDate(i.completedAt) : '—'}</TD>
                 <TD>
@@ -1581,25 +1609,57 @@ function ListCard({ title, items }: { title: string; items: string[] }) {
 
 export function AdoptionPage() {
   const query = useMarketplaceAdoption();
+  const companies = useCompanies();
   const rows = query.data ?? [];
+  const activeCompanies = (companies.data ?? []).filter((c) => c.status === 'active').length;
+  const totalInstalls = rows.reduce((n, r) => n + r.installCount, 0);
+  const topExtension = rows.reduce<(typeof rows)[number] | null>(
+    (top, r) => (!top || r.distinctCompanies > top.distinctCompanies ? r : top),
+    null,
+  );
+  const adoptionPct = (n: number) => (activeCompanies > 0 ? Math.round((n / activeCompanies) * 100) : 0);
   return (
     <>
       <PageHeader icon={<TrendingUp className="size-5" />} title="Marketplace Adoption" description="How many companies installed each marketplace extension" />
-      <TableBoundary query={query} filtered={rows} cols={3} emptyTitle="No marketplace extensions" emptyDescription="Adoption appears once marketplace extensions are published.">
+      <div className="mb-6 grid gap-4 sm:grid-cols-3">
+        <StatCard label="Marketplace extensions" value={rows.length} icon={<Package className="size-5" />} />
+        <StatCard label="Total installs" value={totalInstalls} icon={<DownloadCloud className="size-5" />} />
+        <StatCard label="Most installed" value={topExtension?.packageName ?? '—'} icon={<TrendingUp className="size-5" />} />
+      </div>
+      <TableBoundary query={query} filtered={rows} cols={4} emptyTitle="No marketplace extensions" emptyDescription="Adoption appears once marketplace extensions are published.">
         <DataTable>
           <THead>
             <TH>Extension</TH>
             <TH>Installs</TH>
             <TH>Companies</TH>
+            <TH>Adoption</TH>
           </THead>
           <TBody>
-            {rows.map((r) => (
-              <TR key={r.packageKey}>
-                <TD className="font-medium">{r.packageName}<span className="ml-2 text-content-variant">{r.packageKey}</span></TD>
-                <TD>{r.installCount}</TD>
-                <TD>{r.distinctCompanies}</TD>
-              </TR>
-            ))}
+            {rows.map((r) => {
+              const pct = adoptionPct(r.distinctCompanies);
+              return (
+                <TR key={r.packageKey}>
+                  <TD className="font-medium">{r.packageName}<span className="ml-2 text-content-variant">{r.packageKey}</span></TD>
+                  <TD className="tabular-nums">{r.installCount}</TD>
+                  <TD className="tabular-nums">{r.distinctCompanies}</TD>
+                  <TD>
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="h-2 w-24 overflow-hidden rounded-pill bg-surface-subtle"
+                        role="progressbar"
+                        aria-valuenow={pct}
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-label={`${r.packageName} adoption`}
+                      >
+                        <div className="h-full rounded-pill bg-[var(--portal-color)]" style={{ width: `${pct}%` }} />
+                      </div>
+                      <span className="text-sm tabular-nums text-content-variant">{pct}%</span>
+                    </div>
+                  </TD>
+                </TR>
+              );
+            })}
           </TBody>
         </DataTable>
       </TableBoundary>

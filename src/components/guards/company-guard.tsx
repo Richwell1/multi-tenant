@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Navigate } from '@tanstack/react-router';
+import { Navigate, useParams } from '@tanstack/react-router';
 import { useSession } from '@/lib/session';
 import { useCompanyContext } from '@/hooks/context';
 import { validateMembershipForTenant, type MembershipInfo } from '@/lib/guards';
@@ -7,18 +7,24 @@ import { ErrorState, PageLoadingState } from '@/components/states';
 
 /**
  * Guards company routes: requires an authenticated session, an active membership
- * whose company matches the requested tenant, and an active company.
- *   unauthenticated  → tenant login
+ * whose company matches the requested tenant, and an active company. The tenant
+ * is the `/:companySlug` route segment — a routing identifier that must match the
+ * authenticated membership; it never replaces the company UUID + RLS boundary.
+ *   unauthenticated  → tenant login (slug pre-filled)
  *   tenant mismatch / inactive membership → access-denied
  *   suspended company → company-suspended
  */
 export function CompanyGuard({ children }: { children: ReactNode }) {
   const { authenticated, authLoading, user, tenantId } = useSession();
+  const params = useParams({ strict: false }) as { companySlug?: string };
+  // The URL slug is the requested tenant; fall back to session tenant only if a
+  // guard ever renders outside the `/$companySlug` subtree.
+  const requestedSlug = params.companySlug ?? tenantId ?? '';
   const contextQuery = useCompanyContext();
 
   if (authLoading) return <PageLoadingState label="Loading workspace…" />;
   if (!authenticated || !user) {
-    return <Navigate to="/login" search={{ tenant: tenantId ?? undefined }} />;
+    return <Navigate to="/login" search={{ tenant: requestedSlug || undefined }} />;
   }
   if (contextQuery.isPending) return <PageLoadingState label="Loading workspace…" />;
   if (contextQuery.isError) {
@@ -44,9 +50,10 @@ export function CompanyGuard({ children }: { children: ReactNode }) {
 
   const outcome = validateMembershipForTenant({
     authenticated: true,
-    // Bare /login is tenant-neutral. Once authenticated, the membership is
-    // the source of truth for the user's workspace when no tenant was chosen.
-    requestedTenantSlug: tenantId ?? membership?.companySlug ?? '',
+    // The `/:companySlug` segment is the requested tenant. If it is absent
+    // (guard rendered outside the workspace subtree), the membership slug stands
+    // in so a legitimately authenticated member is never spuriously denied.
+    requestedTenantSlug: requestedSlug || membership?.companySlug || '',
     membership,
   });
 

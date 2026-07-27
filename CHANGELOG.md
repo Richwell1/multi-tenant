@@ -1,5 +1,25 @@
 # Changelog
 
+## Unreleased — Path-based tenant routing (branch `feat/path-based-tenant-routing`)
+
+- Company workspace URLs are now prefixed with the tenant slug:
+  `/:companySlug/dashboard`, `/:companySlug/departments`,
+  `/:companySlug/extensions/marketplace`, … (e.g. `/rich/dashboard`). Platform
+  Admin routes stay at `/admin/...` — never nested under a slug.
+- Router: the workspace layout moved from a pathless group to `/$companySlug`;
+  a bare `/:companySlug` redirects to `/:companySlug/dashboard`. Static routes
+  (`/admin`, `/login`, …) keep priority over the dynamic segment.
+- `CompanyGuard` validates the `/:companySlug` segment against the authenticated
+  membership (mismatch → access-denied; unauthenticated → tenant login with the
+  slug pre-filled). The slug is a routing identifier only — company UUID +
+  membership + entitlement + RLS remain the security boundary.
+- New `useCompanySlug` hook (reads the route param) builds slug-prefixed links in
+  the workspace shell and pages; login lands the user on their own slugged
+  dashboard. `isNavItemActive` recognizes the slugged dashboard as an exact
+  destination. The existing Vercel SPA rewrite already serves every path.
+- 351 tests (router inventory asserts slug-scoping + no admin-under-slug; guard
+  tests cover slug match/mismatch/suspended/inactive and the bare-slug redirect).
+
 ## Unreleased — Provisioning guardrails + registration UX (branch `feat/package-security-guardrails-and-registration-ux`)
 
 **Provisioning guardrail (prevents the confirmed 42501 class):**

@@ -140,7 +140,8 @@ export function LoginPage() {
         return;
       }
       notify.signedIn();
-      navigate({ to: '/dashboard' });
+      // Path-based tenant routing: land on the company's own slugged dashboard.
+      navigate({ to: '/$companySlug/dashboard', params: { companySlug: company.companySlug } });
     } catch (e) {
       setAuthError(e instanceof RepositoryError ? e.message : 'Sign-in failed. Please try again.');
     }

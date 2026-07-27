@@ -54,27 +54,32 @@ describe('route guards', () => {
   });
 
   it('Alpha member can access Alpha workspace', async () => {
-    const router = await renderGuarded({ path: '/dashboard', url: '/login?tenant=alpha', email: 'admin@alpha.test' });
-    await waitFor(() => expect(at(router)).toBe('/dashboard'));
+    const router = await renderGuarded({ path: '/alpha/dashboard', url: '/login?tenant=alpha', email: 'admin@alpha.test' });
+    await waitFor(() => expect(at(router)).toBe('/alpha/dashboard'));
   });
 
-  it('shared login allows a company member without a tenant query', async () => {
-    const router = await renderGuarded({ path: '/dashboard', url: '/login', email: 'admin@beta.test' });
-    await waitFor(() => expect(at(router)).toBe('/dashboard'));
+  it('bare /:companySlug redirects to the slugged dashboard', async () => {
+    const router = await renderGuarded({ path: '/alpha', url: '/login?tenant=alpha', email: 'admin@alpha.test' });
+    await waitFor(() => expect(at(router)).toBe('/alpha/dashboard'));
   });
 
-  it('Alpha tenant + Beta member → /access-denied (tenant mismatch)', async () => {
-    const router = await renderGuarded({ path: '/dashboard', url: '/login?tenant=alpha', email: 'admin@beta.test' });
+  it('shared login allows a company member on their own slug', async () => {
+    const router = await renderGuarded({ path: '/beta/dashboard', url: '/login', email: 'admin@beta.test' });
+    await waitFor(() => expect(at(router)).toBe('/beta/dashboard'));
+  });
+
+  it('Alpha slug + Beta member → /access-denied (tenant mismatch)', async () => {
+    const router = await renderGuarded({ path: '/alpha/dashboard', url: '/login', email: 'admin@beta.test' });
     await waitFor(() => expect(at(router)).toBe('/access-denied'));
   });
 
   it('suspended company → /company-suspended', async () => {
-    const router = await renderGuarded({ path: '/dashboard', url: '/login?tenant=gamma', email: 'admin@gamma.test' });
+    const router = await renderGuarded({ path: '/gamma/dashboard', url: '/login?tenant=gamma', email: 'admin@gamma.test' });
     await waitFor(() => expect(at(router)).toBe('/company-suspended'));
   });
 
   it('inactive membership → /access-denied', async () => {
-    const router = await renderGuarded({ path: '/dashboard', url: '/login?tenant=alpha', email: 'inactive@alpha.test' });
+    const router = await renderGuarded({ path: '/alpha/dashboard', url: '/login?tenant=alpha', email: 'inactive@alpha.test' });
     await waitFor(() => expect(at(router)).toBe('/access-denied'));
   });
 });

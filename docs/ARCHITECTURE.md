@@ -89,6 +89,19 @@ company from membership. Tenant-owned operations use the real `companies.id`
 UUID, never a slug or mock identifier. Slugs are for display and resolution;
 UUIDs are the persistence key.
 
+**Path-based tenant routing.** Company workspace URLs are prefixed with the
+tenant slug: `/:companySlug/dashboard`, `/:companySlug/departments`,
+`/:companySlug/extensions/marketplace`, and so on (e.g.
+`https://multi-tenant-hr.vercel.app/rich/dashboard`). Platform Admin routes stay
+at `/admin/...` and are never nested under a company slug. The slug is a routing
+identifier only: `CompanyGuard` verifies the `/:companySlug` segment against the
+authenticated membership (mismatch → access-denied), and `useCompanySlug` reads
+it solely to build links. It never replaces the company UUID, membership,
+entitlement checks, or RLS — the final security boundary remains authenticated
+membership plus `company_id` and RLS. After sign-in the user lands on their own
+slugged dashboard; a bare `/:companySlug` redirects to `/:companySlug/dashboard`.
+The single Vercel SPA rewrite already serves every non-asset path.
+
 Every tenant-owned table carries `company_id`. Repositories include the
 company scope, and PostgreSQL RLS is the authoritative boundary. The browser
 does not use a service-role key and frontend hiding is not security.

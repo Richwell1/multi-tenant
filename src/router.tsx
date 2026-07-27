@@ -132,10 +132,14 @@ const adminUsage = createRoute({ getParentRoute: () => adminLayout, path: 'usage
 const adminHealth = createRoute({ getParentRoute: () => adminLayout, path: 'health', component: adminPage('HealthPage') });
 const adminAudit = createRoute({ getParentRoute: () => adminLayout, path: 'audit', component: adminPage('AuditPage') });
 
-// --- Company Workspace (pathless layout, lazy page group) --------------------
+// --- Company Workspace (path-based tenant prefix, lazy page group) ------------
+// Every company route is nested under `/$companySlug`, e.g. `/rich/dashboard`.
+// The slug is a ROUTING identifier only: CompanyGuard verifies it against the
+// authenticated membership, and the security boundary stays company_id + RLS.
+// Static routes (/admin, /login, …) take priority over this dynamic segment.
 const workspaceLayout = createRoute({
   getParentRoute: () => rootRoute,
-  id: 'workspace',
+  path: '/$companySlug',
   component: () => (
     <CompanyGuard>
       <WorkspaceShell>
@@ -144,26 +148,34 @@ const workspaceLayout = createRoute({
     </CompanyGuard>
   ),
 });
-const wsDashboard = createRoute({ getParentRoute: () => workspaceLayout, path: '/dashboard', component: workspacePage('WorkspaceDashboard') });
-const wsEmployees = createRoute({ getParentRoute: () => workspaceLayout, path: '/employees', component: workspacePage('EmployeesList') });
-const wsEmployeeNew = createRoute({ getParentRoute: () => workspaceLayout, path: '/employees/new', component: workspacePage('AddEmployee') });
+// Bare `/$companySlug` sends the founder to their dashboard.
+const wsIndex = createRoute({
+  getParentRoute: () => workspaceLayout,
+  path: '/',
+  beforeLoad: ({ params }) => {
+    throw redirect({ to: '/$companySlug/dashboard', params: { companySlug: params.companySlug } });
+  },
+});
+const wsDashboard = createRoute({ getParentRoute: () => workspaceLayout, path: 'dashboard', component: workspacePage('WorkspaceDashboard') });
+const wsEmployees = createRoute({ getParentRoute: () => workspaceLayout, path: 'employees', component: workspacePage('EmployeesList') });
+const wsEmployeeNew = createRoute({ getParentRoute: () => workspaceLayout, path: 'employees/new', component: workspacePage('AddEmployee') });
 const wsEmployeeDetail = createRoute({
   getParentRoute: () => workspaceLayout,
-  path: '/employees/$employeeId',
+  path: 'employees/$employeeId',
   component: workspacePage('EmployeeProfile'),
 });
-const wsDepartments = createRoute({ getParentRoute: () => workspaceLayout, path: '/departments', component: workspacePage('DepartmentsPage') });
-const wsPositions = createRoute({ getParentRoute: () => workspaceLayout, path: '/positions', component: workspacePage('PositionsPage') });
-const wsUpdates = createRoute({ getParentRoute: () => workspaceLayout, path: '/updates', component: workspacePage('UpdatesPage') });
-const wsPackages = createRoute({ getParentRoute: () => workspaceLayout, path: '/packages', component: workspacePage('InstalledPackagesPage') });
-const wsUsers = createRoute({ getParentRoute: () => workspaceLayout, path: '/users', component: workspacePage('UsersPage') });
-const wsSettings = createRoute({ getParentRoute: () => workspaceLayout, path: '/settings', component: workspacePage('SettingsPage') });
-const wsLeave = createRoute({ getParentRoute: () => workspaceLayout, path: '/leave', component: workspacePage('LeavePage') });
-const wsAttendance = createRoute({ getParentRoute: () => workspaceLayout, path: '/attendance', component: workspacePage('AttendancePage') });
-const wsMarketplace = createRoute({ getParentRoute: () => workspaceLayout, path: '/extensions/marketplace', component: workspacePage('MarketplacePage') });
-const wsDocumentNotes = createRoute({ getParentRoute: () => workspaceLayout, path: '/extensions/document-notes', component: workspacePage('DocumentNotesPage') });
-const wsExpenseRequests = createRoute({ getParentRoute: () => workspaceLayout, path: '/extensions/expense-requests', component: workspacePage('ExpenseRequestsPage') });
-const wsVisitorRegister = createRoute({ getParentRoute: () => workspaceLayout, path: '/extensions/visitor-register', component: workspacePage('VisitorRegisterPage') });
+const wsDepartments = createRoute({ getParentRoute: () => workspaceLayout, path: 'departments', component: workspacePage('DepartmentsPage') });
+const wsPositions = createRoute({ getParentRoute: () => workspaceLayout, path: 'positions', component: workspacePage('PositionsPage') });
+const wsUpdates = createRoute({ getParentRoute: () => workspaceLayout, path: 'updates', component: workspacePage('UpdatesPage') });
+const wsPackages = createRoute({ getParentRoute: () => workspaceLayout, path: 'packages', component: workspacePage('InstalledPackagesPage') });
+const wsUsers = createRoute({ getParentRoute: () => workspaceLayout, path: 'users', component: workspacePage('UsersPage') });
+const wsSettings = createRoute({ getParentRoute: () => workspaceLayout, path: 'settings', component: workspacePage('SettingsPage') });
+const wsLeave = createRoute({ getParentRoute: () => workspaceLayout, path: 'leave', component: workspacePage('LeavePage') });
+const wsAttendance = createRoute({ getParentRoute: () => workspaceLayout, path: 'attendance', component: workspacePage('AttendancePage') });
+const wsMarketplace = createRoute({ getParentRoute: () => workspaceLayout, path: 'extensions/marketplace', component: workspacePage('MarketplacePage') });
+const wsDocumentNotes = createRoute({ getParentRoute: () => workspaceLayout, path: 'extensions/document-notes', component: workspacePage('DocumentNotesPage') });
+const wsExpenseRequests = createRoute({ getParentRoute: () => workspaceLayout, path: 'extensions/expense-requests', component: workspacePage('ExpenseRequestsPage') });
+const wsVisitorRegister = createRoute({ getParentRoute: () => workspaceLayout, path: 'extensions/visitor-register', component: workspacePage('VisitorRegisterPage') });
 
 export const routeTree = rootRoute.addChildren([
   indexRoute,
@@ -193,6 +205,7 @@ export const routeTree = rootRoute.addChildren([
     adminAudit,
   ]),
   workspaceLayout.addChildren([
+    wsIndex,
     wsDashboard,
     wsEmployees,
     wsEmployeeNew,

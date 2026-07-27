@@ -123,6 +123,11 @@ const adminInstallations = createRoute({
   path: 'installations',
   component: adminPage('InstallationsPage'),
 });
+const adminLifecycle = createRoute({
+  getParentRoute: () => adminLayout,
+  path: 'lifecycle',
+  component: adminPage('LifecycleMonitoringPage'),
+});
 const adminAdoption = createRoute({
   getParentRoute: () => adminLayout,
   path: 'packages/adoption',
@@ -199,6 +204,7 @@ export const routeTree = rootRoute.addChildren([
     adminDiagnostic,
     adminDiagnostics,
     adminInstallations,
+    adminLifecycle,
     adminAdoption,
     adminUsage,
     adminHealth,

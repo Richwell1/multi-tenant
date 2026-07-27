@@ -32,6 +32,28 @@ export interface LifecycleResult {
   status: string;
 }
 
+export type LifecycleOperationType =
+  | 'install' | 'update' | 'rollback' | 'disable' | 'enable'
+  | 'uninstall' | 'restore' | 'permanent_removal' | 'purge';
+export type LifecycleOperationState = 'running' | 'completed' | 'failed';
+
+/** Platform-Admin monitoring row — operation METADATA only, never tenant content. */
+export interface LifecycleOperationRecord {
+  id: string;
+  companyName: string;
+  packageKey: string;
+  packageName: string;
+  operation: LifecycleOperationType;
+  status: LifecycleOperationState;
+  sourceVersion: string | null;
+  targetVersion: string | null;
+  diagnosticsStatus: string | null;
+  correlationId: string;
+  failureReason: string | null;
+  startedAt: string;
+  completedAt: string | null;
+}
+
 export interface PackageLifecycleRepository {
   /** List the caller's company packages with lifecycle state. */
   listCompanyPackages(companyId: string): Promise<CompanyPackageLifecycle[]>;
@@ -40,6 +62,8 @@ export interface PackageLifecycleRepository {
   uninstall(companyId: string, packageKey: string, reason?: string): Promise<LifecycleResult>;
   restore(companyId: string, packageKey: string): Promise<LifecycleResult>;
   permanentlyRemove(companyId: string, packageKey: string): Promise<LifecycleResult>;
+  /** Platform-Admin monitoring: every lifecycle operation (RLS: admin sees all). */
+  listOperations(): Promise<LifecycleOperationRecord[]>;
 }
 
 /** Actions a company admin may take, given category + role + lifecycle state. */

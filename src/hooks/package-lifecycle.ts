@@ -5,6 +5,14 @@ import { queryKeys } from '@/lib/query-keys';
 import { notify } from '@/lib/notify';
 import { RepositoryError } from '@/data/errors';
 
+/** Platform-Admin monitoring: every package lifecycle operation. */
+export function useLifecycleOperations() {
+  return useQuery({
+    queryKey: ['lifecycle-operations'],
+    queryFn: () => packageLifecycleRepository.listOperations(),
+  });
+}
+
 /** The caller's company packages with lifecycle/retention state. */
 export function useCompanyPackages() {
   const companyId = useCompanyId();

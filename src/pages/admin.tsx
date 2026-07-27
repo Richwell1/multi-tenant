@@ -56,6 +56,7 @@ import {
   useRollbackInstallation,
 } from '@/hooks/packages';
 import { useMarketplaceAdoption } from '@/hooks/marketplace';
+import { useLifecycleOperations } from '@/hooks/package-lifecycle';
 import { useRequests, useRequest, useCreateRequest, useChangeRequestStatus } from '@/hooks/requests';
 import { requestFormSchema, type RequestFormValues } from '@/services/request-service';
 import { allowedNextStatuses } from '@/data/requests';
@@ -1693,6 +1694,74 @@ export function AdoptionPage() {
                 </TR>
               );
             })}
+          </TBody>
+        </DataTable>
+      </TableBoundary>
+    </>
+  );
+}
+
+// --- Package Lifecycle Monitoring --------------------------------------------
+
+const LIFECYCLE_OP_LABEL: Record<string, string> = {
+  install: 'Install',
+  update: 'Update',
+  rollback: 'Rollback',
+  disable: 'Disable',
+  enable: 'Enable',
+  uninstall: 'Uninstall',
+  restore: 'Restore',
+  permanent_removal: 'Permanent removal',
+  purge: 'Secure purge',
+};
+const LIFECYCLE_STATUS_TONE: Record<string, 'healthy' | 'neutral' | 'offline'> = {
+  completed: 'healthy',
+  running: 'neutral',
+  failed: 'offline',
+};
+
+/** Platform-Admin monitoring of every package lifecycle operation (metadata
+ *  only — never tenant feature content). Raw op codes are mapped to labels. */
+export function LifecycleMonitoringPage() {
+  const query = useLifecycleOperations();
+  const rows = query.data ?? [];
+  return (
+    <>
+      <PageHeader
+        icon={<Activity className="size-5" />}
+        title="Lifecycle Monitoring"
+        description="Install, update, rollback, disable, uninstall, restore, and purge operations"
+      />
+      <TableBoundary query={query} filtered={rows} cols={7} emptyTitle="No lifecycle operations yet">
+        <DataTable>
+          <THead>
+            <TH>Company</TH>
+            <TH>Package</TH>
+            <TH>Operation</TH>
+            <TH>Version</TH>
+            <TH>Diagnostics</TH>
+            <TH>Status</TH>
+            <TH>Started</TH>
+          </THead>
+          <TBody>
+            {rows.map((op) => (
+              <TR key={op.id}>
+                <TD className="font-medium">{op.companyName}</TD>
+                <TD>{op.packageName}</TD>
+                <TD>{LIFECYCLE_OP_LABEL[op.operation] ?? op.operation}</TD>
+                <TD className="text-content-variant">
+                  {op.sourceVersion || op.targetVersion
+                    ? `${op.sourceVersion ?? '—'} → ${op.targetVersion ?? '—'}`
+                    : '—'}
+                </TD>
+                <TD>{op.diagnosticsStatus ? <Badge tone={op.diagnosticsStatus === 'PASS' ? 'healthy' : 'degraded'}>{op.diagnosticsStatus}</Badge> : '—'}</TD>
+                <TD>
+                  <Badge tone={LIFECYCLE_STATUS_TONE[op.status] ?? 'neutral'}>{op.status}</Badge>
+                  {op.failureReason && <span className="ml-2 text-xs text-danger">{op.failureReason}</span>}
+                </TD>
+                <TD className="text-content-variant">{formatDate(op.startedAt)}</TD>
+              </TR>
+            ))}
           </TBody>
         </DataTable>
       </TableBoundary>

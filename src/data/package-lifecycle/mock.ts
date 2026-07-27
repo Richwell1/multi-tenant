@@ -2,6 +2,7 @@ import { RepositoryError } from '@/data/errors';
 import type { PackageCategory } from '@/lib/packages/category';
 import type {
   CompanyPackageLifecycle,
+  LifecycleOperationRecord,
   LifecycleResult,
   PackageLifecycleRepository,
 } from './types';
@@ -127,5 +128,17 @@ export class MockPackageLifecycleRepository implements PackageLifecycleRepositor
     row.dataState = 'purged';
     row.retentionUntil = null;
     return { packageKey, status: 'purged' };
+  }
+
+  async listOperations(): Promise<LifecycleOperationRecord[]> {
+    await new Promise((r) => setTimeout(r, 120));
+    const now = Date.now();
+    const at = (mins: number) => new Date(now - mins * 60000).toISOString();
+    return [
+      { id: 'op-1', companyName: 'Alpha Trading', packageKey: 'document-notes', packageName: 'Document Notes', operation: 'install', status: 'completed', sourceVersion: null, targetVersion: '1.0.0', diagnosticsStatus: 'PASS', correlationId: 'corr-1', failureReason: null, startedAt: at(120), completedAt: at(120) },
+      { id: 'op-2', companyName: 'Alpha Trading', packageKey: 'document-notes', packageName: 'Document Notes', operation: 'uninstall', status: 'completed', sourceVersion: '1.0.0', targetVersion: null, diagnosticsStatus: null, correlationId: 'corr-2', failureReason: null, startedAt: at(60), completedAt: at(60) },
+      { id: 'op-3', companyName: 'Alpha Trading', packageKey: 'document-notes', packageName: 'Document Notes', operation: 'restore', status: 'completed', sourceVersion: null, targetVersion: '1.0.0', diagnosticsStatus: null, correlationId: 'corr-3', failureReason: null, startedAt: at(30), completedAt: at(30) },
+      { id: 'op-4', companyName: 'Beta Manufacturing', packageKey: 'expense-requests', packageName: 'Expense Requests', operation: 'purge', status: 'completed', sourceVersion: null, targetVersion: null, diagnosticsStatus: null, correlationId: 'corr-4', failureReason: null, startedAt: at(15), completedAt: at(15) },
+    ];
   }
 }

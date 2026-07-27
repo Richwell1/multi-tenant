@@ -88,4 +88,17 @@ describe('MockPackageLifecycleRepository transitions', () => {
   it('mandatory HR Core cannot be uninstalled', async () => {
     await expect(repo.uninstall('alpha', 'hr-core')).rejects.toThrow('cannot be removed');
   });
+
+  it('listOperations returns monitoring metadata only (no tenant content)', async () => {
+    const ops = await repo.listOperations();
+    expect(ops.length).toBeGreaterThan(0);
+    const kinds = ops.map((o) => o.operation);
+    expect(kinds).toContain('uninstall');
+    expect(kinds).toContain('purge');
+    // Metadata only — no note titles or feature rows leak through.
+    for (const op of ops) {
+      expect(op).toHaveProperty('correlationId');
+      expect(op).not.toHaveProperty('notes');
+    }
+  });
 });

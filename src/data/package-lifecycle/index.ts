@@ -7,6 +7,7 @@ import { resolveDataSource } from '@/data/repository';
 import { MockPackageLifecycleRepository } from './mock';
 import type {
   CompanyPackageLifecycle,
+  LifecycleOperationRecord,
   LifecycleResult,
   PackageLifecycleRepository,
 } from './types';
@@ -33,6 +34,9 @@ class LazyPackageLifecycleRepository implements PackageLifecycleRepository {
   permanentlyRemove(companyId: string, packageKey: string): Promise<LifecycleResult> {
     return this.load().then((r) => r.permanentlyRemove(companyId, packageKey));
   }
+  listOperations(): Promise<LifecycleOperationRecord[]> {
+    return this.load().then((r) => r.listOperations());
+  }
 }
 
 export function createPackageLifecycleRepository(source = resolveDataSource()): PackageLifecycleRepository {
@@ -44,6 +48,9 @@ export const packageLifecycleRepository = createPackageLifecycleRepository();
 export type {
   CompanyPackageLifecycle,
   LifecycleResult,
+  LifecycleOperationRecord,
+  LifecycleOperationType,
+  LifecycleOperationState,
   PackageLifecycleRepository,
   PackageDataState,
   PackageLifecycleStatus,

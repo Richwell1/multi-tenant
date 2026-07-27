@@ -80,6 +80,17 @@ On successful registration, the system shall create:
 
 The system shall reject duplicate company slugs and duplicate admin email accounts where applicable.
 
+**Unique slugs.** Company display names MAY repeat; company slugs MUST be globally
+unique, lowercase, URL-safe (`^[a-z0-9]+(?:-[a-z0-9]+)*$`), 3–63 characters, and
+never a reserved word (`admin`, `api`, `login`, `dashboard`, `settings`,
+`marketplace`, …). The backend is authoritative: it derives a slug from the
+company name and, when the base is taken, appends a short **random** suffix
+(e.g. `acme-ltd-k7p2`) with a bounded, race-safe retry — never a sequential
+`-2`/`-3`. A founder may instead choose a slug, which is validated and must be
+unique (a conflict is surfaced as “already taken”, never silently changed). The
+persisted slug is used for path-based routing (`/:companySlug/dashboard`). Slugs
+are immutable after registration; a controlled rename flow is deferred work.
+
 ### 5.2 Login and Logout
 
 The system shall provide:

@@ -14,7 +14,15 @@ import type {
   MembershipRepository,
   PlatformAdminRepository,
 } from './repositories';
-import type { CompanyRole, CompanySessionContext, EnabledPackage, MembershipRecord, MembershipStatus } from './types';
+import type {
+  CompanyBySlug,
+  CompanyRole,
+  CompanySessionContext,
+  CompanyStatus,
+  EnabledPackage,
+  MembershipRecord,
+  MembershipStatus,
+} from './types';
 
 const COMPANY_NAME: Record<string, string> = {
   alpha: 'Alpha Trading',
@@ -85,5 +93,14 @@ export class MockCompanyContextRepository implements CompanyContextRepository {
       enabledPackages,
       enabledPackageCodes: enabledPackages.map((p) => p.code),
     };
+  }
+
+  /** Resolve one of the demo tenants by slug (normalized). Unknown → null. */
+  async findCompanyBySlug(slug: string): Promise<CompanyBySlug | null> {
+    const normalized = slug.trim().toLowerCase();
+    const name = COMPANY_NAME[normalized];
+    if (!name) return null;
+    const status: CompanyStatus = normalized === 'gamma' ? 'suspended' : 'active';
+    return { companyId: `mock-${normalized}`, companySlug: normalized, companyName: name, companyStatus: status };
   }
 }

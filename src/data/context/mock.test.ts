@@ -40,6 +40,17 @@ describe('MockCompanyContextRepository', () => {
     const normal = await repo.getCompanyContext(user('user@alpha.test'));
     expect(normal?.role).toBe('company_user');
   });
+
+  it('findCompanyBySlug resolves safe metadata and normalizes the slug', async () => {
+    const c = await repo.findCompanyBySlug('  ALPHA ');
+    expect(c).toMatchObject({ companyId: 'mock-alpha', companySlug: 'alpha', companyStatus: 'active' });
+    // No membership/entitlement data leaks through the slug lookup.
+    expect(c).not.toHaveProperty('enabledPackageCodes');
+    expect(c).not.toHaveProperty('role');
+  });
+  it('findCompanyBySlug returns null for an unknown slug (no enumeration of others)', async () => {
+    expect(await repo.findCompanyBySlug('does-not-exist')).toBeNull();
+  });
 });
 
 describe('MockMembershipRepository', () => {

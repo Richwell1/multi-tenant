@@ -46,12 +46,12 @@ describe('RegisterPage UX', () => {
   it('auto-derives the slug from the company name', () => {
     render(<RegisterPage />);
     fireEvent.change(screen.getByLabelText('Company name'), { target: { value: 'Acme Corp!' } });
-    expect(screen.getByLabelText('Company slug')).toHaveValue('acme-corp');
+    expect(screen.getByLabelText('Workspace URL')).toHaveValue('acme-corp');
   });
 
   it('stops syncing the slug once the user edits it by hand', () => {
     render(<RegisterPage />);
-    const slug = screen.getByLabelText('Company slug');
+    const slug = screen.getByLabelText('Workspace URL');
     fireEvent.change(screen.getByLabelText('Company name'), { target: { value: 'Acme' } });
     fireEvent.change(slug, { target: { value: 'custom-slug' } });
     fireEvent.change(screen.getByLabelText('Company name'), { target: { value: 'Acme Two' } });
@@ -62,7 +62,22 @@ describe('RegisterPage UX', () => {
     mockAvailability({ slug: 'acme-corp', available: true, verified: true });
     render(<RegisterPage />);
     fireEvent.change(screen.getByLabelText('Company name'), { target: { value: 'Acme Corp' } });
-    expect(screen.getByText(/is available/i)).toBeInTheDocument();
+    expect(screen.getByText('This workspace URL is available.')).toBeInTheDocument();
+  });
+
+  it('flags a reserved slug client-side without an availability call', () => {
+    render(<RegisterPage />);
+    fireEvent.change(screen.getByLabelText('Workspace URL'), { target: { value: 'admin' } });
+    expect(screen.getByText('This workspace URL is reserved.')).toBeInTheDocument();
+  });
+
+  it('previews the full path-based workspace URL and wires slug accessibility', () => {
+    render(<RegisterPage />);
+    // Prefix + suffix framing the slug are present (path-based, not subdomain).
+    expect(screen.getByText(/multi-tenant-hr\.vercel\.app\//)).toBeInTheDocument();
+    expect(screen.getByText('/dashboard')).toBeInTheDocument();
+    const slug = screen.getByLabelText('Workspace URL');
+    expect(slug).toHaveAttribute('aria-describedby', 'slug-availability');
   });
 
   it('toggles password visibility', () => {
@@ -85,7 +100,7 @@ describe('RegisterPage UX', () => {
     render(<RegisterPage />);
     fillForm();
     fireEvent.click(screen.getByRole('button', { name: /create company/i }));
-    expect(await screen.findByText(/you’re all set/i)).toBeInTheDocument();
+    expect(await screen.findByText(/your workspace is ready/i)).toBeInTheDocument();
     expect(navigate).not.toHaveBeenCalled();
     // The founder advances explicitly.
     fireEvent.click(screen.getByRole('button', { name: /continue to sign in/i }));
@@ -102,7 +117,7 @@ describe('RegisterPage UX', () => {
     fireEvent.click(screen.getByRole('button', { name: /create company/i }));
     expect(await screen.findByText('That company slug is already taken.')).toBeInTheDocument();
     // Lands inline on the slug field (aria-invalid), not as the generic top banner.
-    expect(screen.getByLabelText('Company slug')).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByLabelText('Workspace URL')).toHaveAttribute('aria-invalid', 'true');
     // Exactly one alert (the field error) — the message isn't duplicated in a banner.
     expect(screen.getAllByRole('alert')).toHaveLength(1);
   });

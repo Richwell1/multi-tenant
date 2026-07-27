@@ -3,7 +3,13 @@
 // Atomic company onboarding. Runs server-side with the service-role key (NEVER
 // exposed to the browser). Flow:
 //   validate -> normalize -> create Auth user (Admin API)
-//   -> onboard_company RPC -> on RPC failure delete the Auth user -> respond.
+//   -> register_company RPC (authoritative, collision-safe slug allocation)
+//   -> on RPC failure delete the Auth user -> respond.
+//
+// The slug is optional: when the founder chooses one it is validated and must be
+// unique; otherwise register_company derives a unique slug from the company name
+// (bounded random-suffix retry). The DATABASE owns the final slug — it is read
+// back from the RPC result and returned to the client for navigation.
 //
 // Email/password only. No MFA / OTP / invitations / password reset.
 
@@ -27,6 +33,8 @@ interface RegisterBody {
 
 type ErrCode =
   | 'validation'
+  | 'reserved_slug'
+  | 'invalid_slug'
   | 'duplicate_email'
   | 'duplicate_slug'
   | 'duplicate_subdomain'
@@ -48,6 +56,13 @@ function fail(status: number, code: ErrCode, message: string) {
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const SLUG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
+// Reserved slugs — mirrors public.is_reserved_slug() and src/lib/slug.ts.
+const RESERVED_SLUGS = new Set([
+  'admin', 'api', 'auth', 'login', 'logout', 'register', 'dashboard', 'settings',
+  'support', 'system', 'platform', 'www', 'health', 'packages', 'updates',
+  'extensions', 'marketplace',
+]);
+
 function normalizeSlug(value: string): string {
   return value
     .toLowerCase()
@@ -56,22 +71,43 @@ function normalizeSlug(value: string): string {
     .replace(/^-+|-+$/g, '');
 }
 
+interface ValidData {
+  companyName: string;
+  email: string;
+  password: string;
+  /** null = auto-generate on the backend; a string = the founder's chosen slug. */
+  requestedSlug: string | null;
+  phone: string | null;
+}
+
 /** Explicit validator (no external deps in the Edge runtime). */
-function validate(body: RegisterBody): { ok: true; data: Required<Pick<RegisterBody, 'companyName' | 'email' | 'password'>> & { slug: string; subdomain: string; phone: string | null } } | { ok: false; message: string } {
+function validate(body: RegisterBody):
+  | { ok: true; data: ValidData }
+  | { ok: false; code: ErrCode; message: string } {
   const companyName = (body.companyName ?? '').trim();
   const email = (body.email ?? '').trim().toLowerCase();
   const password = body.password ?? '';
-  const rawSlug = body.slug ?? body.requestedSubdomain ?? '';
-  const slug = normalizeSlug(rawSlug);
-  const subdomain = normalizeSlug(body.requestedSubdomain ?? rawSlug);
 
-  if (companyName.length < 2) return { ok: false, message: 'Company name is required.' };
-  if (!EMAIL_RE.test(email)) return { ok: false, message: 'A valid email is required.' };
-  if (password.length < 8) return { ok: false, message: 'Password must be at least 8 characters.' };
-  if (!SLUG_RE.test(slug)) return { ok: false, message: 'Company slug is invalid.' };
-  if (!SLUG_RE.test(subdomain)) return { ok: false, message: 'Subdomain is invalid.' };
+  if (companyName.length < 2) return { ok: false, code: 'validation', message: 'Company name is required.' };
+  if (!EMAIL_RE.test(email)) return { ok: false, code: 'validation', message: 'A valid email is required.' };
+  if (password.length < 8) return { ok: false, code: 'validation', message: 'Password must be at least 8 characters.' };
 
-  return { ok: true, data: { companyName, email, password, slug, subdomain, phone: body.phone?.trim() || null } };
+  // The slug is optional. Only validate it when the founder chose one; otherwise
+  // the backend derives a unique slug from the company name.
+  const rawSlug = (body.slug ?? '').trim();
+  let requestedSlug: string | null = null;
+  if (rawSlug.length > 0) {
+    const slug = normalizeSlug(rawSlug);
+    if (!SLUG_RE.test(slug) || slug.length < 3 || slug.length > 63) {
+      return { ok: false, code: 'invalid_slug', message: 'Use lowercase letters, numbers, and hyphens only.' };
+    }
+    if (RESERVED_SLUGS.has(slug)) {
+      return { ok: false, code: 'reserved_slug', message: 'This workspace URL is reserved.' };
+    }
+    requestedSlug = slug;
+  }
+
+  return { ok: true, data: { companyName, email, password, requestedSlug, phone: body.phone?.trim() || null } };
 }
 
 Deno.serve(async (req) => {
@@ -90,8 +126,8 @@ Deno.serve(async (req) => {
   }
 
   const result = validate(body);
-  if (!result.ok) return fail(400, 'validation', result.message);
-  const { companyName, email, password, slug, subdomain, phone } = result.data;
+  if (!result.ok) return fail(400, result.code, result.message);
+  const { companyName, email, password, requestedSlug, phone } = result.data;
 
   const admin = createClient(url, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
@@ -114,12 +150,12 @@ Deno.serve(async (req) => {
   }
   const userId = created.data.user.id;
 
-  // 2) Atomic tenant onboarding.
-  const { data, error } = await admin.rpc('onboard_company', {
+  // 2) Authoritative, collision-safe tenant onboarding. The backend owns the
+  //    final slug and returns it in `data.slug`.
+  const { data, error } = await admin.rpc('register_company', {
     p_user_id: userId,
     p_company_name: companyName,
-    p_slug: slug,
-    p_subdomain: subdomain,
+    p_requested_slug: requestedSlug,
     p_company_email: email,
     p_phone: phone,
   });
@@ -128,13 +164,19 @@ Deno.serve(async (req) => {
     // 3) Roll back the orphaned Auth user so no partial account survives.
     await admin.auth.admin.deleteUser(userId);
     const m = error.message ?? '';
-    if (m.includes('duplicate_slug')) return fail(409, 'duplicate_slug', 'That company slug is already taken.');
+    if (m.includes('reserved_slug')) return fail(400, 'reserved_slug', 'This workspace URL is reserved.');
+    if (m.includes('duplicate_slug')) return fail(409, 'duplicate_slug', 'This workspace URL is already taken.');
     if (m.includes('duplicate_subdomain')) return fail(409, 'duplicate_subdomain', 'That subdomain is already taken.');
     if (m.includes('user_already_member')) return fail(409, 'conflict', 'This account already belongs to a company.');
+    if (m.includes('slug_allocation_failed'))
+      return fail(503, 'onboarding_failed', 'We could not create a unique workspace URL. Please try again.');
+    if (m.includes('invalid_slug')) return fail(400, 'invalid_slug', 'Use lowercase letters, numbers, and hyphens only.');
     if (m.startsWith('invalid_')) return fail(400, 'validation', 'The submitted company details are invalid.');
-    console.error('onboard_company failed');
+    console.error('register_company failed');
     return fail(500, 'onboarding_failed', 'Registration could not be completed. Please try again.');
   }
 
+  // The DB is authoritative: the client navigates using data.slug, never a
+  // slug re-derived from the company name.
   return json(201, { data });
 });

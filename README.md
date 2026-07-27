@@ -105,6 +105,14 @@ Open `http://localhost:5173`. The shared login is available at:
 - `/login?tenant=beta` for the Beta workspace
 - `/register` for company registration
 
+Company workspaces use **path-based tenant routing** — `/:companySlug/dashboard`,
+`/:companySlug/departments`, etc. (Platform Admin stays at `/admin/...`). Company
+**names may repeat**, but **slugs are globally unique**: the backend derives a
+slug from the company name and, on collision, appends a short random suffix
+(e.g. `acme-ltd-k7p2`). The slug is only a public routing identifier — the company
+UUID plus membership and RLS remain the tenant boundary. See
+`docs/ARCHITECTURE.md` (“Globally unique slugs”).
+
 Mock data includes Alpha Trading, Beta Manufacturing, and a suspended company.
 The mock adapter accepts demo credentials; password `wrong` exercises the
 inline invalid-credentials state.

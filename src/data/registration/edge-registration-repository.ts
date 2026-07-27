@@ -17,7 +17,7 @@ interface EdgeSuccessBody {
 
 /** The form field an Edge Function conflict code maps to (for inline errors). */
 function conflictField(code: string | undefined): 'slug' | 'subdomain' | 'email' | undefined {
-  if (code === 'duplicate_slug') return 'slug';
+  if (code === 'duplicate_slug' || code === 'reserved_slug' || code === 'invalid_slug') return 'slug';
   if (code === 'duplicate_subdomain') return 'subdomain';
   if (code === 'duplicate_email') return 'email';
   return undefined;
@@ -25,12 +25,13 @@ function conflictField(code: string | undefined): 'slug' | 'subdomain' | 'email'
 
 /** Pure mapping of an Edge Function error response → RepositoryError. */
 export function mapRegistrationError(code: string | undefined, message: string | undefined): RepositoryError {
-  const kind: RepositoryErrorKind =
-    code === 'duplicate_email' || code === 'duplicate_slug' || code === 'duplicate_subdomain' || code === 'conflict'
-      ? 'conflict'
-      : code === 'validation'
-        ? 'validation'
-        : 'unknown';
+  const conflictCodes = ['duplicate_email', 'duplicate_slug', 'duplicate_subdomain', 'conflict'];
+  const validationCodes = ['validation', 'reserved_slug', 'invalid_slug'];
+  const kind: RepositoryErrorKind = conflictCodes.includes(code ?? '')
+    ? 'conflict'
+    : validationCodes.includes(code ?? '')
+      ? 'validation'
+      : 'unknown';
   return new RepositoryError(message ?? 'Registration failed. Please try again.', kind, undefined, conflictField(code));
 }
 
@@ -40,12 +41,30 @@ export function mapRegistrationError(code: string | undefined, message: string |
  */
 export class EdgeRegistrationRepository implements RegistrationRepository {
   /**
-   * No hosted slug-lookup endpoint exists; uniqueness is enforced transactionally
-   * by the Edge Function on submit. We answer best-effort (available, unverified)
-   * so the UI never shows a false "taken" — the authoritative check is at submit.
+   * Pre-submit availability via the public.is_slug_available RPC (boolean only —
+   * never returns company rows). Uses the anon key through PostgREST. On any
+   * transport failure we degrade to best-effort (available, unverified) so the UI
+   * never shows a false "taken"; the database is still authoritative at submit.
    */
   async checkSlugAvailability(slug: string): Promise<SlugAvailability> {
-    return { slug, available: true, verified: false };
+    const baseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+    try {
+      const res = await fetch(`${baseUrl}/rest/v1/rpc/is_slug_available`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: anonKey,
+          Authorization: `Bearer ${anonKey}`,
+        },
+        body: JSON.stringify({ p_slug: slug }),
+      });
+      if (!res.ok) return { slug, available: true, verified: false };
+      const available = (await res.json()) as boolean;
+      return { slug, available: available === true, verified: true };
+    } catch {
+      return { slug, available: true, verified: false };
+    }
   }
 
   async register(input: RegisterCompanyInput): Promise<RegisterCompanyResult> {

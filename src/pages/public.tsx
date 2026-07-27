@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -15,7 +15,8 @@ import { useSession } from '@/lib/session';
 import { useLoginPortalContext } from '@/hooks/use-login-portal-context';
 import { useRegisterCompany, useSlugAvailability } from '@/hooks/use-register-company';
 import type { RegisterCompanyResult } from '@/data/registration';
-import { deriveSlug, isValidSlug } from '@/lib/slug';
+import { deriveSlug, slugIssue, SLUG_MIN_LENGTH, SLUG_MAX_LENGTH, SLUG_PATTERN } from '@/lib/slug';
+import { WORKSPACE_HOST } from '@/lib/app-config';
 import { passwordStrength, PASSWORD_STRENGTH_LABEL, type PasswordStrength } from '@/lib/password';
 import { RepositoryError } from '@/data/errors';
 import { companyContextRepository, platformAdminRepository } from '@/data/context';
@@ -229,10 +230,14 @@ export function LoginPage() {
 const registerSchema = z
   .object({
     companyName: z.string().min(2, 'Company name is required'),
+    // Format + length only. Reserved words and global uniqueness are enforced by
+    // the authoritative backend (and previewed via the availability hint) so the
+    // auto-derived value is never hard-blocked before the backend can suffix it.
     slug: z
       .string()
-      .min(2, 'Slug is required')
-      .regex(/^[a-z0-9-]+$/, 'Lowercase letters, numbers and hyphens only'),
+      .min(SLUG_MIN_LENGTH, `At least ${SLUG_MIN_LENGTH} characters`)
+      .max(SLUG_MAX_LENGTH, `At most ${SLUG_MAX_LENGTH} characters`)
+      .regex(SLUG_PATTERN, 'Use lowercase letters, numbers, and hyphens only.'),
     adminName: z.string().min(2, 'Admin name is required'),
     adminEmail: z.string().email('Enter a valid email'),
     password: z.string().min(8, 'At least 8 characters'),
@@ -290,16 +295,18 @@ export function RegisterPage() {
     try {
       const result = await mutation.mutateAsync({
         companyName: values.companyName,
-        slug: values.slug,
-        requestedSubdomain: values.slug,
+        // Only send a slug when the founder deliberately chose one. Otherwise the
+        // backend derives a unique slug from the name (authoritative allocation).
+        slug: slugEdited ? values.slug : undefined,
         adminName: values.adminName,
         email: values.adminEmail,
         password: values.password,
       });
       setCreated(result);
     } catch (e) {
-      // Field-specific conflicts land on their input; everything else is a banner.
-      if (e instanceof RepositoryError && e.kind === 'conflict' && e.field) {
+      // Field-specific errors (taken / reserved / invalid slug, duplicate email)
+      // land on their input; everything else is a banner.
+      if (e instanceof RepositoryError && e.field) {
         const formField = CONFLICT_FIELD_TO_FORM[e.field];
         if (formField) {
           setError(formField, { type: 'server', message: e.message });
@@ -319,16 +326,18 @@ export function RegisterPage() {
             <CheckCircle2 className="size-8" />
           </div>
           <Badge tone="company">Company created</Badge>
-          <h1 className="mt-4 text-2xl font-bold tracking-tight text-content">You’re all set</h1>
+          <h1 className="mt-4 text-2xl font-bold tracking-tight text-content">Your workspace is ready</h1>
           <p className="mt-2 text-sm leading-6 text-content-variant">
-            <span className="font-medium text-content">{created.slug}</span> is ready. HR Core{' '}
-            {created.hrCore.version} has been assigned automatically. Sign in with the admin account you just
-            created to open your workspace.
+            HR Core {created.hrCore.version} has been assigned automatically. Sign in with the admin account you
+            just created to open your workspace.
           </p>
           <dl className="mt-5 space-y-2 rounded-md border border-border bg-surface-subtle px-4 py-3 text-left text-sm">
-            <div className="flex justify-between gap-3">
-              <dt className="text-content-variant">Workspace</dt>
-              <dd className="font-medium text-content">{created.subdomain}.multi-tenants-hr.com</dd>
+            <div className="flex flex-col gap-1">
+              <dt className="text-content-variant">Workspace URL</dt>
+              {/* The backend-persisted slug — never re-derived from the name. */}
+              <dd className="break-all font-medium text-content">
+                {WORKSPACE_HOST}/{created.slug}/dashboard
+              </dd>
             </div>
             <div className="flex justify-between gap-3">
               <dt className="text-content-variant">Starter package</dt>
@@ -374,18 +383,40 @@ export function RegisterPage() {
             <Input id="companyName" aria-invalid={!!errors.companyName} {...register('companyName')} />
           </Field>
           <Field
-            label="Company slug"
+            label="Workspace URL"
             htmlFor="slug"
             error={errors.slug?.message}
-            hint={slug ? `${slug}.multi-tenants-hr.com` : 'Auto-filled from your company name; edit if you like.'}
+            hint="Auto-filled from your company name; edit if you like."
           >
-            <Input
-              id="slug"
-              aria-invalid={!!errors.slug}
-              placeholder="acme-corp"
-              {...register('slug', { onChange: () => setSlugEdited(true) })}
-            />
-            <SlugAvailabilityHint slug={slug ?? ''} query={availability} hasError={!!errors.slug} />
+            {/* Prefix + suffix frame the slug so the founder sees the final URL. */}
+            <div
+              className={cn(
+                'flex items-center rounded-md border bg-surface text-sm focus-within:ring-2 focus-within:ring-[var(--portal-color)]/40',
+                errors.slug ? 'border-danger' : 'border-border',
+              )}
+            >
+              <span className="shrink-0 whitespace-nowrap py-2 pl-3 text-content-variant" aria-hidden>
+                {WORKSPACE_HOST}/
+              </span>
+              <input
+                id="slug"
+                aria-invalid={!!errors.slug}
+                aria-describedby="slug-availability"
+                placeholder="acme-corp"
+                className="min-w-0 flex-1 bg-transparent py-2 text-content outline-none placeholder:text-content-variant/60"
+                {...register('slug', {
+                  onChange: (e) => {
+                    setSlugEdited(true);
+                    // Normalize toward the stored shape (lowercase) as they type.
+                    e.target.value = e.target.value.toLowerCase();
+                  },
+                })}
+              />
+              <span className="shrink-0 whitespace-nowrap py-2 pr-3 text-content-variant" aria-hidden>
+                /dashboard
+              </span>
+            </div>
+            <SlugAvailabilityHint slug={slug ?? ''} query={availability} hasFormatError={!!errors.slug} />
           </Field>
           <div className="border-b border-border pb-2 pt-2 text-xs font-semibold uppercase tracking-[0.12em] text-content-variant">
             Company administrator
@@ -447,33 +478,58 @@ export function RegisterPage() {
   );
 }
 
-/** Live availability line under the slug field. */
+/**
+ * Live workspace-URL feedback under the slug field. Reserved/invalid are
+ * client-side truth (instant); taken/available comes from the debounced
+ * availability check. Rendered in a fixed-height, politely-announced region so
+ * there is no layout jump and non-color cues (icons + text) are always present.
+ */
 function SlugAvailabilityHint({
   slug,
   query,
-  hasError,
+  hasFormatError,
 }: {
   slug: string;
   query: ReturnType<typeof useSlugAvailability>;
-  hasError: boolean;
+  hasFormatError: boolean;
 }) {
-  // Format errors already show via the Field; don't double up.
-  if (hasError || !isValidSlug(slug.trim())) return null;
-  if (query.isFetching) {
-    return <p className="mt-1.5 text-xs text-content-variant">Checking availability…</p>;
-  }
+  const value = slug.trim();
+  const issue = slugIssue(value);
   const data = query.data;
-  if (!data || data.slug !== slug.trim()) return null;
-  if (!data.verified) {
-    return <p className="mt-1.5 text-xs text-content-variant">Availability is confirmed when you submit.</p>;
+
+  let content: ReactNode = <span className="text-content-variant">Lowercase letters, numbers, and hyphens.</span>;
+  let tone: 'muted' | 'good' | 'bad' = 'muted';
+
+  if (issue === 'reserved') {
+    tone = 'bad';
+    content = 'This workspace URL is reserved.';
+  } else if (hasFormatError || (issue && issue !== 'empty')) {
+    tone = 'bad';
+    content = 'Use lowercase letters, numbers, and hyphens only.';
+  } else if (value.length === 0) {
+    content = <span className="text-content-variant">Lowercase letters, numbers, and hyphens.</span>;
+  } else if (query.isFetching) {
+    content = <span className="text-content-variant">Checking availability…</span>;
+  } else if (data && data.slug === value && data.verified) {
+    tone = data.available ? 'good' : 'bad';
+    content = data.available ? 'This workspace URL is available.' : 'This workspace URL is already taken.';
+  } else {
+    content = <span className="text-content-variant">Availability is confirmed when you submit.</span>;
   }
-  return data.available ? (
-    <p className="mt-1.5 flex items-center gap-1.5 text-xs text-status-healthy">
-      <CheckCircle2 className="size-3.5" /> “{slug.trim()}” is available.
-    </p>
-  ) : (
-    <p className="mt-1.5 flex items-center gap-1.5 text-xs text-danger">
-      <AlertCircle className="size-3.5" /> “{slug.trim()}” is already taken.
+
+  const Icon = tone === 'good' ? CheckCircle2 : tone === 'bad' ? AlertCircle : null;
+  return (
+    <p
+      id="slug-availability"
+      aria-live="polite"
+      className={cn(
+        'mt-1.5 flex min-h-[1.25rem] items-center gap-1.5 text-xs',
+        tone === 'good' && 'text-status-healthy',
+        tone === 'bad' && 'text-danger',
+      )}
+    >
+      {Icon && <Icon className="size-3.5 shrink-0" aria-hidden />}
+      {content}
     </p>
   );
 }

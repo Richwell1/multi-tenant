@@ -102,6 +102,26 @@ membership plus `company_id` and RLS. After sign-in the user lands on their own
 slugged dashboard; a bare `/:companySlug` redirects to `/:companySlug/dashboard`.
 The single Vercel SPA rewrite already serves every non-asset path.
 
+**Globally unique slugs.** Company **names may repeat**; company **slugs are
+globally unique**. `companies.slug` is `not null unique` and additionally
+constrained to be lowercase, URL-safe (`^[a-z0-9]+(?:-[a-z0-9]+)*$`), 3–63 chars,
+and non-reserved (`companies_slug_lowercase_ck` / `_format_ck` / `_length_ck` /
+`_not_reserved_ck`). The **backend is authoritative** for allocation:
+`public.register_company(user, name, requested_slug?, …)` either validates a
+chosen slug (never auto-suffixed — a conflict is a clean `duplicate_slug`) or
+derives one from the name and, on collision, retries with a short **random**
+suffix (e.g. `acme-ltd-k7p2`) up to 5 times inside the onboarding transaction —
+race-safe, never a predictable `-2`/`-3` sequence, never leaking counts. The
+persisted slug is returned and used verbatim for navigation; it is never
+re-derived on the client. The reserved-word list lives once as
+`public.is_reserved_slug()` mirrored by `RESERVED_SLUGS` in `src/lib/slug.ts`
+(and the Edge Function). `public.is_slug_available()` powers pre-submit UX
+(boolean only — no company rows). Slugs are immutable after registration; a
+controlled rename flow (with redirects) is deferred. The company UUID remains the
+tenant identity and, with membership + RLS, the security boundary — a slug is
+never an authorization path (`findCompanyBySlug` is RLS-gated and returns nothing
+for tenants you are not a member of).
+
 Every tenant-owned table carries `company_id`. Repositories include the
 company scope, and PostgreSQL RLS is the authoritative boundary. The browser
 does not use a service-role key and frontend hiding is not security.

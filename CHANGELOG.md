@@ -1,5 +1,32 @@
 # Changelog
 
+## Unreleased — Unique company slugs (branch `feat/unique-company-slugs`)
+
+- **Company names may repeat; slugs are globally unique.** `companies.slug` keeps
+  its `unique` constraint and gains lowercase / URL-safe-format / length(3..63) /
+  non-reserved CHECK constraints (`companies_slug_*_ck`).
+- **Backend-authoritative, collision-safe allocation** via new
+  `public.register_company(user, name, requested_slug?, …)`: validates a chosen
+  slug (never auto-suffixed → clean `duplicate_slug`) or derives one from the name
+  and retries with a short **random** suffix (`acme-ltd-k7p2`) up to 5× inside the
+  onboarding transaction — race-safe, non-sequential, no count leakage. The
+  register-company Edge Function now calls it and returns the **persisted** slug;
+  the client navigates with that slug, never re-derived.
+- **Centralized reserved list** — `public.is_reserved_slug()` mirrored by
+  `RESERVED_SLUGS` in `src/lib/slug.ts` and the Edge Function; `public.slugify()`
+  and `public.is_slug_available()` (boolean-only UX check) added.
+- **Registration UI** — the field is now a framed **Workspace URL**
+  (`multi-tenant-hr.vercel.app/[slug]/dashboard`) with live available/taken/
+  reserved/invalid feedback (reduced-motion-safe, no layout jump, `aria-describedby`
+  + polite announce), lowercase-on-type, and a success screen showing the final
+  backend URL. Auto-slug is sent only when the founder edits it.
+- **Slug lookup** — RLS-gated `findCompanyBySlug` on the context repository
+  (mock + Supabase); the Supabase context now reads `companies.slug` (not
+  subdomain). Slug rename deferred (documented).
+- **Additive migration** `20260801010000_unique_company_slugs.sql` with a
+  defensive, deterministic backfill. 367 tests; SQL suite
+  `unique_company_slugs_rls.sql` (19/19).
+
 ## Unreleased — Path-based tenant routing (branch `feat/path-based-tenant-routing`)
 
 - Company workspace URLs are now prefixed with the tenant slug:

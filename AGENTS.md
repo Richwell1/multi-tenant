@@ -94,8 +94,13 @@ Do not add:
   boundaries, and tenant isolation.
 - Keep the supported roles limited to `platform_super_admin`, `company_admin`,
   and `company_user` unless the product scope is deliberately changed.
-- Use real `company_id` UUIDs in Supabase mode; slugs are for resolution and
-  display only.
+- Use real `company_id` UUIDs in Supabase mode; slugs are for routing/resolution
+  and display only. Company names may repeat; `companies.slug` is globally unique
+  (lowercase, URL-safe, 3–63, non-reserved). The backend (`public.register_company`)
+  is authoritative for slug allocation with collision-safe random suffixes — never
+  re-derive the slug on the client, and keep the reserved list in sync across
+  `public.is_reserved_slug()`, `src/lib/slug.ts`, and the register-company Edge
+  Function. Slugs are immutable post-registration (rename is deferred).
 - Treat Supabase RLS, grants/Data API exposure, and server-side entitlement
   checks as separate security boundaries. Do not change them without a
   reproduced failure and a focused test.

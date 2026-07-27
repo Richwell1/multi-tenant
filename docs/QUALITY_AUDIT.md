@@ -6,6 +6,25 @@ Branch: `feat/admin-package-management`
 This audit records implementation coverage and known verification boundaries.
 It does not claim that hosted browser smoke testing has been completed.
 
+## Unique company slugs (2026-08-01)
+
+- **Model:** company names may repeat; `companies.slug` is globally unique and
+  additionally constrained (lowercase / format / length 3–63 / non-reserved).
+  Migration `20260801010000_unique_company_slugs.sql` is additive with a
+  defensive, deterministic backfill (no hardcoded identities).
+- **Authoritative allocation:** `public.register_company` owns the final slug —
+  validate-a-chosen-slug or derive-and-random-suffix with bounded, race-safe
+  retry inside the onboarding transaction. The Edge Function calls it and returns
+  the persisted slug; the client never re-derives it. Reserved list is centralized
+  (`is_reserved_slug` ↔ `src/lib/slug.ts` ↔ Edge Function).
+- **Isolation verified:** `unique_company_slugs_rls.sql` (14 checks) proves
+  duplicate-slug rejection, duplicate-name success, invalid/uppercase/reserved
+  rejection, unique generation + collision retry, and that a slug is not an
+  authorization path (a member cannot resolve or list another tenant by slug).
+  Full suite 19/19; 367 application tests.
+- **Deferred:** slug rename (with redirects); hosted browser smoke of two
+  same-name registrations.
+
 ## Marketplace entitlement authorization fix (2026-07-30)
 
 - **Root cause:** the marketplace/private feature tables (`document_notes`,

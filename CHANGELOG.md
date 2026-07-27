@@ -53,9 +53,19 @@ items. No business logic, RLS, or migrations changed.
 - **Diagnostics** — a result icon per row and a "passed / total passed" count.
 - Tests: Diagnostics checks-passed count. 326 tests.
 
-_Remaining phases (login/logout one-toast feedback, dialog focus sweep,
-responsive/accessibility audit, design-token centralization, optional Framer
-Motion) are scoped in `docs/UI_UX_PROGRESS.md`._
+**Phase 6 (auth feedback + dialogs):**
+- **Login** shows a single "Signed in successfully" toast after the session and
+  Platform-Admin/company context resolve (not before).
+- **Logout** shows one "Signed out successfully" toast; the profile-menu action
+  shows a pending "Signing out…" state and is disabled to prevent duplicate
+  clicks. Rejection-cleanup logouts on the login page are `silent` (no toast), so
+  no contradictory "signed out" appears while signing in.
+- Confirmed `ConfirmDialog` already traps focus, closes on Escape, and returns
+  focus to the trigger (covered by existing state tests).
+- Tests: profile-menu logout pending state. 326 tests.
+
+_Remaining (responsive/accessibility audit, design-token centralization, optional
+Framer Motion) are scoped in `docs/UI_UX_PROGRESS.md`._
 
 ## Unreleased — Company update notifications (branch `feat/company-update-notifications`)
 

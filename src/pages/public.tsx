@@ -110,31 +110,33 @@ export function LoginPage() {
 
       if (isAdmin) {
         if (!isPlatformAdmin) {
-          await logout();
+          await logout({ silent: true });
           setAuthError('This account is not a Platform Super Admin account. Use the company login instead.');
           return;
         }
+        notify.signedIn();
         navigate({ to: '/admin' });
         return;
       }
 
       if (isPlatformAdmin) {
-        await logout();
+        await logout({ silent: true });
         setAuthError('Platform administrators must use the admin sign-in link.');
         return;
       }
 
       const company = await companyContextRepository.getCompanyContext(session.user);
       if (!company) {
-        await logout();
+        await logout({ silent: true });
         setAuthError('No active company workspace is linked to this account.');
         return;
       }
       if (requestedTenant && company.companySlug !== requestedTenant) {
-        await logout();
+        await logout({ silent: true });
         setAuthError(`This account belongs to ${company.companyName}, not the ${requestedTenant} workspace.`);
         return;
       }
+      notify.signedIn();
       navigate({ to: '/dashboard' });
     } catch (e) {
       setAuthError(e instanceof RepositoryError ? e.message : 'Sign-in failed. Please try again.');

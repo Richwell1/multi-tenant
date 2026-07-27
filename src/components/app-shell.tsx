@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useRouterState } from '@tanstack/react-router';
-import { PanelLeftClose, PanelLeftOpen, LogOut, Menu, X, ChevronDown } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, LogOut, Menu, X, ChevronDown, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { AppVersion } from '@/components/app-version';
@@ -179,8 +179,9 @@ export function AppShell({ portal, brandLine, portalBadge, nav, children }: AppS
 }
 
 /** Accessible top-bar account menu: identity, role, version, and logout. */
-function ProfileMenu({ email, roleLabel, onLogout }: { email?: string | null; roleLabel: string; onLogout: () => void }) {
+function ProfileMenu({ email, roleLabel, onLogout }: { email?: string | null; roleLabel: string; onLogout: () => void | Promise<void> }) {
   const [open, setOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -227,13 +228,23 @@ function ProfileMenu({ email, roleLabel, onLogout }: { email?: string | null; ro
           <button
             type="button"
             role="menuitem"
-            onClick={() => {
-              setOpen(false);
-              onLogout();
+            disabled={loggingOut}
+            onClick={async () => {
+              if (loggingOut) return;
+              setLoggingOut(true);
+              await onLogout();
             }}
-            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-content-variant hover:bg-surface-subtle hover:text-content"
+            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-content-variant hover:bg-surface-subtle hover:text-content disabled:opacity-70"
           >
-            <LogOut className="size-4" aria-hidden /> Logout
+            {loggingOut ? (
+              <>
+                <Loader2 className="size-4 motion-safe:animate-spin" aria-hidden /> Signing out…
+              </>
+            ) : (
+              <>
+                <LogOut className="size-4" aria-hidden /> Logout
+              </>
+            )}
           </button>
         </div>
       )}

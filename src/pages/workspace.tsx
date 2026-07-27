@@ -26,6 +26,8 @@ import { formatDate } from '@/lib/utils';
 import { RepositoryError } from '@/data/errors';
 import { StatCard } from '@/components/stat-card';
 import { InstalledPackagesPanel } from '@/components/installed-packages-panel';
+import { PackageReviewDialog } from '@/components/package-review-dialog';
+import { latestImpactManifest, type PackageImpactManifest } from '@/lib/packages/impact';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { SubmitButton } from '@/components/ui/submit-button';
@@ -1179,6 +1181,8 @@ export function MarketplacePage() {
   const install = useInstallMarketplaceExtension();
   // Pending state is package-specific: only the card being installed shows it.
   const installingKey = install.isPending ? install.variables : undefined;
+  // Install is never immediate — it opens an impact/diagnostics review first.
+  const [reviewing, setReviewing] = useState<{ code: string; name: string; version: string } | null>(null);
   const [q, setQ] = useState('');
   const [category, setCategory] = useState<MarketplaceCategory>('All');
   const items = query.data ?? [];
@@ -1253,7 +1257,11 @@ export function MarketplacePage() {
                       </Link>
                     )
                   ) : isAdmin ? (
-                    <Button onClick={() => install.mutate(p.code)} disabled={isInstalling} aria-label={`Install ${p.name}`}>
+                    <Button
+                      onClick={() => setReviewing({ code: p.code, name: p.name, version: p.latestVersion ?? '1.0.0' })}
+                      disabled={isInstalling}
+                      aria-label={`Install ${p.name}`}
+                    >
                       {isInstalling ? 'Installing…' : 'Install'}
                     </Button>
                   ) : (
@@ -1265,7 +1273,42 @@ export function MarketplacePage() {
           })}
         </div>
       )}
+      {reviewing && (
+        <PackageReviewDialog
+          open
+          mode="install"
+          packageName={reviewing.name}
+          category="marketplace_extension"
+          manifest={reviewManifest(reviewing.code, reviewing.version)}
+          pending={install.isPending}
+          onCancel={() => setReviewing(null)}
+          onConfirm={() =>
+            install.mutate(reviewing.code, {
+              onSuccess: () => setReviewing(null),
+              onError: () => setReviewing(null),
+            })
+          }
+        />
+      )}
     </>
+  );
+}
+
+/** The impact manifest to review, or a safe minimal fallback for packages that
+ *  have not published a structured manifest yet (diagnostics still PASS-gated). */
+function reviewManifest(packageKey: string, version: string): PackageImpactManifest {
+  return (
+    latestImpactManifest(packageKey) ?? {
+      version,
+      frontend: {},
+      backend: {},
+      data: { notes: ['Creates company-owned records; uninstall retains them for 30 days.'] },
+      dependencies: { minimumPlatformVersion: APP_VERSION },
+      migrations: { required: true, reversible: true },
+      rollback: { supported: false },
+      retention: { policy: 'retain_then_purge', retentionDays: 30 },
+      diagnostics: { status: 'PASS' },
+    }
   );
 }
 

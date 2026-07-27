@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased — Company marketplace redesign (branch `feat/company-marketplace-redesign`)
+
+- **Extensions Marketplace redesign**: a search box + category filter chips
+  (All / Productivity / Finance / HR Tools / Operations, mapped per package),
+  richer cards with a category badge and a feature list, and a "no matching
+  extensions" state. Per-card install/open state and installed/version badges
+  are preserved. Category/feature mapping is presentation-only (no business
+  rules); motion stays dependency-free.
+- Tests: marketplace category + search filtering. 328 tests.
+
 ## Unreleased — Company workspace UI polish, phase 1 (branch `feat/company-workspace-ui-polish`)
 
 Mirrors the Admin polish for the company workspace (same green identity). Motion

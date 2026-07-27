@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 
 // Link isn't exercised here (nothing installed); stub it to avoid router setup.
@@ -52,5 +52,19 @@ describe('MarketplacePage pending state is package-specific', () => {
     render(<MarketplacePage />);
     expect(screen.getByRole('button', { name: 'Install Document Notes' })).toHaveTextContent('Install');
     expect(screen.getByRole('button', { name: 'Install Expense Requests' })).toHaveTextContent('Install');
+  });
+
+  it('filters by category and search', () => {
+    setup({ isPending: false });
+    render(<MarketplacePage />);
+    // Finance category → only Expense Requests (Document Notes is Productivity).
+    fireEvent.click(screen.getByRole('button', { name: 'Finance' }));
+    expect(screen.getByRole('button', { name: 'Install Expense Requests' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Install Document Notes' })).toBeNull();
+    // Back to All, then search narrows.
+    fireEvent.click(screen.getByRole('button', { name: 'All' }));
+    fireEvent.change(screen.getByLabelText('Search extensions'), { target: { value: 'notes' } });
+    expect(screen.getByRole('button', { name: 'Install Document Notes' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Install Expense Requests' })).toBeNull();
   });
 });

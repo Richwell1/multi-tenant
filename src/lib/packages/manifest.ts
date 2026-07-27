@@ -81,6 +81,27 @@ export const PACKAGE_MANIFEST: Partial<Record<PackageKey, PackageManifestEntry>>
   },
 };
 
+/**
+ * Presentation-only marketplace categories (grouping in the Extensions
+ * Marketplace). Not a business rule — maps package keys to a browse category.
+ */
+export const MARKETPLACE_CATEGORIES = ['All', 'Productivity', 'Finance', 'HR Tools', 'Operations'] as const;
+export type MarketplaceCategory = (typeof MARKETPLACE_CATEGORIES)[number];
+
+const MARKETPLACE_CATEGORY_BY_CODE: Record<string, MarketplaceCategory> = {
+  'document-notes': 'Productivity',
+  'expense-requests': 'Finance',
+};
+
+export function marketplaceCategory(code: string): MarketplaceCategory {
+  return MARKETPLACE_CATEGORY_BY_CODE[code] ?? 'Operations';
+}
+
+/** Feature labels a marketplace package advertises (from the manifest). */
+export function packageFeatureLabels(code: PackageKey): string[] {
+  return (PACKAGE_MANIFEST[code]?.features ?? []).map((f) => f.label);
+}
+
 /** Installed version of a package for the company, or null when not entitled. */
 export function installedVersion(packages: readonly EnabledPackage[], code: PackageKey): string | null {
   return packages.find((p) => p.code === code)?.version ?? null;

@@ -20,7 +20,8 @@ Branch: `feat/ui-ux-polish`
 | Admin Adoption page | Complete (phase 4) | Summary cards (extensions/total installs/most installed) + per-row adoption progress bar (role=progressbar) as % of active companies | Adoption test |
 | Admin Operations pages | Complete (phase 5) | Usage summary cards + tabular numerals; System Health per-card status icons; Diagnostics result icon + passed/total count | Diagnostics test |
 | Admin auth feedback + dialogs | Complete (phase 6) | One "Signed in"/"Signed out" toast (after context resolves); logout pending state + duplicate-click guard; login-page rejection cleanup is silent; ConfirmDialog focus-trap/Escape/return-focus verified | app-shell + states tests |
-| Admin UI polish — remaining | Planned | Per-page card/table/filter polish; login/logout feedback + one-toast sequencing; dialog focus/return sweep; responsive + a11y audit; design-token centralization; optional Framer Motion (deferred — dependency/bundle) | Phased on `feat/platform-admin-ui-polish` |
+| Admin motion approach | Decided | Motion stays dependency-free via reduced-motion-aware CSS (`motion-safe:` variants); Framer Motion declined (avoids a ~50 KB dependency for subtle fades/spins/pulse) | — |
+| Admin UI polish — remaining | Planned (optional) | A dedicated responsive + accessibility audit pass and design-token centralization; lower-yield now that phases 1–6 cover the concrete items | — |
 | Shared buttons, badges, cards | Complete | Added outline/icon sizing, richer status tones, calmer borders/shadows, responsive padding | Typecheck/lint/tests/build pass |
 | Forms and fields | Complete | Linked hints/errors with `aria-describedby`, clearer labels, shared select/textarea styling, autofill treatment | Full route form smoke test deferred |
 | Tables | Complete | Improved row rhythm, focus-within state, responsive minimum width, consistent surface treatment | Browser viewport checks deferred |

@@ -13,6 +13,7 @@ const pkg = (over: Partial<CompanyPackageLifecycle>): CompanyPackageLifecycle =>
   isMandatory: false,
   installationSource: 'company_marketplace',
   hasFeatureData: true,
+  featureStatus: 'implemented',
   ...over,
 });
 

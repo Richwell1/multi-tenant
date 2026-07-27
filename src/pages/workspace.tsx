@@ -1235,6 +1235,9 @@ export function MarketplacePage() {
                   </div>
                 </CardHeader>
                 <CardContent className="flex flex-1 flex-col gap-3">
+                  {p.featureStatus === 'catalog_only' && (
+                    <Badge tone="warning">Feature implementation pending</Badge>
+                  )}
                   {p.description && <p className="text-sm text-content-variant">{p.description}</p>}
                   {features.length > 0 && (
                     <ul className="space-y-1 text-sm text-content-variant">

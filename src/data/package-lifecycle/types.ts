@@ -25,6 +25,8 @@ export interface CompanyPackageLifecycle {
   installationSource: string | null;
   /** Whether the package owns per-company feature data (drives retention copy). */
   hasFeatureData: boolean;
+  /** Honest implementation readiness (separate from diagnostics PASS). */
+  featureStatus: 'implemented' | 'catalog_only';
 }
 
 export interface LifecycleResult {

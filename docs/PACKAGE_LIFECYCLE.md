@@ -119,6 +119,23 @@ survival, idempotent purge, and PASS-only install. **20/20** SQL suites overall.
   Custom Approval Matrix) — each with a released diagnostic-PASS 1.0.0 + impact
   manifest, flowing through install-review and the full lifecycle.
 
+## Feature readiness (honest status)
+
+A version's `diagnostic_status` (PASS/WARN/FAIL) attests **catalog + lifecycle**
+readiness — never "the business feature is built". `packages.feature_status`
+(`implemented` | `catalog_only`) is a separate, truthful axis:
+
+| Package | Catalog | Lifecycle | Feature build |
+|---|---|---|---|
+| HR Core, Document Notes, Expense Requests, Visitor Register, Leave, Attendance | PASS | PASS | **Implemented** |
+| Company Announcements, Asset Register, Pulse Surveys | PASS | PASS | **Pending (catalog_only)** |
+| Audit Log Exporter, Bulk Data Importer, Org Chart Viewer | PASS | PASS | **Pending (catalog_only)** |
+| Custom Onboarding Checklist, Custom Approval Matrix | PASS | PASS | **Pending (catalog_only)** |
+
+Catalog-only packages render a **"Feature implementation pending"** badge in the
+Marketplace and Installed Packages and expose no feature page — installing them
+demonstrates the lifecycle, not a working business module.
+
 ## Remaining limitations / deferred
 
 - The new packages are catalog-level (metadata + lifecycle participation): they

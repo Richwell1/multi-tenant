@@ -6,6 +6,18 @@ Branch: `feat/admin-package-management`
 This audit records implementation coverage and known verification boundaries.
 It does not claim that hosted browser smoke testing has been completed.
 
+## Package lifecycle readiness honesty (2026-08-04)
+
+- Added `packages.feature_status` (`implemented` | `catalog_only`) so a version's
+  diagnostics PASS can never be mistaken for "feature built". The eight new
+  catalog packages are `catalog_only` and surface a "Feature implementation
+  pending" badge; real features (HR Core, Document Notes, …) are `implemented`.
+- Statuses: DB backbone / TS lifecycle / review dialog / monitoring / purge
+  function = **Complete**. Eight new packages = **Catalog only**. Dedicated
+  update & rollback transactions, restore-point integration, reversible-migration
+  orchestration, and feature verticals for the eight = **Pending**. Scheduled
+  purge execution = **Deferred** (function is schedule-ready, not scheduled).
+
 ## Unique company slugs (2026-08-01)
 
 - **Model:** company names may repeat; `companies.slug` is globally unique and

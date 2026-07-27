@@ -1,5 +1,61 @@
 # Changelog
 
+## Unreleased — Package lifecycle Phases 3-5 (review dialogs, monitoring, new packages)
+
+- **Impact manifests + review dialog:** `src/lib/packages/impact.ts` (structured
+  `PackageImpactManifest`) and `PackageReviewDialog` shown before install/update/
+  rollback — sectioned impact, a diagnostics gate (no confirm unless PASS), and an
+  acknowledgement for breaking/irreversible change. Marketplace Install opens the
+  review first.
+- **Platform-Admin Lifecycle Monitoring** (`/admin/lifecycle`) over
+  `package_lifecycle_operations` (metadata only; labels not raw enums) + the
+  **purge-retention Edge Function** (service-role, idempotent, schedule-ready).
+- **New packages:** three Marketplace Extensions (Company Announcements, Asset
+  Register, Pulse Surveys), three optional System Tools (Audit Log Exporter, Bulk
+  Data Importer, Org Chart Viewer), and two Private Customizations of HR Core
+  (Custom Onboarding Checklist, Custom Approval Matrix) — migration
+  `20260803010000`, each with a released diagnostic-PASS 1.0.0 + impact manifest.
+- SQL suites `new_packages_catalog_rls.sql` (6 checks). 385 tests, 21/21 SQL suites.
+
+## Unreleased — Package lifecycle TS layer + Installed-Packages actions (Phase 2)
+
+- New `src/data/package-lifecycle` vertical: repository interface, a stateful
+  mock (real disable→enable→uninstall→restore→permanently-remove transitions),
+  and a Supabase adapter that drives the lifecycle RPCs + reads company_packages
+  with retention state. Pages/components never call Supabase directly.
+- Hooks: `useCompanyPackages` (lifecycle list) + `useDisablePackage` /
+  `useEnablePackage` / `useUninstallPackage` / `useRestorePackage` /
+  `usePermanentlyRemovePackage`, each invalidating only the current company's
+  lifecycle + context queries and surfacing safe error messages.
+- Installed Packages page rebuilt: lifecycle-status cards (Active / Disabled /
+  Uninstalled / Removed) with retention-end dates and actions gated by category +
+  role + state — Disable/Re-enable, Uninstall (→30-day retention confirm),
+  Restore, and Permanently Remove (typed-confirmation dialog). Mandatory HR Core
+  exposes no destructive actions; non-admins are read-only.
+- Tests: action-gating logic, mock lifecycle transitions, and the panel UI
+  (typed-confirmation gate). 380 tests.
+
+## Unreleased — Package lifecycle & retention backbone (branch `feat/package-lifecycle-and-retention`)
+
+Phase 1 of the package lifecycle: the authoritative, RLS-safe **database backbone**
+for disable / uninstall / restore / permanent removal / secure purge, plus impact
+manifests and lifecycle monitoring. (TS/UI layers, review dialogs, and the new
+packages follow in later phases — see docs/PACKAGE_LIFECYCLE.md.)
+
+- Migration `20260802010000_package_lifecycle_and_retention.sql`:
+  `packages.is_mandatory` + `feature_table`, `package_versions.impact_manifest`,
+  `company_packages` retention columns (`data_state`, `retention_until`, …),
+  `package_lifecycle_operations` (one running op per company+package),
+  `package_restore_points`, all RLS-gated.
+- RPCs (self-authorizing company_admin): `disable_package`, `enable_package`,
+  `uninstall_package` (→ 30-day retention, data preserved not deleted),
+  `restore_package` (data returns, no duplication), `permanently_remove_package`
+  (deletes only that package's company data). `purge_expired_retention`
+  (service-role, idempotent, per-tenant failure isolation, counts-not-content).
+- Mandatory HR Core cannot be uninstalled/removed by a company; lifecycle RPCs
+  only ever act on the caller's own company; PASS-only install still enforced.
+- SQL suite `package_lifecycle_rls.sql` (16 checks). 20/20 suites, 368 tests.
+
 ## Unreleased — Unique company slugs (branch `feat/unique-company-slugs`)
 
 - **Company names may repeat; slugs are globally unique.** `companies.slug` keeps

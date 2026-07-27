@@ -13,7 +13,7 @@ vi.mock('@/hooks/entitlements', () => ({
 }));
 vi.mock('@/hooks/use-company-id', () => ({ useCompanyId: () => 'rich-co' }));
 
-import { InstalledPackagesPage, DepartmentsPage } from './workspace';
+import { DepartmentsPage } from './workspace';
 import { usePackageEntitlements } from '@/hooks/entitlements';
 import * as departmentsHooks from '@/hooks/departments';
 
@@ -24,24 +24,6 @@ const entitle = (packages: { code: string; version: string | null }[]) =>
     isPending: false,
     isError: false,
   } as unknown as ReturnType<typeof usePackageEntitlements>);
-
-describe('InstalledPackagesPage summary metrics', () => {
-  it('summarizes installed package and unlocked-feature counts', () => {
-    // HR Core 1.1.0 unlocks Departments + Employees (2 features).
-    entitle([{ code: 'hr-core', version: '1.1.0' }]);
-    render(<InstalledPackagesPage />);
-    expect(screen.getByText('Installed packages')).toBeInTheDocument();
-    expect(screen.getByText('Features unlocked')).toBeInTheDocument();
-    // Feature count reflects the installed version, not a hardcoded number.
-    expect(screen.getByText('2 features available')).toBeInTheDocument();
-  });
-
-  it('shows an empty state when nothing is installed', () => {
-    entitle([]);
-    render(<InstalledPackagesPage />);
-    expect(screen.getByText('No packages installed')).toBeInTheDocument();
-  });
-});
 
 describe('DepartmentsPage empty state', () => {
   it('offers an Add Department action from the empty state and opens the form', () => {

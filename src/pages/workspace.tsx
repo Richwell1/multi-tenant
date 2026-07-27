@@ -8,7 +8,6 @@ import { PageHeader } from '@/components/page-header';
 import { APP_VERSION } from '@/lib/app-version';
 import {
   PACKAGE_MANIFEST,
-  availableFeatures,
   hasFeature,
   installedVersion,
   marketplaceCategory,
@@ -26,6 +25,9 @@ import { packageCategoryLabel, type PackageCategory } from '@/lib/packages/categ
 import { formatDate } from '@/lib/utils';
 import { RepositoryError } from '@/data/errors';
 import { StatCard } from '@/components/stat-card';
+import { InstalledPackagesPanel } from '@/components/installed-packages-panel';
+import { PackageReviewDialog } from '@/components/package-review-dialog';
+import { latestImpactManifest, type PackageImpactManifest } from '@/lib/packages/impact';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { SubmitButton } from '@/components/ui/submit-button';
@@ -716,76 +718,20 @@ export function UpdatesPage() {
 }
 
 export function InstalledPackagesPage() {
-  // Single source: the resolved company context (enabled packages + installed
-  // versions). Feature lists come from the centralized package manifest — package
-  // versions are never hardcoded per component and stay separate from APP_VERSION.
-  const { packages, isPending, isError } = usePackageEntitlements();
-  const featureCount = packages.reduce(
-    (sum, p) => sum + availableFeatures(packages, p.code as PackageKey).length,
-    0,
-  );
+  // Lifecycle-aware view: install state + retention, with actions gated by the
+  // package category, the caller's role, and the current lifecycle state. All
+  // mutations run through SECURITY DEFINER RPCs — never a direct Supabase call.
+  const companyContext = useCompanyContext();
+  const isCompanyAdmin = companyContext.data?.role === 'company_admin';
   return (
     <>
       <PageHeader
         title="Installed Packages"
-        description="Packages active in this workspace"
+        description="Manage the packages active in this workspace"
         icon={<Package className="size-5" />}
         actions={<Badge tone="neutral">Platform version: {APP_VERSION}</Badge>}
       />
-      {isPending ? (
-        <PageLoadingState label="Loading installed packages…" />
-      ) : isError ? (
-        <ErrorState />
-      ) : packages.length === 0 ? (
-        <EmptyState title="No packages installed" description="Installed packages will appear here once a release reaches this company." />
-      ) : (
-        <>
-          <div className="mb-6 grid gap-4 sm:grid-cols-2">
-            <StatCard
-              label="Installed packages"
-              value={packages.length}
-              hint="Active in this workspace"
-              icon={<Package className="size-5" />}
-              accent="portal"
-            />
-            <StatCard
-              label="Features unlocked"
-              value={featureCount}
-              hint="Across all installed versions"
-              icon={<CheckCircle2 className="size-5" />}
-            />
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {packages.map((p) => {
-              const entry = PACKAGE_MANIFEST[p.code as PackageKey];
-              const features = availableFeatures(packages, p.code as PackageKey);
-              return (
-                <Card key={p.code}>
-                  <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
-                    <CardTitle>{entry?.name ?? p.code}</CardTitle>
-                    <Badge tone="neutral">v{p.version ?? '—'}</Badge>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <p className="text-label-caps uppercase text-content-variant">
-                      {features.length} {features.length === 1 ? 'feature' : 'features'} available
-                    </p>
-                    {features.length > 0 && (
-                      <ul className="space-y-1 text-sm text-content-variant">
-                        {features.map((f) => (
-                          <li key={f.label} className="flex items-center gap-2">
-                            <CheckCircle2 className="size-4 text-status-healthy" />
-                            {f.label}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        </>
-      )}
+      <InstalledPackagesPanel isCompanyAdmin={isCompanyAdmin} />
     </>
   );
 }
@@ -1235,6 +1181,8 @@ export function MarketplacePage() {
   const install = useInstallMarketplaceExtension();
   // Pending state is package-specific: only the card being installed shows it.
   const installingKey = install.isPending ? install.variables : undefined;
+  // Install is never immediate — it opens an impact/diagnostics review first.
+  const [reviewing, setReviewing] = useState<{ code: string; name: string; version: string } | null>(null);
   const [q, setQ] = useState('');
   const [category, setCategory] = useState<MarketplaceCategory>('All');
   const items = query.data ?? [];
@@ -1309,7 +1257,11 @@ export function MarketplacePage() {
                       </Link>
                     )
                   ) : isAdmin ? (
-                    <Button onClick={() => install.mutate(p.code)} disabled={isInstalling} aria-label={`Install ${p.name}`}>
+                    <Button
+                      onClick={() => setReviewing({ code: p.code, name: p.name, version: p.latestVersion ?? '1.0.0' })}
+                      disabled={isInstalling}
+                      aria-label={`Install ${p.name}`}
+                    >
                       {isInstalling ? 'Installing…' : 'Install'}
                     </Button>
                   ) : (
@@ -1321,7 +1273,42 @@ export function MarketplacePage() {
           })}
         </div>
       )}
+      {reviewing && (
+        <PackageReviewDialog
+          open
+          mode="install"
+          packageName={reviewing.name}
+          category="marketplace_extension"
+          manifest={reviewManifest(reviewing.code, reviewing.version)}
+          pending={install.isPending}
+          onCancel={() => setReviewing(null)}
+          onConfirm={() =>
+            install.mutate(reviewing.code, {
+              onSuccess: () => setReviewing(null),
+              onError: () => setReviewing(null),
+            })
+          }
+        />
+      )}
     </>
+  );
+}
+
+/** The impact manifest to review, or a safe minimal fallback for packages that
+ *  have not published a structured manifest yet (diagnostics still PASS-gated). */
+function reviewManifest(packageKey: string, version: string): PackageImpactManifest {
+  return (
+    latestImpactManifest(packageKey) ?? {
+      version,
+      frontend: {},
+      backend: {},
+      data: { notes: ['Creates company-owned records; uninstall retains them for 30 days.'] },
+      dependencies: { minimumPlatformVersion: APP_VERSION },
+      migrations: { required: true, reversible: true },
+      rollback: { supported: false },
+      retention: { policy: 'retain_then_purge', retentionDays: 30 },
+      diagnostics: { status: 'PASS' },
+    }
   );
 }
 

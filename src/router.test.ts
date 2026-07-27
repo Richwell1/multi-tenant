@@ -18,6 +18,7 @@ const EXPECTED_ROUTES = [
   '/admin/packages/$packageId',
   '/admin/diagnostics/$diagnosticId',
   '/admin/installations',
+  '/admin/lifecycle',
   '/admin/usage',
   '/admin/health',
   '/admin/audit',
@@ -49,8 +50,8 @@ describe('route inventory', () => {
     }
   });
 
-  it('registers all 30 app routes', () => {
-    expect(EXPECTED_ROUTES.length).toBe(30);
+  it('registers all 31 app routes', () => {
+    expect(EXPECTED_ROUTES.length).toBe(31);
   });
 
   it('scopes every company workspace route under the tenant slug, and no admin route', () => {

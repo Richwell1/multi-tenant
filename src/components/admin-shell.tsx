@@ -19,6 +19,7 @@ const nav: NavItem[] = [
   { to: '/admin/requests', label: 'Request Records', icon: <Inbox className="size-4" />, section: 'Platform' },
   { to: '/admin/packages', label: 'Packages', icon: <Package className="size-4" />, section: 'Packages' },
   { to: '/admin/installations', label: 'Installations', icon: <DownloadCloud className="size-4" />, section: 'Packages' },
+  { to: '/admin/lifecycle', label: 'Lifecycle Monitoring', icon: <Activity className="size-4" />, section: 'Packages' },
   { to: '/admin/packages/adoption', label: 'Adoption', icon: <TrendingUp className="size-4" />, section: 'Packages' },
   { to: '/admin/usage', label: 'Usage Analytics', icon: <BarChart3 className="size-4" />, section: 'Operations' },
   { to: '/admin/health', label: 'System Health', icon: <Activity className="size-4" />, section: 'Operations' },

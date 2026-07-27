@@ -58,6 +58,8 @@ export const queryKeys = {
     versions: (packageKey: string) => ['packages', packageKey, 'versions'] as const,
     /** A single company's package entitlements. */
     company: (companyId: string) => ['packages', 'company', companyId] as const,
+    /** A single company's packages with lifecycle/retention state. */
+    lifecycle: (companyId: string) => ['packages', 'lifecycle', companyId] as const,
   },
   releases: {
     detail: (releaseId: string) => ['releases', 'detail', releaseId] as const,

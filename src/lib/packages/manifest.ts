@@ -91,6 +91,9 @@ export type MarketplaceCategory = (typeof MARKETPLACE_CATEGORIES)[number];
 const MARKETPLACE_CATEGORY_BY_CODE: Record<string, MarketplaceCategory> = {
   'document-notes': 'Productivity',
   'expense-requests': 'Finance',
+  'company-announcements': 'Productivity',
+  'asset-register': 'Operations',
+  'pulse-surveys': 'HR Tools',
 };
 
 export function marketplaceCategory(code: string): MarketplaceCategory {

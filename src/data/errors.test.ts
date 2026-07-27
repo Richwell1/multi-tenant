@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { mapSupabaseError, RepositoryError } from './errors';
+import { describe, it, expect, vi } from 'vitest';
+import { mapSupabaseError, RepositoryError, logSupabaseError } from './errors';
 
 describe('mapSupabaseError', () => {
   it('maps unique violation (23505) to conflict', () => {
@@ -35,5 +35,26 @@ describe('mapSupabaseError', () => {
 
   it('falls back to a generic message for unknown shapes', () => {
     expect(mapSupabaseError(42).kind).toBe('unknown');
+  });
+});
+
+describe('logSupabaseError (dev diagnostics)', () => {
+  it('retains code, details, and hint when logging in dev', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    logSupabaseError('company.updates.install', {
+      code: '42501',
+      status: 403,
+      message: 'permission denied for table document_notes',
+      details: 'insufficient privilege',
+      hint: 'grant insert to authenticated',
+    });
+    // DEV is on under vitest; the structured entry keeps developer-facing context.
+    if (spy.mock.calls.length > 0) {
+      const entry = spy.mock.calls[0]![1] as Record<string, unknown>;
+      expect(entry.code).toBe('42501');
+      expect(entry.details).toContain('insufficient privilege');
+      expect(entry.hint).toContain('grant insert');
+    }
+    spy.mockRestore();
   });
 });

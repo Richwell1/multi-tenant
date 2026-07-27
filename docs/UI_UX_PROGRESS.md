@@ -20,6 +20,8 @@ Branch: `feat/ui-ux-polish`
 | Admin Adoption page | Complete (phase 4) | Summary cards (extensions/total installs/most installed) + per-row adoption progress bar (role=progressbar) as % of active companies | Adoption test |
 | Admin Operations pages | Complete (phase 5) | Usage summary cards + tabular numerals; System Health per-card status icons; Diagnostics result icon + passed/total count | Diagnostics test |
 | Admin auth feedback + dialogs | Complete (phase 6) | One "Signed in"/"Signed out" toast (after context resolves); logout pending state + duplicate-click guard; login-page rejection cleanup is silent; ConfirmDialog focus-trap/Escape/return-focus verified | app-shell + states tests |
+| Company sidebar grouping | Complete (phase 1) | Workspace sidebar grouped Workspace / Installed Features / Extensions / Administration via NavItem.section (empty groups hidden; version-gated items entitlement-only) | reuses AppShell section test |
+| Company dashboard | Complete (phase 1) | Welcome header (company + HR Core/platform version badges), metric cards with icons (Employees/Departments/Positions/Installed/Updates), installed-packages summary | WorkspaceDashboard test |
 | Admin motion approach | Decided | Motion stays dependency-free via reduced-motion-aware CSS (`motion-safe:` variants); Framer Motion declined (avoids a ~50 KB dependency for subtle fades/spins/pulse) | — |
 | Admin UI polish — remaining | Planned (optional) | A dedicated responsive + accessibility audit pass and design-token centralization; lower-yield now that phases 1–6 cover the concrete items | — |
 | Shared buttons, badges, cards | Complete | Added outline/icon sizing, richer status tones, calmer borders/shadows, responsive padding | Typecheck/lint/tests/build pass |

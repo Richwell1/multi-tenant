@@ -42,24 +42,23 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
   const hasVisitorRegister = hasFeature(packages, PACKAGE_CODES.visitorRegister, '1.0.0');
 
   const nav: NavItem[] = [
-    { to: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="size-4" /> },
+    { to: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="size-4" />, section: 'Workspace' },
   ];
-  if (hasHrCore) nav.push({ to: '/departments', label: 'Departments', icon: <Building className="size-4" /> });
-  if (hasEmployees) nav.push({ to: '/employees', label: 'Employees', icon: <Users className="size-4" /> });
-  if (hasHrCore) nav.push({ to: '/positions', label: 'Positions', icon: <Briefcase className="size-4" /> });
-  if (hasLeave) nav.push({ to: '/leave', label: 'Leave Management', icon: <CalendarClock className="size-4" /> });
-  if (hasAttendance) nav.push({ to: '/attendance', label: 'Attendance', icon: <Clock className="size-4" /> });
-  // Installed marketplace extensions (version-gated) appear as feature pages.
-  if (hasDocumentNotes) nav.push({ to: '/extensions/document-notes', label: 'Document Notes', icon: <FileText className="size-4" /> });
-  if (hasExpenseRequests) nav.push({ to: '/extensions/expense-requests', label: 'Expense Requests', icon: <Receipt className="size-4" /> });
-  // Private standalone: only the assigned company sees this.
-  if (hasVisitorRegister) nav.push({ to: '/extensions/visitor-register', label: 'Visitor Register', icon: <DoorOpen className="size-4" /> });
+  if (hasHrCore) nav.push({ to: '/departments', label: 'Departments', icon: <Building className="size-4" />, section: 'Workspace' });
+  if (hasEmployees) nav.push({ to: '/employees', label: 'Employees', icon: <Users className="size-4" />, section: 'Workspace' });
+  if (hasHrCore) nav.push({ to: '/positions', label: 'Positions', icon: <Briefcase className="size-4" />, section: 'Workspace' });
+  // Installed features (version-gated) appear only when entitled.
+  if (hasLeave) nav.push({ to: '/leave', label: 'Leave Management', icon: <CalendarClock className="size-4" />, section: 'Installed Features' });
+  if (hasAttendance) nav.push({ to: '/attendance', label: 'Attendance', icon: <Clock className="size-4" />, section: 'Installed Features' });
+  if (hasDocumentNotes) nav.push({ to: '/extensions/document-notes', label: 'Document Notes', icon: <FileText className="size-4" />, section: 'Installed Features' });
+  if (hasExpenseRequests) nav.push({ to: '/extensions/expense-requests', label: 'Expense Requests', icon: <Receipt className="size-4" />, section: 'Installed Features' });
+  if (hasVisitorRegister) nav.push({ to: '/extensions/visitor-register', label: 'Visitor Register', icon: <DoorOpen className="size-4" />, section: 'Installed Features' });
   nav.push(
-    { to: '/extensions/marketplace', label: 'Marketplace', icon: <Store className="size-4" /> },
-    { to: '/updates', label: 'Available Updates', icon: <RefreshCw className="size-4" />, badgeCount: updateCount },
-    { to: '/packages', label: 'Installed Packages', icon: <Package className="size-4" /> },
-    { to: '/users', label: 'Users & Roles', icon: <UserCog className="size-4" /> },
-    { to: '/settings', label: 'Settings', icon: <Settings className="size-4" /> },
+    { to: '/extensions/marketplace', label: 'Marketplace', icon: <Store className="size-4" />, section: 'Extensions' },
+    { to: '/updates', label: 'Available Updates', icon: <RefreshCw className="size-4" />, badgeCount: updateCount, section: 'Extensions' },
+    { to: '/packages', label: 'Installed Packages', icon: <Package className="size-4" />, section: 'Extensions' },
+    { to: '/users', label: 'Users & Roles', icon: <UserCog className="size-4" />, section: 'Administration' },
+    { to: '/settings', label: 'Settings', icon: <Settings className="size-4" />, section: 'Administration' },
   );
 
   return (

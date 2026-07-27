@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased — Company workspace UI polish, phase 1 (branch `feat/company-workspace-ui-polish`)
+
+Mirrors the Admin polish for the company workspace (same green identity). Motion
+stays dependency-free (`motion-safe:` CSS). No business/RLS changes.
+
+- **Sidebar grouping** — the workspace sidebar is grouped into Workspace /
+  Installed Features / Extensions / Administration via `NavItem.section`; empty
+  groups don't render (version-gated items still appear only when entitled). The
+  shared top-bar profile menu + update badge/pulse already apply here.
+- **Dashboard** — a welcome header (company name, HR Core + platform version
+  badges) replaces the sparse layout; metric cards now carry icons (Employees,
+  Departments, Positions, Installed Packages, Available Updates) and an installed-
+  packages summary list.
+- Tests: WorkspaceDashboard (header, metrics, installed summary). 327 tests.
+
+_Marketplace redesign, Installed Packages cards, per-page polish, and the
+loading/state sweep continue in later phases (scoped in `docs/UI_UX_PROGRESS.md`)._
+
 ## Unreleased — Platform Admin UI polish, phase 1 (branch `feat/platform-admin-ui-polish`)
 
 First phase of the Admin UI polish, focused on the highest-leverage, low-risk

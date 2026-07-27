@@ -3,16 +3,16 @@ import { Link, useParams, useNavigate } from '@tanstack/react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, LayoutDashboard, Users, Building, Briefcase, Package, RefreshCw } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import { APP_VERSION } from '@/lib/app-version';
-import { PACKAGE_MANIFEST, availableFeatures, hasFeature } from '@/lib/packages/manifest';
+import { PACKAGE_MANIFEST, availableFeatures, hasFeature, installedVersion } from '@/lib/packages/manifest';
 import type { PackageKey } from '@/data/types';
 import { useMarketplacePackages, useInstallMarketplaceExtension } from '@/hooks/marketplace';
 import { useDocumentNotes, useCreateDocumentNote } from '@/hooks/document-notes';
 import { useExpenseRequests, useCreateExpenseRequest } from '@/hooks/expense-requests';
 import { useVisitorEntries, useCreateVisitor } from '@/hooks/visitor-register';
-import { useAvailableUpdates, useInstallCompanyUpdate } from '@/hooks/company-updates';
+import { useAvailableUpdates, useInstallCompanyUpdate, useAvailableUpdateCount } from '@/hooks/company-updates';
 import { packageCategoryLabel, type PackageCategory } from '@/lib/packages/category';
 import { formatDate } from '@/lib/utils';
 import { RepositoryError } from '@/data/errors';
@@ -35,7 +35,7 @@ import { useSession } from '@/lib/session';
 import { useCompanyId } from '@/hooks/use-company-id';
 import { useCompanyContext } from '@/hooks/context';
 import { PackageGuard } from '@/components/guards';
-import { useHasPackage, usePackageEntitlements } from '@/hooks/entitlements';
+import { usePackageEntitlements } from '@/hooks/entitlements';
 import { PACKAGE_CODES } from '@/lib/entitlements';
 import { notify } from '@/lib/notify';
 import {
@@ -66,7 +66,8 @@ export function WorkspaceDashboard() {
   const { company } = useSession();
   const companyContext = useCompanyContext();
   const companyName = company?.name ?? companyContext.data?.companyName ?? 'Company';
-  const hasLeave = useHasPackage(PACKAGE_CODES.leave);
+  const { packages } = usePackageEntitlements();
+  const updateCount = useAvailableUpdateCount();
   const employees = useEmployees();
   const departments = useDepartments();
   const positions = usePositions();
@@ -75,33 +76,51 @@ export function WorkspaceDashboard() {
   if (employees.isError)
     return <ErrorState onRetry={() => employees.refetch()} retrying={employees.isFetching} />;
 
+  const hrCoreVersion = installedVersion(packages, PACKAGE_CODES.hrCore);
+  const installedCount = packages.length;
+
   return (
     <>
       <PageHeader
-        title={`${companyName} Dashboard`}
-        description={hasLeave ? 'HR Core + Leave Management' : 'HR Core'}
-        actions={<Badge tone="company">{hasLeave ? 'Leave enabled' : 'Core only'}</Badge>}
+        icon={<LayoutDashboard className="size-5" />}
+        title={companyName}
+        description="Manage your people, packages, and company activity."
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            {hrCoreVersion && <Badge tone="company">HR Core {hrCoreVersion}</Badge>}
+            <Badge tone="neutral">Platform {APP_VERSION}</Badge>
+          </div>
+        }
       />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Employees" value={employees.data.length} />
-        <StatCard label="Departments" value={departments.data?.length ?? '—'} />
-        <StatCard label="Positions" value={positions.data?.length ?? '—'} />
-        <StatCard label="Leave" value={hasLeave ? 'Enabled' : '—'} />
+        <StatCard label="Employees" value={employees.data.length} icon={<Users className="size-5" />} />
+        <StatCard label="Departments" value={departments.data?.length ?? '—'} icon={<Building className="size-5" />} />
+        <StatCard label="Positions" value={positions.data?.length ?? '—'} icon={<Briefcase className="size-5" />} />
+        <StatCard label="Installed Packages" value={installedCount} icon={<Package className="size-5" />} />
+        <StatCard label="Available Updates" value={updateCount} hint={updateCount > 0 ? 'Review in Available Updates' : 'Up to date'} icon={<RefreshCw className="size-5" />} />
       </div>
-      {hasLeave && (
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>Leave Management</CardTitle>
-            <Badge tone="company">Active package</Badge>
-          </CardHeader>
-          <CardContent className="text-sm text-content-variant">
-            Leave Management is enabled for this workspace.{' '}
-            <Link to="/leave" className="text-company hover:underline">
-              Open Leave
-            </Link>
-          </CardContent>
-        </Card>
-      )}
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Installed packages</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {packages.length === 0 ? (
+            <p className="text-sm text-content-variant">No packages installed yet.</p>
+          ) : (
+            <ul className="divide-y divide-border">
+              {packages.map((p) => {
+                const entry = PACKAGE_MANIFEST[p.code as PackageKey];
+                return (
+                  <li key={p.code} className="flex items-center justify-between py-2 text-sm">
+                    <span className="font-medium text-content">{entry?.name ?? p.code}</span>
+                    <span className="text-content-variant">Version {p.version ?? '—'}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
     </>
   );
 }

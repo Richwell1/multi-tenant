@@ -18,6 +18,7 @@ import {
   Clock,
   Loader2,
   CircleX,
+  AlertTriangle,
 } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import { StatCard } from '@/components/stat-card';
@@ -109,6 +110,20 @@ const diagTone = (r: DiagnosticResult) =>
   r === 'PASS' ? 'healthy' : r === 'WARN' ? 'degraded' : 'offline';
 const installTone = (s: PackageInstallationStatus) =>
   s === 'installed' ? 'healthy' : s === 'failed' ? 'offline' : s === 'rolled_back' ? 'neutral' : 'degraded';
+
+/** Health-signal status icon. */
+function HealthIcon({ status }: { status: 'healthy' | 'degraded' | 'offline' }) {
+  if (status === 'healthy') return <CheckCircle2 className="size-4 text-status-healthy" aria-hidden />;
+  if (status === 'degraded') return <AlertTriangle className="size-4 text-status-degraded" aria-hidden />;
+  return <CircleX className="size-4 text-status-offline" aria-hidden />;
+}
+
+/** Diagnostic result icon (PASS / WARN / FAIL). */
+function DiagIcon({ result }: { result: DiagnosticResult }) {
+  if (result === 'PASS') return <CheckCircle2 className="size-4 text-status-healthy" aria-hidden />;
+  if (result === 'WARN') return <AlertTriangle className="size-4 text-status-degraded" aria-hidden />;
+  return <CircleX className="size-4 text-status-offline" aria-hidden />;
+}
 
 /** Status icon for an installation row (installing spins, respecting reduced-motion). */
 function InstallStatusIcon({ status }: { status: PackageInstallationStatus }) {
@@ -688,26 +703,35 @@ export function DiagnosticsList() {
           <THead>
             <TH>Package</TH>
             <TH>Result</TH>
-            <TH>Checks</TH>
+            <TH>Checks passed</TH>
             <TH>Recommendation</TH>
           </THead>
           <TBody>
-            {rows.map((report) => (
-              <TR key={report.id}>
-                <TD>
-                  <Link
-                    to="/admin/diagnostics/$diagnosticId"
-                    params={{ diagnosticId: report.id }}
-                    className="font-medium text-platform hover:underline"
-                  >
-                    {report.packageKey}
-                  </Link>
-                </TD>
-                <TD><Badge tone={diagTone(report.result)}>{report.result}</Badge></TD>
-                <TD>{report.checks.length} / {DIAGNOSTIC_DIMENSIONS.length}</TD>
-                <TD className="text-content-variant">{report.recommendation || '—'}</TD>
-              </TR>
-            ))}
+            {rows.map((report) => {
+              const passed = report.checks.filter((c) => c.status === 'PASS').length;
+              const total = report.checks.length || DIAGNOSTIC_DIMENSIONS.length;
+              return (
+                <TR key={report.id}>
+                  <TD>
+                    <Link
+                      to="/admin/diagnostics/$diagnosticId"
+                      params={{ diagnosticId: report.id }}
+                      className="font-medium text-platform hover:underline"
+                    >
+                      {report.packageKey}
+                    </Link>
+                  </TD>
+                  <TD>
+                    <span className="flex items-center gap-2">
+                      <DiagIcon result={report.result} />
+                      <Badge tone={diagTone(report.result)}>{report.result}</Badge>
+                    </span>
+                  </TD>
+                  <TD className="tabular-nums">{passed} / {total} passed</TD>
+                  <TD className="text-content-variant">{report.recommendation || '—'}</TD>
+                </TR>
+              );
+            })}
           </TBody>
         </DataTable>
       </TableBoundary>
@@ -1479,6 +1503,12 @@ export function UsagePage() {
   return (
     <>
       <PageHeader icon={<BarChart3 className="size-5" />} title="Usage Analytics" description="Per-module activity across tenants" />
+      {filtered.length > 0 && (
+        <div className="mb-6 grid gap-4 sm:grid-cols-2">
+          <StatCard label="Total actions" value={filtered.reduce((n, m) => n + m.actionCount, 0)} icon={<Activity className="size-5" />} />
+          <StatCard label="Modules tracked" value={filtered.length} icon={<BarChart3 className="size-5" />} />
+        </div>
+      )}
       <TargetFilter value={target} onChange={setTarget} />
       <TableBoundary
         query={query}
@@ -1497,8 +1527,8 @@ export function UsagePage() {
             {filtered.map((m) => (
               <TR key={m.module}>
                 <TD className="capitalize">{m.module}</TD>
-                <TD>{m.actionCount}</TD>
-                <TD>{m.companiesUsing}</TD>
+                <TD className="tabular-nums">{m.actionCount}</TD>
+                <TD className="tabular-nums">{m.companiesUsing}</TD>
               </TR>
             ))}
           </TBody>
@@ -1529,8 +1559,11 @@ export function HealthPage() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {query.data.map((h) => (
           <Card key={h.label} className="p-6">
-            <p className="text-label-bold uppercase text-content-variant">{h.label}</p>
-            <p className="mt-2 text-xl font-semibold text-content">{h.value}</p>
+            <div className="flex items-start justify-between gap-3">
+              <p className="text-label-bold uppercase text-content-variant">{h.label}</p>
+              <HealthIcon status={h.status} />
+            </div>
+            <p className="mt-2 text-xl font-semibold tabular-nums text-content">{h.value}</p>
             <Badge tone={h.status} className="mt-2">
               {h.status}
             </Badge>

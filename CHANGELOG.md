@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased — Package lifecycle TS layer + Installed-Packages actions (Phase 2)
+
+- New `src/data/package-lifecycle` vertical: repository interface, a stateful
+  mock (real disable→enable→uninstall→restore→permanently-remove transitions),
+  and a Supabase adapter that drives the lifecycle RPCs + reads company_packages
+  with retention state. Pages/components never call Supabase directly.
+- Hooks: `useCompanyPackages` (lifecycle list) + `useDisablePackage` /
+  `useEnablePackage` / `useUninstallPackage` / `useRestorePackage` /
+  `usePermanentlyRemovePackage`, each invalidating only the current company's
+  lifecycle + context queries and surfacing safe error messages.
+- Installed Packages page rebuilt: lifecycle-status cards (Active / Disabled /
+  Uninstalled / Removed) with retention-end dates and actions gated by category +
+  role + state — Disable/Re-enable, Uninstall (→30-day retention confirm),
+  Restore, and Permanently Remove (typed-confirmation dialog). Mandatory HR Core
+  exposes no destructive actions; non-admins are read-only.
+- Tests: action-gating logic, mock lifecycle transitions, and the panel UI
+  (typed-confirmation gate). 380 tests.
+
 ## Unreleased — Package lifecycle & retention backbone (branch `feat/package-lifecycle-and-retention`)
 
 Phase 1 of the package lifecycle: the authoritative, RLS-safe **database backbone**

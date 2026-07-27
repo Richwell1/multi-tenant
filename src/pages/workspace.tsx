@@ -8,7 +8,6 @@ import { PageHeader } from '@/components/page-header';
 import { APP_VERSION } from '@/lib/app-version';
 import {
   PACKAGE_MANIFEST,
-  availableFeatures,
   hasFeature,
   installedVersion,
   marketplaceCategory,
@@ -26,6 +25,7 @@ import { packageCategoryLabel, type PackageCategory } from '@/lib/packages/categ
 import { formatDate } from '@/lib/utils';
 import { RepositoryError } from '@/data/errors';
 import { StatCard } from '@/components/stat-card';
+import { InstalledPackagesPanel } from '@/components/installed-packages-panel';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { SubmitButton } from '@/components/ui/submit-button';
@@ -716,76 +716,20 @@ export function UpdatesPage() {
 }
 
 export function InstalledPackagesPage() {
-  // Single source: the resolved company context (enabled packages + installed
-  // versions). Feature lists come from the centralized package manifest — package
-  // versions are never hardcoded per component and stay separate from APP_VERSION.
-  const { packages, isPending, isError } = usePackageEntitlements();
-  const featureCount = packages.reduce(
-    (sum, p) => sum + availableFeatures(packages, p.code as PackageKey).length,
-    0,
-  );
+  // Lifecycle-aware view: install state + retention, with actions gated by the
+  // package category, the caller's role, and the current lifecycle state. All
+  // mutations run through SECURITY DEFINER RPCs — never a direct Supabase call.
+  const companyContext = useCompanyContext();
+  const isCompanyAdmin = companyContext.data?.role === 'company_admin';
   return (
     <>
       <PageHeader
         title="Installed Packages"
-        description="Packages active in this workspace"
+        description="Manage the packages active in this workspace"
         icon={<Package className="size-5" />}
         actions={<Badge tone="neutral">Platform version: {APP_VERSION}</Badge>}
       />
-      {isPending ? (
-        <PageLoadingState label="Loading installed packages…" />
-      ) : isError ? (
-        <ErrorState />
-      ) : packages.length === 0 ? (
-        <EmptyState title="No packages installed" description="Installed packages will appear here once a release reaches this company." />
-      ) : (
-        <>
-          <div className="mb-6 grid gap-4 sm:grid-cols-2">
-            <StatCard
-              label="Installed packages"
-              value={packages.length}
-              hint="Active in this workspace"
-              icon={<Package className="size-5" />}
-              accent="portal"
-            />
-            <StatCard
-              label="Features unlocked"
-              value={featureCount}
-              hint="Across all installed versions"
-              icon={<CheckCircle2 className="size-5" />}
-            />
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {packages.map((p) => {
-              const entry = PACKAGE_MANIFEST[p.code as PackageKey];
-              const features = availableFeatures(packages, p.code as PackageKey);
-              return (
-                <Card key={p.code}>
-                  <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
-                    <CardTitle>{entry?.name ?? p.code}</CardTitle>
-                    <Badge tone="neutral">v{p.version ?? '—'}</Badge>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <p className="text-label-caps uppercase text-content-variant">
-                      {features.length} {features.length === 1 ? 'feature' : 'features'} available
-                    </p>
-                    {features.length > 0 && (
-                      <ul className="space-y-1 text-sm text-content-variant">
-                        {features.map((f) => (
-                          <li key={f.label} className="flex items-center gap-2">
-                            <CheckCircle2 className="size-4 text-status-healthy" />
-                            {f.label}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        </>
-      )}
+      <InstalledPackagesPanel isCompanyAdmin={isCompanyAdmin} />
     </>
   );
 }

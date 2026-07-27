@@ -95,7 +95,14 @@ survival, idempotent purge, and PASS-only install. **20/20** SQL suites overall.
 
 - **Phase 1 (this branch, done & verified):** the lifecycle + retention database
   backbone — schema, RLS, RPCs, impact-manifest column, and the SQL suite above.
-- **Phase 2+ (planned):** TypeScript repository/hooks/services for the lifecycle
+- **Phase 2 (this branch, done & verified):** TypeScript lifecycle layer —
+  `src/data/package-lifecycle` (repository interface + stateful mock + Supabase
+  RPC adapter), `useCompanyPackages` + disable/enable/uninstall/restore/
+  permanently-remove hooks (scoped cache invalidation), and the Installed
+  Packages panel: lifecycle-status cards with actions gated by category + role +
+  state, an uninstall→retention confirm, and a typed-confirmation permanent
+  removal. Tests: pure action-gating, mock transitions, and the panel UI.
+- **Phase 3+ (planned):** TypeScript repository/hooks/services for the remaining
   RPCs; install/update/rollback **review dialogs**; Installed-Packages lifecycle
   actions (Disable/Enable/Uninstall/Restore/Permanently Remove) gated by category
   + role + state; Platform-Admin monitoring surface; a scheduled purge Edge

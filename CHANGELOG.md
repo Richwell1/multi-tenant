@@ -1,5 +1,26 @@
 # Changelog
 
+## Unreleased — Package lifecycle & retention backbone (branch `feat/package-lifecycle-and-retention`)
+
+Phase 1 of the package lifecycle: the authoritative, RLS-safe **database backbone**
+for disable / uninstall / restore / permanent removal / secure purge, plus impact
+manifests and lifecycle monitoring. (TS/UI layers, review dialogs, and the new
+packages follow in later phases — see docs/PACKAGE_LIFECYCLE.md.)
+
+- Migration `20260802010000_package_lifecycle_and_retention.sql`:
+  `packages.is_mandatory` + `feature_table`, `package_versions.impact_manifest`,
+  `company_packages` retention columns (`data_state`, `retention_until`, …),
+  `package_lifecycle_operations` (one running op per company+package),
+  `package_restore_points`, all RLS-gated.
+- RPCs (self-authorizing company_admin): `disable_package`, `enable_package`,
+  `uninstall_package` (→ 30-day retention, data preserved not deleted),
+  `restore_package` (data returns, no duplication), `permanently_remove_package`
+  (deletes only that package's company data). `purge_expired_retention`
+  (service-role, idempotent, per-tenant failure isolation, counts-not-content).
+- Mandatory HR Core cannot be uninstalled/removed by a company; lifecycle RPCs
+  only ever act on the caller's own company; PASS-only install still enforced.
+- SQL suite `package_lifecycle_rls.sql` (16 checks). 20/20 suites, 368 tests.
+
 ## Unreleased — Unique company slugs (branch `feat/unique-company-slugs`)
 
 - **Company names may repeat; slugs are globally unique.** `companies.slug` keeps

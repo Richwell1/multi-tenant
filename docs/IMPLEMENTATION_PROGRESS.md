@@ -8,13 +8,13 @@
 | | |
 |---|---|
 | Product | Multi-Tenants HR |
-| Current branch | `feat/unique-company-slugs` |
+| Current branch | `feat/package-lifecycle-and-retention` |
 | Current phase | Platform Admin UI polish (phase 1: event labels + header icons) |
 | Current increment | Human-readable audit/event labels (Dashboard + Audit) + shared page-header icons across Admin; remaining polish phases scoped in UI_UX_PROGRESS |
 | Default data source | `mock` (`VITE_DATA_SOURCE`), Supabase path behind lazy adapters |
 | Local Supabase ports | API/Functions 54331 · DB 54332 · Studio 54333 (project-local +10 offset) |
 | Hosted Supabase | Linked (`uezvaqoqqqgblpcbkujq`); all 25 migrations deployed (marketplace table grants + company-updates RPCs pushed through 2026-07-31); local↔remote aligned |
-| Test count | 367 application tests |
+| Test count | 368 application tests |
 
 > `main` carries everything through 5.6 and the hosted Supabase baseline is deployed. The hosted CI quality gate passed the full
 > SQL/RLS matrix and application checks. RLS suites under `supabase/tests/`:

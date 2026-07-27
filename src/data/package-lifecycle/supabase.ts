@@ -18,7 +18,7 @@ interface CompanyPackageRow {
   data_state: PackageDataState;
   retention_until: string | null;
   installation_source: string | null;
-  packages: { name: string; category: PackageCategory; is_mandatory: boolean; feature_table: string | null } | null;
+  packages: { name: string; category: PackageCategory; is_mandatory: boolean; feature_table: string | null; feature_status: 'implemented' | 'catalog_only' | null } | null;
 }
 
 /**
@@ -30,7 +30,7 @@ export class SupabasePackageLifecycleRepository implements PackageLifecycleRepos
   async listCompanyPackages(companyId: string): Promise<CompanyPackageLifecycle[]> {
     const { data, error } = await getSupabaseClient()
       .from('company_packages')
-      .select('package_key, package_version, enabled, data_state, retention_until, installation_source, packages(name, category, is_mandatory, feature_table)')
+      .select('package_key, package_version, enabled, data_state, retention_until, installation_source, packages(name, category, is_mandatory, feature_table, feature_status)')
       .eq('company_id', companyId);
     if (error) throw mapSupabaseError(error, 'package-lifecycle.list');
     return ((data ?? []) as unknown as CompanyPackageRow[]).map((r) => ({
@@ -44,6 +44,7 @@ export class SupabasePackageLifecycleRepository implements PackageLifecycleRepos
       isMandatory: r.packages?.is_mandatory ?? false,
       installationSource: r.installation_source,
       hasFeatureData: !!r.packages?.feature_table,
+      featureStatus: r.packages?.feature_status ?? 'implemented',
     }));
   }
 

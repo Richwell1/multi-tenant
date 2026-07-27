@@ -3,11 +3,16 @@
 // the company catalog is restricted to marketplace packages by RLS.
 import { resolveDataSource } from '@/data/repository';
 
+/** Honest implementation readiness (separate from diagnostics PASS). */
+export type FeatureStatus = 'implemented' | 'catalog_only';
+
 export interface MarketplacePackage {
   code: string;
   name: string;
   description: string;
   latestVersion: string | null;
+  /** 'catalog_only' = discovery/review/lifecycle only; feature build pending. */
+  featureStatus: FeatureStatus;
 }
 
 export interface MarketplaceInstallResult {
@@ -29,11 +34,11 @@ export interface MarketplaceRepository {
 }
 
 const MOCK_CATALOG: MarketplacePackage[] = [
-  { code: 'document-notes', name: 'Document Notes', description: 'Create simple internal notes for your company.', latestVersion: '1.0.0' },
-  { code: 'expense-requests', name: 'Expense Requests', description: 'Record and track basic company expense requests.', latestVersion: '1.0.0' },
-  { code: 'company-announcements', name: 'Company Announcements', description: 'Broadcast company-wide announcements to your workspace.', latestVersion: '1.0.0' },
-  { code: 'asset-register', name: 'Asset Register', description: 'Track company assets and who they are assigned to.', latestVersion: '1.0.0' },
-  { code: 'pulse-surveys', name: 'Pulse Surveys', description: 'Run short, recurring employee pulse surveys.', latestVersion: '1.0.0' },
+  { code: 'document-notes', name: 'Document Notes', description: 'Create simple internal notes for your company.', latestVersion: '1.0.0', featureStatus: 'implemented' },
+  { code: 'expense-requests', name: 'Expense Requests', description: 'Record and track basic company expense requests.', latestVersion: '1.0.0', featureStatus: 'implemented' },
+  { code: 'company-announcements', name: 'Company Announcements', description: 'Broadcast company-wide announcements to your workspace.', latestVersion: '1.0.0', featureStatus: 'catalog_only' },
+  { code: 'asset-register', name: 'Asset Register', description: 'Track company assets and who they are assigned to.', latestVersion: '1.0.0', featureStatus: 'catalog_only' },
+  { code: 'pulse-surveys', name: 'Pulse Surveys', description: 'Run short, recurring employee pulse surveys.', latestVersion: '1.0.0', featureStatus: 'catalog_only' },
 ];
 
 class MockMarketplaceRepository implements MarketplaceRepository {

@@ -13,14 +13,15 @@ interface CatalogEntry {
   category: PackageCategory;
   isMandatory: boolean;
   hasFeatureData: boolean;
+  featureStatus: 'implemented' | 'catalog_only';
 }
 const CATALOG: Record<string, CatalogEntry> = {
-  'hr-core': { name: 'HR Core', category: 'standard_package', isMandatory: true, hasFeatureData: false },
-  'leave-management': { name: 'Leave Management', category: 'standard_package', isMandatory: false, hasFeatureData: false },
-  'attendance-management': { name: 'Attendance Management', category: 'standard_package', isMandatory: false, hasFeatureData: false },
-  'document-notes': { name: 'Document Notes', category: 'marketplace_extension', isMandatory: false, hasFeatureData: true },
-  'expense-requests': { name: 'Expense Requests', category: 'marketplace_extension', isMandatory: false, hasFeatureData: true },
-  'custom-visitor-register': { name: 'Custom Visitor Register', category: 'private_standalone', isMandatory: false, hasFeatureData: true },
+  'hr-core': { name: 'HR Core', category: 'standard_package', isMandatory: true, hasFeatureData: false, featureStatus: 'implemented' },
+  'leave-management': { name: 'Leave Management', category: 'standard_package', isMandatory: false, hasFeatureData: false, featureStatus: 'implemented' },
+  'attendance-management': { name: 'Attendance Management', category: 'standard_package', isMandatory: false, hasFeatureData: false, featureStatus: 'implemented' },
+  'document-notes': { name: 'Document Notes', category: 'marketplace_extension', isMandatory: false, hasFeatureData: true, featureStatus: 'implemented' },
+  'expense-requests': { name: 'Expense Requests', category: 'marketplace_extension', isMandatory: false, hasFeatureData: true, featureStatus: 'implemented' },
+  'custom-visitor-register': { name: 'Custom Visitor Register', category: 'private_standalone', isMandatory: false, hasFeatureData: true, featureStatus: 'implemented' },
 };
 
 /** Default installed set per demo company (keyed by slug === mock companyId). */
@@ -39,7 +40,13 @@ const RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 function seedFor(companyId: string): CompanyPackageLifecycle[] {
   const rows = SEED[companyId] ?? SEED.alpha;
   return rows.map(({ key, version, source }) => {
-    const cat = CATALOG[key] ?? { name: key, category: 'standard_package' as PackageCategory, isMandatory: false, hasFeatureData: false };
+    const cat = CATALOG[key] ?? {
+      name: key,
+      category: 'standard_package' as PackageCategory,
+      isMandatory: false,
+      hasFeatureData: false,
+      featureStatus: 'implemented' as const,
+    };
     return {
       packageKey: key,
       name: cat.name,
@@ -51,6 +58,7 @@ function seedFor(companyId: string): CompanyPackageLifecycle[] {
       isMandatory: cat.isMandatory,
       installationSource: source,
       hasFeatureData: cat.hasFeatureData,
+      featureStatus: cat.featureStatus,
     };
   });
 }

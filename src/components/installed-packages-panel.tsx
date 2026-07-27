@@ -90,6 +90,7 @@ export function InstalledPackagesPanel({ isCompanyAdmin }: { isCompanyAdmin: boo
                 <div className="flex flex-wrap items-center gap-2 text-xs text-content-variant">
                   <Badge tone="neutral">v{p.installedVersion ?? '—'}</Badge>
                   {p.isMandatory && <Badge tone="platform">Mandatory</Badge>}
+                  {p.featureStatus === 'catalog_only' && <Badge tone="warning">Feature implementation pending</Badge>}
                   {status === 'uninstalled' && p.retentionUntil && (
                     <span className="flex items-center gap-1 text-status-degraded">
                       <Clock className="size-3.5" /> Retention ends {formatDate(p.retentionUntil)}

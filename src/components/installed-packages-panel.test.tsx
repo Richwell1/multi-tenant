@@ -28,6 +28,7 @@ const row = (over: Partial<CompanyPackageLifecycle>): CompanyPackageLifecycle =>
   isMandatory: false,
   installationSource: 'company_marketplace',
   hasFeatureData: true,
+  featureStatus: 'implemented',
   ...over,
 });
 
@@ -80,6 +81,12 @@ describe('InstalledPackagesPanel', () => {
       { packageKey: 'document-notes' },
       expect.objectContaining({ onSuccess: expect.any(Function) }),
     );
+  });
+
+  it('marks a catalog-only package as feature-implementation pending', () => {
+    list([row({ packageKey: 'company-announcements', name: 'Company Announcements', featureStatus: 'catalog_only' })]);
+    render(<InstalledPackagesPanel isCompanyAdmin />);
+    expect(screen.getByText('Feature implementation pending')).toBeInTheDocument();
   });
 
   it('gives a non-admin no lifecycle action buttons', () => {

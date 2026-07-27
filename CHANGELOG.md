@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased — Feature-readiness honesty (branch `fix/hosted-lifecycle-readiness`)
+
+- New `packages.feature_status` (`implemented` | `catalog_only`, migration
+  `20260804010000`) — a truthful axis separate from diagnostics PASS so a
+  catalog-only package can never appear fully production-ready. The eight new
+  packages are `catalog_only`; real features are `implemented`.
+- Marketplace + Installed Packages show a **"Feature implementation pending"**
+  badge for catalog-only packages (and expose no feature page). No diagnostics are
+  faked. 387 tests, 21/21 SQL suites.
+
 ## Unreleased — Package lifecycle Phases 3-5 (review dialogs, monitoring, new packages)
 
 - **Impact manifests + review dialog:** `src/lib/packages/impact.ts` (structured

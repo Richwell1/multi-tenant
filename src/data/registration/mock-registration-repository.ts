@@ -1,6 +1,9 @@
 import { RepositoryError } from '@/data/errors';
 import type { RegistrationRepository } from './registration-repository';
-import type { RegisterCompanyInput, RegisterCompanyResult } from './types';
+import type { RegisterCompanyInput, RegisterCompanyResult, SlugAvailability } from './types';
+
+/** Slugs the demo backend treats as already taken (drives live availability). */
+const RESERVED_SLUGS = new Set(['taken', 'admin', 'www', 'app']);
 
 /**
  * Mock registration — succeeds by default. Sentinel inputs surface the same
@@ -11,17 +14,22 @@ import type { RegisterCompanyInput, RegisterCompanyResult } from './types';
  *   email "taken@x.com"     -> duplicate_email
  */
 export class MockRegistrationRepository implements RegistrationRepository {
+  async checkSlugAvailability(slug: string): Promise<SlugAvailability> {
+    await new Promise((r) => setTimeout(r, 250));
+    return { slug, available: !RESERVED_SLUGS.has(slug.toLowerCase()), verified: true };
+  }
+
   async register(input: RegisterCompanyInput): Promise<RegisterCompanyResult> {
     await new Promise((r) => setTimeout(r, 300));
 
     if (input.email.toLowerCase() === 'taken@x.com') {
-      throw new RepositoryError('An account with this email already exists.', 'conflict');
+      throw new RepositoryError('An account with this email already exists.', 'conflict', undefined, 'email');
     }
-    if (input.slug === 'taken') {
-      throw new RepositoryError('That company slug is already taken.', 'conflict');
+    if (RESERVED_SLUGS.has(input.slug.toLowerCase())) {
+      throw new RepositoryError('That company slug is already taken.', 'conflict', undefined, 'slug');
     }
     if (input.requestedSubdomain === 'taken') {
-      throw new RepositoryError('That subdomain is already taken.', 'conflict');
+      throw new RepositoryError('That subdomain is already taken.', 'conflict', undefined, 'subdomain');
     }
 
     const subdomain = input.requestedSubdomain?.trim() || input.slug;

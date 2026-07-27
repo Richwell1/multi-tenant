@@ -18,7 +18,11 @@ advanced incident management.
 - Supabase Auth and PostgreSQL through the Supabase JavaScript client
 - Supabase Edge Function for atomic company registration
 - Vitest and React Testing Library for application tests
-- Supabase CLI SQL suites for authenticated RLS and RPC scenarios
+- Supabase CLI SQL suites for authenticated RLS and RPC scenarios, including a
+  dynamic **privilege-drift guardrail** (`feature_table_grants_guardrail.sql`)
+  that fails if any RLS-policied `public` table is missing the `authenticated`
+  Data API grant its policies imply — Postgres checks table privileges before
+  RLS, so a missing grant is a 42501 the browser hits before RLS ever runs
 - Vercel for the SPA deployment; `vercel.json` rewrites application routes to
   `index.html`
 

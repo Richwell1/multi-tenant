@@ -15,4 +15,4 @@ export function createRegistrationRepository(source = resolveDataSource()): Regi
 export const registrationRepository: RegistrationRepository = createRegistrationRepository();
 
 export type { RegistrationRepository } from './registration-repository';
-export type { RegisterCompanyInput, RegisterCompanyResult } from './types';
+export type { RegisterCompanyInput, RegisterCompanyResult, SlugAvailability } from './types';

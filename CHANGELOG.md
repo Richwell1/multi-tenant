@@ -1,5 +1,36 @@
 # Changelog
 
+## Unreleased — Provisioning guardrails + registration UX (branch `feat/package-security-guardrails-and-registration-ux`)
+
+**Provisioning guardrail (prevents the confirmed 42501 class):**
+- New `supabase/tests/feature_table_grants_guardrail.sql` — a *dynamic* drift
+  detector. It reads `pg_policies` at run time and fails if any RLS-policied
+  `public` table lacks the `authenticated` table privilege its policy commands
+  imply (SELECT/INSERT/UPDATE/DELETE; ALL ⇒ all four). Because Postgres evaluates
+  table privileges before RLS, that missing grant is exactly what made
+  document_notes / expense_requests / visitor_register fail on hosted before
+  migration `20260730010000`. Companion check: every policied table has RLS
+  enabled. Includes a self-test proving the detector fires on drift. Every future
+  feature table is covered automatically — nothing to maintain. 18/18 SQL suites.
+- The already-correct `can_use_company_package(company_id, package_key)` helper is
+  untouched.
+
+**Company registration UX:**
+- **Auto-slug** derived from the company name (editable; stops syncing once the
+  founder edits it) via `deriveSlug`/`isValidSlug` (`src/lib/slug.ts`).
+- **Live slug availability** through the registration repository
+  (`checkSlugAvailability`) — authoritative in demo/mock, best-effort
+  ("confirmed on submit") on hosted where uniqueness is enforced transactionally.
+  Debounced, format-gated hook `useSlugAvailability`.
+- **Show/hide password toggle** + advisory **strength meter** (`src/lib/password.ts`).
+- **Success confirmation step** — a "You're all set" panel (workspace + starter
+  HR Core) with an explicit "Continue to sign in"; no session is fabricated.
+- **Clearer error surfacing** — duplicate slug/subdomain/email now land inline on
+  the exact field (`RepositoryError.field`), not a generic banner or a "network"
+  toast.
+- 349 tests (adds slug/password/register/registration-adapter coverage). Layering
+  preserved (page → hook → repository → adapter); no direct Supabase calls.
+
 ## Unreleased — Company workspace polish, phase 2 (branch `feat/workspace-polish-phase2`)
 
 - **Departments / Positions:** page-header icons + descriptions, and actionable

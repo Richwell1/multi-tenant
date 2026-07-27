@@ -19,3 +19,15 @@ export interface RegisterCompanyResult {
   role: 'company_admin';
   hrCore: { packageKey: string; version: string };
 }
+
+/**
+ * Result of a pre-submit slug availability check.
+ * `verified` distinguishes an authoritative answer (mock/demo backend) from a
+ * best-effort format check that will only be confirmed on submit (hosted, where
+ * uniqueness is enforced transactionally by the Edge Function).
+ */
+export interface SlugAvailability {
+  slug: string;
+  available: boolean;
+  verified: boolean;
+}

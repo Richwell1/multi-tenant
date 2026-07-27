@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -13,7 +13,10 @@ import { Badge } from '@/components/ui/badge';
 import { AccessDeniedState, CompanySuspendedState } from '@/components/states';
 import { useSession } from '@/lib/session';
 import { useLoginPortalContext } from '@/hooks/use-login-portal-context';
-import { useRegisterCompany } from '@/hooks/use-register-company';
+import { useRegisterCompany, useSlugAvailability } from '@/hooks/use-register-company';
+import type { RegisterCompanyResult } from '@/data/registration';
+import { deriveSlug, isValidSlug } from '@/lib/slug';
+import { passwordStrength, PASSWORD_STRENGTH_LABEL, type PasswordStrength } from '@/lib/password';
 import { RepositoryError } from '@/data/errors';
 import { companyContextRepository, platformAdminRepository } from '@/data/context';
 import { notify } from '@/lib/notify';
@@ -240,22 +243,47 @@ const registerSchema = z
   });
 type RegisterForm = z.infer<typeof registerSchema>;
 
+/** Maps a registration conflict field to the matching form field. */
+const CONFLICT_FIELD_TO_FORM: Record<string, keyof RegisterForm> = {
+  slug: 'slug',
+  subdomain: 'slug',
+  email: 'adminEmail',
+};
+
 export function RegisterPage() {
   const navigate = useNavigate();
   const mutation = useRegisterCompany();
   const [registerError, setRegisterError] = useState<string | null>(null);
+  const [created, setCreated] = useState<RegisterCompanyResult | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [slugEdited, setSlugEdited] = useState(false);
   const {
     register,
     handleSubmit,
     watch,
+    setValue,
+    setError,
     formState: { errors },
   } = useForm<RegisterForm>({ resolver: zodResolver(registerSchema) });
 
+  const companyName = watch('companyName');
   const slug = watch('slug');
+  const password = watch('password') ?? '';
+  const strength = passwordStrength(password);
+
+  // Auto-derive the slug from the company name until the founder edits it by
+  // hand — then we stop syncing so their choice is preserved.
+  useEffect(() => {
+    if (slugEdited) return;
+    const next = deriveSlug(companyName ?? '');
+    setValue('slug', next, { shouldValidate: next.length > 0 });
+  }, [companyName, slugEdited, setValue]);
+
+  const availability = useSlugAvailability(slug ?? '');
 
   // Register page → hook → registration service → adapter. Never calls the Edge
-  // Function directly. On success we route to the company login (a session is
-  // NOT fabricated here — the founder signs in explicitly).
+  // Function directly. On success we show a confirmation step (a session is NOT
+  // fabricated here — the founder signs in explicitly from there).
   const onValid = async (values: RegisterForm) => {
     setRegisterError(null);
     try {
@@ -267,11 +295,55 @@ export function RegisterPage() {
         email: values.adminEmail,
         password: values.password,
       });
-      navigate({ to: '/login', search: { tenant: result.slug } });
+      setCreated(result);
     } catch (e) {
+      // Field-specific conflicts land on their input; everything else is a banner.
+      if (e instanceof RepositoryError && e.kind === 'conflict' && e.field) {
+        const formField = CONFLICT_FIELD_TO_FORM[e.field];
+        if (formField) {
+          setError(formField, { type: 'server', message: e.message });
+          if (formField === 'slug') setSlugEdited(true);
+          return;
+        }
+      }
       setRegisterError(e instanceof RepositoryError ? e.message : 'Registration failed. Please try again.');
     }
   };
+
+  if (created) {
+    return (
+      <AuthLayout portalClass="portal-company">
+        <Card className="p-5 text-center sm:p-8">
+          <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-full bg-status-healthy/10 text-status-healthy">
+            <CheckCircle2 className="size-8" />
+          </div>
+          <Badge tone="company">Company created</Badge>
+          <h1 className="mt-4 text-2xl font-bold tracking-tight text-content">You’re all set</h1>
+          <p className="mt-2 text-sm leading-6 text-content-variant">
+            <span className="font-medium text-content">{created.slug}</span> is ready. HR Core{' '}
+            {created.hrCore.version} has been assigned automatically. Sign in with the admin account you just
+            created to open your workspace.
+          </p>
+          <dl className="mt-5 space-y-2 rounded-md border border-border bg-surface-subtle px-4 py-3 text-left text-sm">
+            <div className="flex justify-between gap-3">
+              <dt className="text-content-variant">Workspace</dt>
+              <dd className="font-medium text-content">{created.subdomain}.multi-tenants-hr.com</dd>
+            </div>
+            <div className="flex justify-between gap-3">
+              <dt className="text-content-variant">Starter package</dt>
+              <dd className="font-medium text-content">HR Core {created.hrCore.version}</dd>
+            </div>
+          </dl>
+          <Button
+            className="mt-6 w-full"
+            onClick={() => navigate({ to: '/login', search: { tenant: created.slug } })}
+          >
+            Continue to sign in
+          </Button>
+        </Card>
+      </AuthLayout>
+    );
+  }
 
   return (
     <AuthLayout portalClass="portal-company">
@@ -304,9 +376,15 @@ export function RegisterPage() {
             label="Company slug"
             htmlFor="slug"
             error={errors.slug?.message}
-            hint={slug ? `${slug}.multi-tenants-hr.com` : 'Used for your subdomain'}
+            hint={slug ? `${slug}.multi-tenants-hr.com` : 'Auto-filled from your company name; edit if you like.'}
           >
-            <Input id="slug" aria-invalid={!!errors.slug} placeholder="acme-corp" {...register('slug')} />
+            <Input
+              id="slug"
+              aria-invalid={!!errors.slug}
+              placeholder="acme-corp"
+              {...register('slug', { onChange: () => setSlugEdited(true) })}
+            />
+            <SlugAvailabilityHint slug={slug ?? ''} query={availability} hasError={!!errors.slug} />
           </Field>
           <div className="border-b border-border pb-2 pt-2 text-xs font-semibold uppercase tracking-[0.12em] text-content-variant">
             Company administrator
@@ -323,18 +401,31 @@ export function RegisterPage() {
             error={errors.password?.message}
             hint="Use at least 8 characters."
           >
-            <Input
-              id="password"
-              type="password"
-              autoComplete="new-password"
-              aria-invalid={!!errors.password}
-              {...register('password')}
-            />
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="new-password"
+                aria-invalid={!!errors.password}
+                className="pr-10"
+                {...register('password')}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((s) => !s)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                aria-pressed={showPassword}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-content-variant hover:bg-surface-subtle hover:text-content"
+              >
+                {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              </button>
+            </div>
+            <PasswordStrengthMeter strength={strength} />
           </Field>
           <Field label="Confirm password" htmlFor="confirmPassword" error={errors.confirmPassword?.message}>
             <Input
               id="confirmPassword"
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               autoComplete="new-password"
               aria-invalid={!!errors.confirmPassword}
               {...register('confirmPassword')}
@@ -352,6 +443,60 @@ export function RegisterPage() {
         </p>
       </Card>
     </AuthLayout>
+  );
+}
+
+/** Live availability line under the slug field. */
+function SlugAvailabilityHint({
+  slug,
+  query,
+  hasError,
+}: {
+  slug: string;
+  query: ReturnType<typeof useSlugAvailability>;
+  hasError: boolean;
+}) {
+  // Format errors already show via the Field; don't double up.
+  if (hasError || !isValidSlug(slug.trim())) return null;
+  if (query.isFetching) {
+    return <p className="mt-1.5 text-xs text-content-variant">Checking availability…</p>;
+  }
+  const data = query.data;
+  if (!data || data.slug !== slug.trim()) return null;
+  if (!data.verified) {
+    return <p className="mt-1.5 text-xs text-content-variant">Availability is confirmed when you submit.</p>;
+  }
+  return data.available ? (
+    <p className="mt-1.5 flex items-center gap-1.5 text-xs text-status-healthy">
+      <CheckCircle2 className="size-3.5" /> “{slug.trim()}” is available.
+    </p>
+  ) : (
+    <p className="mt-1.5 flex items-center gap-1.5 text-xs text-danger">
+      <AlertCircle className="size-3.5" /> “{slug.trim()}” is already taken.
+    </p>
+  );
+}
+
+/** Advisory password-strength bar (does not gate submit). */
+function PasswordStrengthMeter({ strength }: { strength: PasswordStrength }) {
+  if (strength === 'empty') return null;
+  const fill = strength === 'weak' ? 1 : strength === 'fair' ? 2 : 3;
+  const color =
+    strength === 'weak' ? 'bg-danger' : strength === 'fair' ? 'bg-status-degraded' : 'bg-status-healthy';
+  return (
+    <div className="mt-2" aria-live="polite">
+      <div className="flex gap-1" aria-hidden>
+        {[1, 2, 3].map((i) => (
+          <span
+            key={i}
+            className={cn('h-1 flex-1 rounded-full', i <= fill ? color : 'bg-border')}
+          />
+        ))}
+      </div>
+      <p className="mt-1 text-xs text-content-variant">
+        Password strength: <span className="font-medium text-content">{PASSWORD_STRENGTH_LABEL[strength]}</span>
+      </p>
+    </div>
   );
 }
 

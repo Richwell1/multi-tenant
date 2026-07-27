@@ -47,6 +47,12 @@ items. No business logic, RLS, or migrations changed.
   distinct companies as a percentage of active companies.
 - Tests: Adoption progress-bar percentage. 325 tests.
 
+**Phase 5 (Operations pages):**
+- **Usage Analytics** — summary cards (total actions, modules tracked) + tabular numerals.
+- **System Health** — a status icon per signal card (healthy ✓ / degraded ⚠ / offline ✕).
+- **Diagnostics** — a result icon per row and a "passed / total passed" count.
+- Tests: Diagnostics checks-passed count. 326 tests.
+
 _Remaining phases (login/logout one-toast feedback, dialog focus sweep,
 responsive/accessibility audit, design-token centralization, optional Framer
 Motion) are scoped in `docs/UI_UX_PROGRESS.md`._

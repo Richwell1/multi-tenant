@@ -18,6 +18,8 @@ interface TableBoundaryProps<T> {
   cols?: number;
   emptyTitle?: string;
   emptyDescription?: string;
+  /** Optional primary action rendered inside the empty state (e.g. "Add …"). */
+  emptyAction?: ReactNode;
   children: ReactNode;
 }
 
@@ -33,6 +35,7 @@ export function TableBoundary<T>({
   cols = 4,
   emptyTitle,
   emptyDescription,
+  emptyAction,
   children,
 }: TableBoundaryProps<T>) {
   if (query.isPending) return <TableSkeleton cols={cols} />;
@@ -49,7 +52,7 @@ export function TableBoundary<T>({
   }
 
   const total = query.data?.length ?? 0;
-  if (total === 0) return <EmptyState title={emptyTitle} description={emptyDescription} />;
+  if (total === 0) return <EmptyState title={emptyTitle} description={emptyDescription} action={emptyAction} />;
   if (filtered.length === 0) return <NoResultsState query={searchTerm} />;
 
   return <>{children}</>;

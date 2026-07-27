@@ -15,7 +15,7 @@ import {
   MockMembershipRepository,
   MockPlatformAdminRepository,
 } from './mock';
-import type { CompanySessionContext, MembershipRecord } from './types';
+import type { CompanyBySlug, CompanySessionContext, MembershipRecord } from './types';
 
 class LazyPlatformAdminRepository implements PlatformAdminRepository {
   isPlatformAdmin(user: AuthUser): Promise<boolean> {
@@ -30,6 +30,9 @@ class LazyMembershipRepository implements MembershipRepository {
 class LazyCompanyContextRepository implements CompanyContextRepository {
   getCompanyContext(user: AuthUser): Promise<CompanySessionContext | null> {
     return import('./supabase').then((m) => new m.SupabaseCompanyContextRepository().getCompanyContext(user));
+  }
+  findCompanyBySlug(slug: string): Promise<CompanyBySlug | null> {
+    return import('./supabase').then((m) => new m.SupabaseCompanyContextRepository().findCompanyBySlug(slug));
   }
 }
 
@@ -52,4 +55,4 @@ export type {
   MembershipRepository,
   CompanyContextRepository,
 } from './repositories';
-export type { CompanySessionContext, MembershipRecord } from './types';
+export type { CompanyBySlug, CompanySessionContext, MembershipRecord } from './types';

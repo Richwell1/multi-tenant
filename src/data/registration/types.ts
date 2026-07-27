@@ -4,7 +4,12 @@
 
 export interface RegisterCompanyInput {
   companyName: string;
-  slug: string;
+  /**
+   * Optional user-chosen workspace slug. When present it is validated and must
+   * be unique (never auto-suffixed). When omitted, the backend derives a unique
+   * slug from the company name — the backend is authoritative for the final slug.
+   */
+  slug?: string;
   requestedSubdomain?: string;
   adminName?: string;
   email: string;

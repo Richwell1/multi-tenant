@@ -13,6 +13,7 @@ import type {
   PlatformAdminRepository,
 } from './repositories';
 import type {
+  CompanyBySlug,
   CompanyRole,
   CompanySessionContext,
   CompanyStatus,
@@ -24,7 +25,7 @@ interface MembershipRow {
   company_id: string;
   role: CompanyRole;
   status: MembershipStatus;
-  companies: { name: string; subdomain: string | null; status: CompanyStatus } | null;
+  companies: { name: string; slug: string; status: CompanyStatus } | null;
 }
 interface PackageRow {
   package_key: string;
@@ -65,7 +66,7 @@ export class SupabaseCompanyContextRepository implements CompanyContextRepositor
 
     const { data, error } = await client
       .from('company_memberships')
-      .select('company_id, role, status, companies(name, subdomain, status)')
+      .select('company_id, role, status, companies(name, slug, status)')
       .eq('user_id', user.id)
       .eq('status', 'active')
       .maybeSingle();
@@ -87,7 +88,7 @@ export class SupabaseCompanyContextRepository implements CompanyContextRepositor
     return {
       userId: user.id,
       companyId: m.company_id,
-      companySlug: m.companies.subdomain ?? '',
+      companySlug: m.companies.slug,
       companyName: m.companies.name,
       companyStatus: m.companies.status,
       membershipStatus: m.status,
@@ -95,5 +96,24 @@ export class SupabaseCompanyContextRepository implements CompanyContextRepositor
       enabledPackages,
       enabledPackageCodes: enabledPackages.map((p) => p.code),
     };
+  }
+
+  /**
+   * Resolve safe company metadata by slug. RLS on `companies` restricts rows to
+   * the caller's own company (or all, for a platform admin), so this cannot
+   * expose or authorize access to another tenant — membership + RLS remain the
+   * boundary. Returns null when the slug does not resolve for the caller.
+   */
+  async findCompanyBySlug(slug: string): Promise<CompanyBySlug | null> {
+    const normalized = slug.trim().toLowerCase();
+    const { data, error } = await getSupabaseClient()
+      .from('companies')
+      .select('id, slug, name, status')
+      .eq('slug', normalized)
+      .maybeSingle();
+    if (error) throw mapSupabaseError(error);
+    if (!data) return null;
+    const row = data as unknown as { id: string; slug: string; name: string; status: CompanyStatus };
+    return { companyId: row.id, companySlug: row.slug, companyName: row.name, companyStatus: row.status };
   }
 }

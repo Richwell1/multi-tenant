@@ -3,10 +3,19 @@ import { Link, useParams, useNavigate } from '@tanstack/react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { CheckCircle2, LayoutDashboard, Users, Building, Briefcase, Package, RefreshCw } from 'lucide-react';
+import { CheckCircle2, LayoutDashboard, Users, Building, Briefcase, Package, RefreshCw, Store } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import { APP_VERSION } from '@/lib/app-version';
-import { PACKAGE_MANIFEST, availableFeatures, hasFeature, installedVersion } from '@/lib/packages/manifest';
+import {
+  PACKAGE_MANIFEST,
+  availableFeatures,
+  hasFeature,
+  installedVersion,
+  marketplaceCategory,
+  packageFeatureLabels,
+  MARKETPLACE_CATEGORIES,
+  type MarketplaceCategory,
+} from '@/lib/packages/manifest';
 import type { PackageKey } from '@/data/types';
 import { useMarketplacePackages, useInstallMarketplaceExtension } from '@/hooks/marketplace';
 import { useDocumentNotes, useCreateDocumentNote } from '@/hooks/document-notes';
@@ -1162,33 +1171,72 @@ export function MarketplacePage() {
   const install = useInstallMarketplaceExtension();
   // Pending state is package-specific: only the card being installed shows it.
   const installingKey = install.isPending ? install.variables : undefined;
+  const [q, setQ] = useState('');
+  const [category, setCategory] = useState<MarketplaceCategory>('All');
   const items = query.data ?? [];
+  const filtered = items.filter((p) => {
+    if (category !== 'All' && marketplaceCategory(p.code) !== category) return false;
+    return `${p.name} ${p.description}`.toLowerCase().includes(q.toLowerCase());
+  });
+
   return (
     <>
-      <PageHeader title="Extensions Marketplace" description="Optional standalone features your company can install" />
+      <PageHeader
+        icon={<Store className="size-5" />}
+        title="Extensions Marketplace"
+        description="Discover optional features your company can install."
+        actions={
+          <div className="relative w-full sm:w-64">
+            <Input placeholder="Search extensions…" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search extensions" />
+          </div>
+        }
+      />
+      <div className="mb-4 flex flex-wrap gap-2">
+        {MARKETPLACE_CATEGORIES.map((c) => (
+          <Button key={c} size="sm" variant={category === c ? undefined : 'outline'} onClick={() => setCategory(c)}>
+            {c}
+          </Button>
+        ))}
+      </div>
       {query.isPending ? (
         <PageLoadingState label="Loading marketplace…" />
       ) : query.isError ? (
-        <ErrorState />
+        <ErrorState onRetry={() => query.refetch()} retrying={query.isFetching} />
       ) : items.length === 0 ? (
         <EmptyState title="No extensions available" description="Published marketplace extensions will appear here." />
+      ) : filtered.length === 0 ? (
+        <EmptyState title="No matching extensions" description="Try a different search or category." />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
-          {items.map((p) => {
+          {filtered.map((p) => {
             const installed = codes.includes(p.code);
-            const installedVersion = packages.find((x) => x.code === p.code)?.version ?? null;
+            const version = packages.find((x) => x.code === p.code)?.version ?? null;
             const isInstalling = installingKey === p.code;
             const openRoute = PACKAGE_MANIFEST[p.code as PackageKey]?.features[0]?.route;
+            const features = packageFeatureLabels(p.code as PackageKey);
             return (
-              <Card key={p.code}>
+              <Card key={p.code} className="flex flex-col">
                 <CardHeader>
-                  <CardTitle>{p.name}</CardTitle>
+                  <div className="flex items-start justify-between gap-2">
+                    <CardTitle>{p.name}</CardTitle>
+                    <Badge tone="neutral">{marketplaceCategory(p.code)}</Badge>
+                  </div>
                 </CardHeader>
-                <CardContent className="space-y-3">
+                <CardContent className="flex flex-1 flex-col gap-3">
                   {p.description && <p className="text-sm text-content-variant">{p.description}</p>}
-                  <div className="flex flex-wrap items-center gap-2">
+                  {features.length > 0 && (
+                    <ul className="space-y-1 text-sm text-content-variant">
+                      {features.map((f) => (
+                        <li key={f} className="flex items-center gap-2">
+                          <CheckCircle2 className="size-4 text-status-healthy" aria-hidden />
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <div className="mt-auto flex flex-wrap items-center gap-2 pt-2">
                     <Badge tone="neutral">Latest {p.latestVersion ?? '—'}</Badge>
-                    {installed && installedVersion && <Badge tone="healthy">Installed · {installedVersion}</Badge>}
+                    {installed && version && <Badge tone="healthy">Installed · {version}</Badge>}
                   </div>
                   {installed ? (
                     openRoute && (

@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased — Installed-package runtime access (branch `fix/installed-package-runtime-access`)
+
+- **Investigation (not a guess):** the "Could not add the note" feature-write
+  failure was the missing `authenticated` table grant on the marketplace/private
+  feature tables — table privileges are checked *before* RLS, so INSERTs were
+  denied with 42501. This was already fixed by migration `20260730010000`
+  (grants on `document_notes` / `expense_requests` / `visitor_register`, deployed
+  to hosted); the entitlement-gated RLS (`can_use_company_package`) and the
+  insert payload (company UUID from the authenticated membership context) are
+  correct. Verified end-to-end by `marketplace_notes_authz_rls.sql`.
+- **Authoritative runtime-access helper:** `can_use_company_package(company, package, uid)`
+  (active member ∧ active company ∧ enabled+active package) is the single helper
+  used by every feature-table INSERT/SELECT policy — no redundant duplicate added.
+- **Dev diagnostics:** `logSupabaseError` now also retains `details` and `hint`
+  (dev-only, credential-free) so a grant/policy failure is fully identifiable in
+  the console; user-facing messages remain safe. Test added. 329 tests.
+
 ## Unreleased — Company marketplace redesign (branch `feat/company-marketplace-redesign`)
 
 - **Extensions Marketplace redesign**: a search box + category filter chips

@@ -41,7 +41,12 @@ const isProviderInternalMessage = (message: string) =>
     message,
   );
 
-/** Development-only, structured Supabase diagnostics without credentials. */
+/**
+ * Development-only, structured Supabase diagnostics without credentials.
+ * Retains code/status/message AND details/hint so failures like a missing table
+ * grant (42501) or a policy denial are fully identifiable in the console — while
+ * the user-facing message stays safe (see mapSupabaseError). No-op in production.
+ */
 export function logSupabaseError(operation: string, error: unknown): void {
   if (!import.meta.env.DEV) return;
   const candidate = isSupabaseLike(error) ? error : undefined;
@@ -50,6 +55,8 @@ export function logSupabaseError(operation: string, error: unknown): void {
     code: candidate?.code ?? 'UNKNOWN',
     status: candidate?.status ?? null,
     message: safeMessage(candidate?.message ?? (error instanceof Error ? error.message : undefined)),
+    details: candidate?.details ? safeMessage(candidate.details) : null,
+    hint: candidate?.hint ? safeMessage(candidate.hint) : null,
   });
 }
 

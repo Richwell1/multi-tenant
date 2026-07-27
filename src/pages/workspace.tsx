@@ -3,7 +3,7 @@ import { Link, useParams, useNavigate } from '@tanstack/react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { CheckCircle2, LayoutDashboard, Users, Building, Briefcase, Package, RefreshCw, Store } from 'lucide-react';
+import { CheckCircle2, LayoutDashboard, Users, Building, Briefcase, Package, RefreshCw, Store, Settings as SettingsIcon } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import { APP_VERSION } from '@/lib/app-version';
 import {
@@ -408,6 +408,8 @@ function DepartmentsContent() {
     <>
       <PageHeader
         title="Departments"
+        description="Organizational units in this workspace"
+        icon={<Building className="size-5" />}
         actions={<Button onClick={() => setShowAdd((s) => !s)}>Add Department</Button>}
       />
       {showAdd && (
@@ -444,7 +446,14 @@ function DepartmentsContent() {
           </CardContent>
         </Card>
       )}
-      <TableBoundary query={query} filtered={filtered} cols={hasDeptCode ? 4 : 3}>
+      <TableBoundary
+        query={query}
+        filtered={filtered}
+        cols={hasDeptCode ? 4 : 3}
+        emptyTitle="No departments yet"
+        emptyDescription="Create your first department to start organizing this workspace."
+        emptyAction={<Button onClick={() => setShowAdd(true)}>Add Department</Button>}
+      >
         <DataTable>
           <THead>
             <TH>Name</TH>
@@ -522,6 +531,8 @@ export function PositionsPage() {
     <>
       <PageHeader
         title="Positions"
+        description="Roles and reporting lines across departments"
+        icon={<Briefcase className="size-5" />}
         actions={<Button onClick={() => setShowAdd((s) => !s)}>Add Position</Button>}
       />
       {showAdd && (
@@ -570,7 +581,14 @@ export function PositionsPage() {
           </CardContent>
         </Card>
       )}
-      <TableBoundary query={query} filtered={filtered} cols={5}>
+      <TableBoundary
+        query={query}
+        filtered={filtered}
+        cols={5}
+        emptyTitle="No positions yet"
+        emptyDescription="Add positions to define roles and reporting lines in this workspace."
+        emptyAction={<Button onClick={() => setShowAdd(true)}>Add Position</Button>}
+      >
         <DataTable>
           <THead>
             <TH>Title</TH>
@@ -698,11 +716,16 @@ export function InstalledPackagesPage() {
   // versions). Feature lists come from the centralized package manifest — package
   // versions are never hardcoded per component and stay separate from APP_VERSION.
   const { packages, isPending, isError } = usePackageEntitlements();
+  const featureCount = packages.reduce(
+    (sum, p) => sum + availableFeatures(packages, p.code as PackageKey).length,
+    0,
+  );
   return (
     <>
       <PageHeader
         title="Installed Packages"
         description="Packages active in this workspace"
+        icon={<Package className="size-5" />}
         actions={<Badge tone="neutral">Platform version: {APP_VERSION}</Badge>}
       />
       {isPending ? (
@@ -712,32 +735,52 @@ export function InstalledPackagesPage() {
       ) : packages.length === 0 ? (
         <EmptyState title="No packages installed" description="Installed packages will appear here once a release reaches this company." />
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
-          {packages.map((p) => {
-            const entry = PACKAGE_MANIFEST[p.code as PackageKey];
-            const features = availableFeatures(packages, p.code as PackageKey);
-            return (
-              <Card key={p.code}>
-                <CardHeader>
-                  <CardTitle>{entry?.name ?? p.code}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <Badge tone="neutral">Version {p.version ?? '—'}</Badge>
-                  {features.length > 0 && (
-                    <ul className="space-y-1 text-sm text-content-variant">
-                      {features.map((f) => (
-                        <li key={f.label} className="flex items-center gap-2">
-                          <CheckCircle2 className="size-4 text-status-healthy" />
-                          {f.label}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+        <>
+          <div className="mb-6 grid gap-4 sm:grid-cols-2">
+            <StatCard
+              label="Installed packages"
+              value={packages.length}
+              hint="Active in this workspace"
+              icon={<Package className="size-5" />}
+              accent="portal"
+            />
+            <StatCard
+              label="Features unlocked"
+              value={featureCount}
+              hint="Across all installed versions"
+              icon={<CheckCircle2 className="size-5" />}
+            />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {packages.map((p) => {
+              const entry = PACKAGE_MANIFEST[p.code as PackageKey];
+              const features = availableFeatures(packages, p.code as PackageKey);
+              return (
+                <Card key={p.code}>
+                  <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
+                    <CardTitle>{entry?.name ?? p.code}</CardTitle>
+                    <Badge tone="neutral">v{p.version ?? '—'}</Badge>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <p className="text-label-caps uppercase text-content-variant">
+                      {features.length} {features.length === 1 ? 'feature' : 'features'} available
+                    </p>
+                    {features.length > 0 && (
+                      <ul className="space-y-1 text-sm text-content-variant">
+                        {features.map((f) => (
+                          <li key={f.label} className="flex items-center gap-2">
+                            <CheckCircle2 className="size-4 text-status-healthy" />
+                            {f.label}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </>
       )}
     </>
   );
@@ -747,9 +790,22 @@ export function UsersPage() {
   const tid = useTenantId();
   const query = useCompanyUsers(tid);
   const filtered = query.data ?? [];
+  const activeCount = filtered.filter((u) => u.status === 'active').length;
+  const adminCount = filtered.filter((u) => u.role === 'company_admin').length;
   return (
     <>
-      <PageHeader title="Users & Roles" description="Company users and their roles" />
+      <PageHeader
+        title="Users & Roles"
+        description="Company users and their roles"
+        icon={<Users className="size-5" />}
+      />
+      {!query.isPending && !query.isError && filtered.length > 0 && (
+        <div className="mb-6 grid gap-4 sm:grid-cols-3">
+          <StatCard label="Total users" value={filtered.length} icon={<Users className="size-5" />} accent="portal" />
+          <StatCard label="Active" value={activeCount} hint="Currently enabled" />
+          <StatCard label="Administrators" value={adminCount} hint="Company admin role" />
+        </div>
+      )}
       <TableBoundary query={query} filtered={filtered} cols={4}>
         <DataTable>
           <THead>
@@ -804,7 +860,11 @@ export function SettingsPage() {
 
   return (
     <>
-      <PageHeader title="Company Settings" description="Basic company profile" />
+      <PageHeader
+        title="Company Settings"
+        description="Basic company profile"
+        icon={<SettingsIcon className="size-5" />}
+      />
       <Card className="max-w-2xl">
         <CardContent className="pt-6">
           <form

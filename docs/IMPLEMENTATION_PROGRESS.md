@@ -14,7 +14,7 @@
 | Default data source | `mock` (`VITE_DATA_SOURCE`), Supabase path behind lazy adapters |
 | Local Supabase ports | API/Functions 54331 · DB 54332 · Studio 54333 (project-local +10 offset) |
 | Hosted Supabase | Linked (`uezvaqoqqqgblpcbkujq`); all 25 migrations deployed (marketplace table grants + company-updates RPCs pushed through 2026-07-31); local↔remote aligned |
-| Test count | 329 application tests |
+| Test count | 332 application tests |
 
 > `main` carries everything through 5.6 and the hosted Supabase baseline is deployed. The hosted CI quality gate passed the full
 > SQL/RLS matrix and application checks. RLS suites under `supabase/tests/`:

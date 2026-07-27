@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased — Company workspace polish, phase 2 (branch `feat/workspace-polish-phase2`)
+
+- **Departments / Positions:** page-header icons + descriptions, and actionable
+  empty states — the "no records yet" panel now carries an **Add Department** /
+  **Add Position** button that opens the create form (via a new optional
+  `emptyAction` on `TableBoundary`).
+- **Installed Packages:** summary metrics (installed-package count + features
+  unlocked, both derived from context/manifest — never hardcoded) and richer
+  cards (version badge in the header + per-package feature count).
+- **Users & Roles:** page-header icon + summary metrics (total users / active /
+  administrators, computed from the loaded list).
+- **Company Settings:** page-header icon.
+- 332 tests (adds `workspace-polish.test.tsx`). Motion stays dependency-free.
+
 ## Unreleased — Installed-package runtime access (branch `fix/installed-package-runtime-access`)
 
 - **Investigation (not a guess):** the "Could not add the note" feature-write

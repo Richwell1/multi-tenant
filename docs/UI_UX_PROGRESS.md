@@ -19,6 +19,7 @@ Branch: `feat/ui-ux-polish`
 | Admin Installations page | Complete (phase 4) | Summary count cards + per-row status icon (installing spins, reduced-motion aware) alongside the badge | build/visual |
 | Admin Adoption page | Complete (phase 4) | Summary cards (extensions/total installs/most installed) + per-row adoption progress bar (role=progressbar) as % of active companies | Adoption test |
 | Admin Operations pages | Complete (phase 5) | Usage summary cards + tabular numerals; System Health per-card status icons; Diagnostics result icon + passed/total count | Diagnostics test |
+| Admin auth feedback + dialogs | Complete (phase 6) | One "Signed in"/"Signed out" toast (after context resolves); logout pending state + duplicate-click guard; login-page rejection cleanup is silent; ConfirmDialog focus-trap/Escape/return-focus verified | app-shell + states tests |
 | Admin UI polish — remaining | Planned | Per-page card/table/filter polish; login/logout feedback + one-toast sequencing; dialog focus/return sweep; responsive + a11y audit; design-token centralization; optional Framer Motion (deferred — dependency/bundle) | Phased on `feat/platform-admin-ui-polish` |
 | Shared buttons, badges, cards | Complete | Added outline/icon sizing, richer status tones, calmer borders/shadows, responsive padding | Typecheck/lint/tests/build pass |
 | Forms and fields | Complete | Linked hints/errors with `aria-describedby`, clearer labels, shared select/textarea styling, autofill treatment | Full route form smoke test deferred |

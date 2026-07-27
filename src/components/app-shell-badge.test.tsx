@@ -63,7 +63,7 @@ describe('sidebar section grouping', () => {
 });
 
 describe('top-bar profile menu', () => {
-  it('opens an accessible menu with identity, role, and logout', () => {
+  it('opens an accessible menu with identity, role, and logout', async () => {
     renderShell();
     const trigger = screen.getByRole('button', { name: 'Account menu' });
     expect(trigger).toHaveAttribute('aria-expanded', 'false');
@@ -74,6 +74,8 @@ describe('top-bar profile menu', () => {
     expect(menu).toHaveTextContent('Workspace'); // role/context label (portalBadge)
     fireEvent.click(screen.getByRole('menuitem', { name: /logout/i }));
     expect(logoutMock).toHaveBeenCalledTimes(1);
+    // Logout shows a pending state (prevents duplicate clicks).
+    expect(await screen.findByRole('menuitem', { name: /signing out/i })).toBeDisabled();
   });
 
   it('closes on Escape', () => {

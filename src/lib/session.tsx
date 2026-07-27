@@ -26,7 +26,7 @@ interface SessionState {
   /** Sign in via the auth boundary (mock or Supabase). */
   signIn: (input: SignInInput) => Promise<AuthSession>;
   /** Sign out and clear all cached tenant data. */
-  logout: () => Promise<void>;
+  logout: (opts?: { silent?: boolean }) => Promise<void>;
 }
 
 const SessionContext = createContext<SessionState | null>(null);
@@ -78,7 +78,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return s;
   }, []);
 
-  const logout = useCallback(async () => {
+  const logout = useCallback(async (opts?: { silent?: boolean }) => {
     let signOutFailed = false;
     try {
       await authRepository.signOut();
@@ -88,7 +88,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setSession(null);
     // Clear cached tenant-scoped data so nothing leaks between sessions.
     queryClient.clear();
-    if (signOutFailed) notify.networkFailure('Sign out could not be confirmed. Local data was cleared.');
+    if (signOutFailed) {
+      notify.networkFailure('Sign out could not be confirmed. Local data was cleared.');
+    } else if (!opts?.silent) {
+      // One success toast for an intentional logout (silent for rejection cleanup).
+      notify.logoutSuccess();
+    }
   }, [queryClient]);
 
   const value = useMemo<SessionState>(

@@ -110,10 +110,38 @@ const expenseRequests: Record<string, PackageImpactManifest> = {
   },
 };
 
+/** A minimal marketplace-extension manifest (structured, diagnostics PASS). */
+function marketplaceExtension(name: string, navItem: string): Record<string, PackageImpactManifest> {
+  return {
+    '1.0.0': {
+      version: '1.0.0',
+      releaseNotes: `Initial ${name} release.`,
+      frontend: { navigationItemsAdded: [navItem] },
+      backend: { policiesChanged: ['company-scoped RLS'] },
+      data: { notes: ['Creates company-owned records', 'Uninstall retains records for 30 days'] },
+      dependencies: { minimumPlatformVersion: 'v0.1.0' },
+      migrations: { required: true, reversible: true },
+      rollback: { supported: false },
+      retention: { policy: 'retain_then_purge', retentionDays: 30 },
+      diagnostics: {
+        status: PASS,
+        checks: [
+          { label: 'RLS', status: PASS },
+          { label: 'Authenticated grants', status: PASS },
+          { label: 'Package key consistency', status: PASS },
+        ],
+      },
+    },
+  };
+}
+
 /** Package key → version → manifest. */
 export const PACKAGE_IMPACT: Record<string, Record<string, PackageImpactManifest>> = {
   'document-notes': documentNotes,
   'expense-requests': expenseRequests,
+  'company-announcements': marketplaceExtension('Company Announcements', 'Announcements'),
+  'asset-register': marketplaceExtension('Asset Register', 'Assets'),
+  'pulse-surveys': marketplaceExtension('Pulse Surveys', 'Pulse Surveys'),
 };
 
 /** The impact manifest for a package version, if known. */

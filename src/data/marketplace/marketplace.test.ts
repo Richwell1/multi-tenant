@@ -9,7 +9,13 @@ describe('marketplace (mock)', () => {
   const repo = createMarketplaceRepository('mock');
   it('lists the reusable marketplace extensions', async () => {
     const list = await repo.list();
-    expect(list.map((p) => p.code).sort()).toEqual(['document-notes', 'expense-requests']);
+    expect(list.map((p) => p.code).sort()).toEqual([
+      'asset-register',
+      'company-announcements',
+      'document-notes',
+      'expense-requests',
+      'pulse-surveys',
+    ]);
   });
   it('install returns the installed version', async () => {
     const r = await repo.install('document-notes');

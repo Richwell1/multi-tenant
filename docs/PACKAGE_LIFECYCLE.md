@@ -102,19 +102,32 @@ survival, idempotent purge, and PASS-only install. **20/20** SQL suites overall.
   Packages panel: lifecycle-status cards with actions gated by category + role +
   state, an uninstall→retention confirm, and a typed-confirmation permanent
   removal. Tests: pure action-gating, mock transitions, and the panel UI.
-- **Phase 3+ (planned):** TypeScript repository/hooks/services for the remaining
-  RPCs; install/update/rollback **review dialogs**; Installed-Packages lifecycle
-  actions (Disable/Enable/Uninstall/Restore/Permanently Remove) gated by category
-  + role + state; Platform-Admin monitoring surface; a scheduled purge Edge
-  Function; three new marketplace extensions, three system tools, and two private
-  customizations (each with feature table + vertical + impact manifest +
-  diagnostics); and the full frontend/service test matrix.
+- **Phase 3 (this branch, done & verified):** structured impact manifests
+  (`src/lib/packages/impact.ts`, mirroring `package_versions.impact_manifest`) and
+  an accessible **review dialog** shown before install/update/rollback — sectioned
+  frontend/backend/data/compatibility/rollback, a diagnostics gate (no confirm
+  unless PASS), and acknowledgement for breaking/irreversible change. Marketplace
+  Install now opens the review first.
+- **Phase 4 (this branch, done & verified):** Platform-Admin **Lifecycle
+  Monitoring** (`/admin/lifecycle`) reading `package_lifecycle_operations`
+  (metadata only, labels not raw enums) + the **purge-retention Edge Function**
+  (service-role, idempotent, schedule-ready).
+- **Phase 5 (this branch, done & verified):** catalog additions — three
+  Marketplace Extensions (Company Announcements, Asset Register, Pulse Surveys),
+  three optional System Tools (Audit Log Exporter, Bulk Data Importer, Org Chart
+  Viewer), and two Private Customizations of HR Core (Custom Onboarding Checklist,
+  Custom Approval Matrix) — each with a released diagnostic-PASS 1.0.0 + impact
+  manifest, flowing through install-review and the full lifecycle.
 
 ## Remaining limitations / deferred
 
-- Update & rollback currently reuse the existing release/rollback RPCs; the
-  dedicated review-gated update/rollback transactions and restore-point wiring
-  land with Phase 2.
+- The new packages are catalog-level (metadata + lifecycle participation): they
+  are browsable/installable/assignable and honor disable/uninstall/retention, but
+  do not yet ship dedicated feature pages/tables (no per-company row data → no
+  purge payload). Dedicated verticals are follow-on work.
+- Update & rollback reuse the existing release/rollback RPCs; dedicated
+  review-gated update/rollback transactions with restore-point wiring are
+  follow-on work.
 - `verify:package-security` is referenced by the spec but not yet a script in
   this repo.
 - Slug rename and scheduled purge cron remain deferred (purge is manually

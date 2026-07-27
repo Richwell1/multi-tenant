@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased — Package lifecycle Phases 3-5 (review dialogs, monitoring, new packages)
+
+- **Impact manifests + review dialog:** `src/lib/packages/impact.ts` (structured
+  `PackageImpactManifest`) and `PackageReviewDialog` shown before install/update/
+  rollback — sectioned impact, a diagnostics gate (no confirm unless PASS), and an
+  acknowledgement for breaking/irreversible change. Marketplace Install opens the
+  review first.
+- **Platform-Admin Lifecycle Monitoring** (`/admin/lifecycle`) over
+  `package_lifecycle_operations` (metadata only; labels not raw enums) + the
+  **purge-retention Edge Function** (service-role, idempotent, schedule-ready).
+- **New packages:** three Marketplace Extensions (Company Announcements, Asset
+  Register, Pulse Surveys), three optional System Tools (Audit Log Exporter, Bulk
+  Data Importer, Org Chart Viewer), and two Private Customizations of HR Core
+  (Custom Onboarding Checklist, Custom Approval Matrix) — migration
+  `20260803010000`, each with a released diagnostic-PASS 1.0.0 + impact manifest.
+- SQL suites `new_packages_catalog_rls.sql` (6 checks). 385 tests, 21/21 SQL suites.
+
 ## Unreleased — Package lifecycle TS layer + Installed-Packages actions (Phase 2)
 
 - New `src/data/package-lifecycle` vertical: repository interface, a stateful

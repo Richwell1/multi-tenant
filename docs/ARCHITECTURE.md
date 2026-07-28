@@ -84,6 +84,48 @@ company slug/tenant query state, `company_memberships`, company status, and
 package entitlements. A failed authorization/context query is shown as a
 retryable error; it is not silently treated as an empty company.
 
+### Session storage across subdomains
+
+The app is served from several hosts on one domain — `home.<domain>` (marketing,
+registration, generic login), `admin.<domain>`, and `<companySlug>.<domain>` per
+tenant. Supabase's browser client persists sessions in `localStorage` by
+default, which is **origin-scoped**: a session created on `home.<domain>` is
+invisible to `kimhr.<domain>`, so signing in on the public login and being
+redirected to the tenant host produced a second login prompt.
+
+Sessions are therefore persisted in a cookie scoped to the parent domain
+(`src/lib/auth-storage.ts`, wired in `src/lib/supabase.ts`):
+
+```text
+Domain=.<baseDomain>   Path=/   SameSite=Lax   Secure (HTTPS only)
+```
+
+* One session is shared by `home`, `admin`, and every tenant host, and a token
+  refresh on any of them is immediately visible to the rest.
+* The Supabase storage **key** is left to Supabase (`sb-<projectRef>-auth-token`),
+  which is identical on every host. Overriding it per host would re-isolate the
+  sessions this exists to share.
+* The cookie is **not** `HttpOnly` — the browser client must read and rewrite
+  the tokens to keep the session alive. XSS exposure is the same as the
+  `localStorage` it replaces: this change buys correct cross-subdomain
+  behaviour, **not** stronger token secrecy.
+* `Domain` is never derived from untrusted input. The parent-domain cookie is
+  used only when the current host is the configured base domain or a real
+  dot-boundary subdomain of it, so look-alikes (`evil<baseDomain>`) and hosts
+  without real subdomains (localhost, previews) fall back to a host-only cookie.
+* Values are chunked deterministically (`key.0`, `key.1`, …) if a session ever
+  exceeds the per-cookie budget, splitting by **code point** so surrogate pairs
+  survive. Nothing is truncated.
+* An existing `localStorage` session is migrated into the cookie once on first
+  read; the legacy entry is removed only after the copy succeeds, and malformed
+  data is left untouched rather than destroyed.
+
+**Shared authentication is not shared authorization.** The cookie proves only
+*who* the user is. Active membership, the company UUID matching the host slug,
+company status, entitlements, and RLS are all still enforced — a member of
+company A reaching company B's host still gets access-denied, and a company
+admin on `admin.<domain>` still fails the `platform_admins` check.
+
 ## Tenant resolution and isolation
 
 The shared login route is `/login`. A `tenant` query parameter can select a

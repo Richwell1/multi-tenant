@@ -1,5 +1,50 @@
 # Changelog
 
+## Unreleased — Cross-subdomain session (branch `fix/cross-subdomain-auth-handoff`)
+
+Fixes the confirmed production double-login: signing in on
+`home.merbsconnect.com/login` and being redirected to
+`kimhr.merbsconnect.com/dashboard` asked for the same credentials again.
+
+- **Root cause** (verified, not inferred): `src/lib/supabase.ts` called
+  `createClient(url, key)` with no auth options. `@supabase/auth-js`
+  `DEFAULT_OPTIONS` sets `persistSession: true` backed by `localStorage`, which
+  is **origin-scoped** — so the session created on `home` was invisible on the
+  tenant host. The observed `…/login?tenant=kimhr` URL was the *symptom*:
+  `CompanyGuard` found no session on the new origin and fell back to the tenant
+  login. The redirect target itself was already correct.
+- **Fix**: sessions persist in a parent-domain cookie
+  (`Domain=.<baseDomain>; Path=/; SameSite=Lax; Secure`) via a custom Supabase
+  storage adapter (`src/lib/auth-storage.ts`). One session now covers `home`,
+  `admin`, and every tenant host, including token refresh and multiple tabs.
+  No migration, no Edge Function, no new route.
+- Chose the shared cookie over a one-time handoff: after a handoff the
+  destination still calls `setSession()`, which persists to `localStorage` on
+  the tenant origin — so a handoff would not improve resting token security,
+  while adding a redeemable credential, a table, two functions and a route, and
+  fixing only the login path (a tenant→admin hop would still lose the session).
+- The cookie is deliberately **not** `HttpOnly` (the browser client must read
+  and rewrite the tokens). XSS exposure is unchanged from `localStorage`; the
+  gain is correct cross-subdomain behaviour, not stronger secrecy.
+- `Domain` is never taken from untrusted input — look-alikes such as
+  `evil<baseDomain>` fail a dot-boundary check and get a host-only cookie, as do
+  localhost and preview hosts.
+- Measured a real hosted session at **2,724 bytes** URL-encoded, inside the
+  ~4,096-byte cookie limit; deterministic chunking (`key.0`, `key.1`, …) covers
+  any future growth, splitting by **code point** so surrogate pairs are never
+  broken (a code-unit split threw `URIError` and was caught by test).
+- Existing `localStorage` sessions migrate into the cookie once on first read;
+  the legacy entry is deleted only after the copy succeeds, malformed data is
+  left intact, and sign-out clears both so a stale entry cannot resurrect a
+  session.
+- Authorization is untouched: membership, host-slug↔company UUID match, company
+  status, entitlements, and RLS all still apply. Shared authentication is not
+  shared authorization.
+- Tests: 25 covering cross-host visibility, refresh propagation, global
+  sign-out, cookie attributes, localhost/look-alike fallback, chunking and
+  round-trip integrity, and every migration-safety rule. 519 tests,
+  27/27 SQL suites.
+
 ## Unreleased — Public login works independently (branch `feat/public-login-host-canonicalization`)
 
 `home.merbsconnect.com/login` is the primary entry point for every company

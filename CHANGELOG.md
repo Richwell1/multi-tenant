@@ -1,5 +1,43 @@
 # Changelog
 
+## Unreleased — Lifecycle Monitoring production fix (branch `fix/lifecycle-monitoring-production`)
+
+Platform Admin `/admin/lifecycle` failed in production with **400 `PGRST200`**,
+rendered as "Couldn't load records".
+
+- **Root cause**: the monitoring read embeds `packages(name)`, and PostgREST
+  resolves embedded resources solely from declared foreign keys.
+  `package_lifecycle_operations.package_key` never declared one, unlike every
+  other package-referencing table. PostgREST therefore rejected the request at
+  schema-cache parse time — **before privileges or RLS were evaluated** — so an
+  authorised Platform Admin saw the same 400 as anyone else.
+- **Not the cause** (each checked and ruled out): hosted migration lag
+  (`Local = Remote` for all 35 migrations, `20260802010000` included), a missing
+  grant or SELECT policy (both correct since `20260802010000`), and column drift
+  (every selected column exists).
+- Migration `20260811010000`: declares the FK on the operations log and on the
+  sibling column in `package_restore_points`, `ON DELETE RESTRICT` so a catalog
+  package cannot be deleted out from under its own audit trail, plus supporting
+  indexes. **No grant, policy, or RLS change** — RLS remains the boundary.
+- Repository, hook, and page needed **no change**: the read already carried no
+  tenant filter, ordered by a real column, handled nulls, and `TableBoundary`
+  already separated the empty state from the error state ("Couldn't load
+  records" was the correct response to a real 400).
+- Tests: `lifecycle_monitoring_grants_rls.sql` (11 checks — FK presence, the
+  `authenticated` SELECT grant, anon invisibility, no direct writes, platform-
+  admin vs company-admin visibility, FK integrity) plus 15 app tests over query
+  shape, null mapping, safe error text, dev diagnostics, and page states.
+  435 tests, 26/26 SQL suites.
+- **Hosted deployed 2026-07-28**: `20260811010000` applied (`Local = Remote`,
+  0 pending); the verbatim production query went `400 PGRST200` → `200` with the
+  `packages(name)` embed resolving. Live smoke on two disposable tenants:
+  disable + re-enable both recorded with company, package, operation, status,
+  `initiated_by`, correlation ID, and start/completion times; each company admin
+  saw only its own operations and anon was denied.
+- **Known gap**: the log records only 6 of its 9 operations — `install`,
+  `update`, and `rollback` are enum values that no RPC writes (those flows record
+  into `package_installations`). Tracked for `fix/lifecycle-operation-logging`.
+
 ## Unreleased — Bulk Data Importer vertical (branch `feat/bulk-data-importer`)
 
 Second System Tool vertical — promotes Bulk Data Importer from catalog_only to

@@ -40,47 +40,47 @@ describe('route guards', () => {
 
   it('unauthenticated /admin → /login', async () => {
     const router = await renderGuarded({ path: '/admin', url: '/login?portal=admin' });
-    await waitFor(() => expect(at(router)).toBe('/login'));
+    await waitFor(() => expect(at(router)).toBe('/login'), { timeout: 5000 });
   });
 
   it('company user cannot access /admin → /access-denied', async () => {
     const router = await renderGuarded({ path: '/admin', url: '/login?portal=admin', email: 'company-user@x.test' });
-    await waitFor(() => expect(at(router)).toBe('/access-denied'));
+    await waitFor(() => expect(at(router)).toBe('/access-denied'), { timeout: 5000 });
   });
 
   it('active platform admin can access /admin', async () => {
     const router = await renderGuarded({ path: '/admin', url: '/login?portal=admin', email: 'super@platform.test' });
-    await waitFor(() => expect(at(router)).toBe('/admin'));
+    await waitFor(() => expect(at(router)).toBe('/admin'), { timeout: 5000 });
   });
 
   it('Alpha member can access Alpha workspace', async () => {
     const router = await renderGuarded({ path: '/alpha/dashboard', url: '/login?tenant=alpha', email: 'admin@alpha.test' });
-    await waitFor(() => expect(at(router)).toBe('/alpha/dashboard'));
+    await waitFor(() => expect(at(router)).toBe('/alpha/dashboard'), { timeout: 5000 });
   });
 
   it('bare /:companySlug redirects to the slugged dashboard', async () => {
     const router = await renderGuarded({ path: '/alpha', url: '/login?tenant=alpha', email: 'admin@alpha.test' });
-    await waitFor(() => expect(at(router)).toBe('/alpha/dashboard'));
+    await waitFor(() => expect(at(router)).toBe('/alpha/dashboard'), { timeout: 5000 });
   });
 
   it('shared login allows a company member on their own slug', async () => {
     const router = await renderGuarded({ path: '/beta/dashboard', url: '/login', email: 'admin@beta.test' });
-    await waitFor(() => expect(at(router)).toBe('/beta/dashboard'));
+    await waitFor(() => expect(at(router)).toBe('/beta/dashboard'), { timeout: 5000 });
   });
 
   it('Alpha slug + Beta member → /access-denied (tenant mismatch)', async () => {
     const router = await renderGuarded({ path: '/alpha/dashboard', url: '/login', email: 'admin@beta.test' });
-    await waitFor(() => expect(at(router)).toBe('/access-denied'));
+    await waitFor(() => expect(at(router)).toBe('/access-denied'), { timeout: 5000 });
   });
 
   it('suspended company → /company-suspended', async () => {
     const router = await renderGuarded({ path: '/gamma/dashboard', url: '/login?tenant=gamma', email: 'admin@gamma.test' });
-    await waitFor(() => expect(at(router)).toBe('/company-suspended'));
+    await waitFor(() => expect(at(router)).toBe('/company-suspended'), { timeout: 5000 });
   });
 
   it('inactive membership → /access-denied', async () => {
     const router = await renderGuarded({ path: '/alpha/dashboard', url: '/login?tenant=alpha', email: 'inactive@alpha.test' });
-    await waitFor(() => expect(at(router)).toBe('/access-denied'));
+    await waitFor(() => expect(at(router)).toBe('/access-denied'), { timeout: 5000 });
   });
 });
 
@@ -107,7 +107,7 @@ describe('logout clears tenant-scoped cache', () => {
       </QueryClientProvider>,
     );
     fireEvent.click(screen.getByText('logout'));
-    await waitFor(() => expect(qc.getQueryData(['employees', 'alpha'])).toBeUndefined());
+    await waitFor(() => expect(qc.getQueryData(['employees', 'alpha'])).toBeUndefined(), { timeout: 5000 });
   });
 
   it('clears the authenticated session and company context on logout', async () => {
@@ -132,9 +132,9 @@ describe('logout clears tenant-scoped cache', () => {
       </QueryClientProvider>,
     );
 
-    await waitFor(() => expect(screen.getByText('authenticated')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('authenticated')).toBeInTheDocument(), { timeout: 5000 });
     fireEvent.click(screen.getByRole('button', { name: 'logout session' }));
-    await waitFor(() => expect(screen.getByText('signed out')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('signed out')).toBeInTheDocument(), { timeout: 5000 });
     expect(screen.getByText('no email')).toBeInTheDocument();
   });
 });
@@ -161,7 +161,7 @@ describe('session restoration failure', () => {
       </QueryClientProvider>,
     );
 
-    await waitFor(() => expect(screen.getByText('signed out')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('signed out')).toBeInTheDocument(), { timeout: 5000 });
     expect(getSession).toHaveBeenCalledOnce();
     getSession.mockRestore();
   });

@@ -78,6 +78,11 @@ export const PACKAGE_MANIFEST: Partial<Record<PackageKey, PackageManifestEntry>>
     name: 'Pulse Surveys',
     features: [{ label: 'Pulse Surveys', minVersion: '1.0.0', route: '/extensions/pulse-surveys' }],
   },
+  [PACKAGE_CODES.orgChart]: {
+    code: PACKAGE_CODES.orgChart,
+    name: 'Org Chart Viewer',
+    features: [{ label: 'Org Chart', minVersion: '1.0.0', route: '/extensions/org-chart' }],
+  },
   // Private extensions render inside existing HR Core surfaces for the assigned company.
   [PACKAGE_CODES.employeeApproval]: {
     code: PACKAGE_CODES.employeeApproval,

@@ -17,6 +17,7 @@ import {
   Megaphone,
   Boxes,
   Gauge,
+  Network,
 } from 'lucide-react';
 import { AppShell, type NavItem } from './app-shell';
 import { useSession } from '@/lib/session';
@@ -48,6 +49,7 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
   const hasAnnouncements = hasFeature(packages, PACKAGE_CODES.companyAnnouncements, '1.0.0');
   const hasAssetRegister = hasFeature(packages, PACKAGE_CODES.assetRegister, '1.0.0');
   const hasPulseSurveys = hasFeature(packages, PACKAGE_CODES.pulseSurveys, '1.0.0');
+  const hasOrgChart = hasFeature(packages, PACKAGE_CODES.orgChart, '1.0.0');
   const hasDocumentNotes = hasFeature(packages, PACKAGE_CODES.documentNotes, '1.0.0');
   const hasExpenseRequests = hasFeature(packages, PACKAGE_CODES.expenseRequests, '1.0.0');
   const hasVisitorRegister = hasFeature(packages, PACKAGE_CODES.visitorRegister, '1.0.0');
@@ -64,6 +66,7 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
   if (hasAnnouncements) nav.push({ to: p('/extensions/announcements'), label: 'Announcements', icon: <Megaphone className="size-4" />, section: 'Installed Features' });
   if (hasAssetRegister) nav.push({ to: p('/extensions/assets'), label: 'Asset Register', icon: <Boxes className="size-4" />, section: 'Installed Features' });
   if (hasPulseSurveys) nav.push({ to: p('/extensions/pulse-surveys'), label: 'Pulse Surveys', icon: <Gauge className="size-4" />, section: 'Installed Features' });
+  if (hasOrgChart) nav.push({ to: p('/extensions/org-chart'), label: 'Org Chart', icon: <Network className="size-4" />, section: 'Installed Features' });
   if (hasDocumentNotes) nav.push({ to: p('/extensions/document-notes'), label: 'Document Notes', icon: <FileText className="size-4" />, section: 'Installed Features' });
   if (hasExpenseRequests) nav.push({ to: p('/extensions/expense-requests'), label: 'Expense Requests', icon: <Receipt className="size-4" />, section: 'Installed Features' });
   if (hasVisitorRegister) nav.push({ to: p('/extensions/visitor-register'), label: 'Visitor Register', icon: <DoorOpen className="size-4" />, section: 'Installed Features' });

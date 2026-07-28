@@ -63,7 +63,10 @@ describe('mapRegistrationError (Edge → RepositoryError)', () => {
     expect(mapRegistrationError('validation', 'bad').kind).toBe('validation');
   });
   it('unknown code → unknown, preserving message', () => {
-    const e = mapRegistrationError('onboarding_failed', 'Try again');
+    // A code this client has never heard of. Recognized codes (including
+    // onboarding_failed) now use our own copy instead of the server's text —
+    // see registration-errors.test.ts.
+    const e = mapRegistrationError('some_future_code', 'Try again');
     expect(e).toBeInstanceOf(RepositoryError);
     expect(e.kind).toBe('unknown');
     expect(e.message).toBe('Try again');

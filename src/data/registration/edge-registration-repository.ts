@@ -23,6 +23,28 @@ function conflictField(code: string | undefined): 'slug' | 'subdomain' | 'email'
   return undefined;
 }
 
+/**
+ * Our own copy for each backend reason.
+ *
+ * The Edge Function's `message` is deliberately NOT shown to users. It is
+ * server-authored text that has drifted from this client before: a deployed
+ * build answered a MISSING slug with "Company slug is invalid.", which surfaced
+ * verbatim and told people their perfectly valid slug was malformed. Mapping
+ * the CODE — the part that is a contract — keeps the wording ours and keeps a
+ * stale backend from inventing user-facing copy.
+ */
+const REGISTRATION_MESSAGE: Record<string, string> = {
+  invalid_slug: 'Use lowercase letters, numbers, and hyphens only.',
+  reserved_slug: 'This workspace URL is reserved. Choose another name.',
+  duplicate_slug: 'This workspace URL is already taken.',
+  duplicate_subdomain: 'This workspace URL is already taken.',
+  duplicate_email: 'An account already exists for this email.',
+  conflict: 'Those details are already in use.',
+  validation: 'Please check the highlighted fields and try again.',
+  onboarding_failed: 'Registration is temporarily unavailable. Please try again.',
+  server_error: 'Registration is temporarily unavailable. Please try again.',
+};
+
 /** Pure mapping of an Edge Function error response → RepositoryError. */
 export function mapRegistrationError(code: string | undefined, message: string | undefined): RepositoryError {
   const conflictCodes = ['duplicate_email', 'duplicate_slug', 'duplicate_subdomain', 'conflict'];
@@ -32,7 +54,11 @@ export function mapRegistrationError(code: string | undefined, message: string |
     : validationCodes.includes(code ?? '')
       ? 'validation'
       : 'unknown';
-  return new RepositoryError(message ?? 'Registration failed. Please try again.', kind, undefined, conflictField(code));
+  // Fall back to the server's text only for a code we have never heard of, so a
+  // genuinely new backend reason is not silently swallowed.
+  const safeMessage =
+    REGISTRATION_MESSAGE[code ?? ''] ?? message ?? 'Registration could not be completed. Please try again.';
+  return new RepositoryError(safeMessage, kind, undefined, conflictField(code));
 }
 
 /**

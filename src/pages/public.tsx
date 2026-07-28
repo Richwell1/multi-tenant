@@ -589,6 +589,13 @@ function SlugAvailabilityHint({
   } else if (data && data.slug === value && data.verified) {
     tone = data.available ? 'good' : 'bad';
     content = data.available ? 'This workspace URL is available.' : 'This workspace URL is already taken.';
+  } else if (query.isError) {
+    // A permission/network failure says NOTHING about the slug. Never render it
+    // as a format problem — and never block submission, since the backend
+    // re-checks authoritatively anyway.
+    content = (
+      <span className="text-content-variant">We couldn’t verify this workspace URL right now. You can still submit.</span>
+    );
   } else {
     content = <span className="text-content-variant">Availability is confirmed when you submit.</span>;
   }

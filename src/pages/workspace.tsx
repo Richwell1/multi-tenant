@@ -3,7 +3,7 @@ import { Link, useParams, useNavigate } from '@tanstack/react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { CheckCircle2, LayoutDashboard, Users, Building, Briefcase, Package, RefreshCw, Store, Settings as SettingsIcon, Megaphone, Boxes, Gauge } from 'lucide-react';
+import { CheckCircle2, LayoutDashboard, Users, Building, Briefcase, Package, RefreshCw, Store, Settings as SettingsIcon, Megaphone, Boxes, Gauge, Network } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import { APP_VERSION } from '@/lib/app-version';
 import {
@@ -1546,6 +1546,84 @@ function PulseSurveysContent() {
           </TBody>
         </DataTable>
       </TableBoundary>
+    </>
+  );
+}
+
+export function OrgChartPage() {
+  // System Tool: a read-only visualization over HR Core data. It owns no data of
+  // its own; HR Core's RLS governs what the viewer can read.
+  return (
+    <PackageGuard packageCode={PACKAGE_CODES.orgChart} packageName="Org Chart Viewer">
+      <OrgChartContent />
+    </PackageGuard>
+  );
+}
+
+function OrgChartContent() {
+  const departments = useDepartments();
+  const positions = usePositions();
+  const employees = useEmployees();
+
+  if (departments.isPending || positions.isPending || employees.isPending) {
+    return <PageLoadingState label="Building org chart…" />;
+  }
+  if (departments.isError || positions.isError || employees.isError) {
+    return <ErrorState onRetry={() => { departments.refetch(); positions.refetch(); employees.refetch(); }} />;
+  }
+
+  const activeDepartments = (departments.data ?? []).filter((d) => d.status === 'active');
+  const allPositions = (positions.data ?? []).filter((p) => p.status === 'active');
+  const allEmployees = employees.data ?? [];
+  const positionsFor = (deptName: string) => allPositions.filter((p) => p.department === deptName);
+  const headcountFor = (deptName: string) => allEmployees.filter((e) => e.department === deptName).length;
+
+  return (
+    <>
+      <PageHeader
+        icon={<Network className="size-5" />}
+        title="Org Chart Viewer"
+        description="Your organization structure, derived from HR Core"
+      />
+      <div className="mb-6 grid gap-4 sm:grid-cols-3">
+        <StatCard label="Departments" value={activeDepartments.length} icon={<Building className="size-5" />} accent="portal" />
+        <StatCard label="Positions" value={allPositions.length} icon={<Briefcase className="size-5" />} />
+        <StatCard label="Employees" value={allEmployees.length} icon={<Users className="size-5" />} />
+      </div>
+      {activeDepartments.length === 0 ? (
+        <EmptyState title="No departments yet" description="Add departments and positions in HR Core to see the org chart." />
+      ) : (
+        <div className="grid gap-4 lg:grid-cols-2">
+          {activeDepartments.map((d) => {
+            const deptPositions = positionsFor(d.name);
+            return (
+              <Card key={d.id}>
+                <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
+                  <div>
+                    <CardTitle>{d.name}</CardTitle>
+                    {d.head && <p className="mt-1 text-sm text-content-variant">Head: {d.head}</p>}
+                  </div>
+                  <Badge tone="neutral">{headcountFor(d.name)} {headcountFor(d.name) === 1 ? 'person' : 'people'}</Badge>
+                </CardHeader>
+                <CardContent>
+                  {deptPositions.length === 0 ? (
+                    <p className="text-sm text-content-variant">No positions defined.</p>
+                  ) : (
+                    <ul className="space-y-1.5 text-sm">
+                      {deptPositions.map((p) => (
+                        <li key={p.id} className="flex items-center justify-between gap-3">
+                          <span className="font-medium text-content">{p.title}</span>
+                          {p.reportsTo && <span className="text-xs text-content-variant">reports to {p.reportsTo}</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </>
   );
 }

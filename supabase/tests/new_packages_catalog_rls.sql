@@ -73,12 +73,21 @@ select pg_temp.check(6, 'private customization cannot be self-installed from mar
 --    package with a real feature vertical (Document Notes, and now Company
 --    Announcements) is implemented — diagnostics PASS never implies "built".
 select pg_temp.check(7, 'catalog-only packages report catalog_only; real features are implemented',
-  (select count(*) = 5 from public.packages where feature_status = 'catalog_only'
-     and key in ('audit-exporter','bulk-importer','org-chart',
+  (select count(*) = 4 from public.packages where feature_status = 'catalog_only'
+     and key in ('audit-exporter','bulk-importer',
                  'custom-onboarding-checklist','custom-approval-matrix'))
   and (select feature_status = 'implemented' from public.packages where key = 'document-notes')
   and (select feature_status = 'implemented' from public.packages where key = 'company-announcements')
   and (select feature_status = 'implemented' from public.packages where key = 'asset-register')
-  and (select feature_status = 'implemented' from public.packages where key = 'pulse-surveys'));
+  and (select feature_status = 'implemented' from public.packages where key = 'pulse-surveys')
+  and (select feature_status = 'implemented' from public.packages where key = 'org-chart'));
+
+-- 8) The Org Chart system tool is an OPTIONAL standard package, owns no feature
+--    data, and is NOT self-installable from the marketplace.
+select pg_temp.check(8, 'org-chart is an optional system tool, not marketplace-installable',
+  (select category = 'standard_package' and not is_mandatory and feature_table is null
+     from public.packages where key = 'org-chart')
+  and pg_temp.errored('a1000000-0000-0000-0000-0000000000a1',
+    $$select public.install_marketplace_extension('org-chart')$$));
 
 rollback;

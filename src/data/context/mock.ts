@@ -38,6 +38,8 @@ const ENABLED_PACKAGES: Record<string, EnabledPackage[]> = {
   alpha: [
     { code: 'hr-core', version: '1.1.0' },
     { code: 'leave-management', version: '1.0.0' },
+    // Org Chart Viewer is a platform-pushed System Tool (not marketplace-installed).
+    { code: 'org-chart', version: '1.0.0' },
   ],
   beta: [{ code: 'hr-core', version: '1.0.0' }],
   gamma: [{ code: 'hr-core', version: '1.0.0' }],

@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased — Org Chart Viewer feature vertical (branch `feat/org-chart-viewer`)
+
+First **System Tool** vertical — promotes Org Chart Viewer from catalog_only to
+**implemented**. Unlike the marketplace extensions it owns NO data: it is a
+read-only visualization over existing HR Core (departments/positions/employees),
+which keep their own RLS.
+- Migration `20260808010000`: flips `feature_status='implemented'` only — no new
+  table, no feature_table (nothing to retain/purge), no new grants. Stays an
+  OPTIONAL standard package and is platform-managed (not marketplace-installable).
+- `OrgChartPage` (PackageGuard) composes `useDepartments`/`usePositions`/
+  `useEmployees` into a per-department view with headcounts and reporting lines;
+  route `/:companySlug/extensions/org-chart`, nav, manifest, PACKAGE_CODES +
+  PackageKey. Demo entitlement wired for Alpha (platform-pushed).
+- Tests: page UI + SQL checks (org-chart implemented, optional, not
+  marketplace-installable). 408 tests, 24/24 SQL suites.
+
 ## Unreleased — Pulse Surveys feature vertical (branch `feat/pulse-surveys-vertical`)
 
 Third full feature vertical — promotes Pulse Surveys from catalog_only to

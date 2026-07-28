@@ -25,6 +25,8 @@ const CATALOG: Record<string, CatalogEntry> = {
   'document-notes': { name: 'Document Notes', category: 'marketplace_extension', isMandatory: false, hasFeatureData: true, featureStatus: 'implemented' },
   'expense-requests': { name: 'Expense Requests', category: 'marketplace_extension', isMandatory: false, hasFeatureData: true, featureStatus: 'implemented' },
   'custom-visitor-register': { name: 'Custom Visitor Register', category: 'private_standalone', isMandatory: false, hasFeatureData: true, featureStatus: 'implemented' },
+  // System tool: read-only over HR Core, owns no data (hasFeatureData false).
+  'org-chart': { name: 'Org Chart Viewer', category: 'standard_package', isMandatory: false, hasFeatureData: false, featureStatus: 'implemented' },
 };
 
 /** Default installed set per demo company (keyed by slug === mock companyId). */
@@ -33,6 +35,7 @@ const SEED: Record<string, Array<{ key: string; version: string; source: string 
     { key: 'hr-core', version: '1.1.0', source: 'registration_default' },
     { key: 'leave-management', version: '1.0.0', source: 'platform_push' },
     { key: 'document-notes', version: '1.0.0', source: 'company_marketplace' },
+    { key: 'org-chart', version: '1.0.0', source: 'platform_push' },
   ],
   beta: [{ key: 'hr-core', version: '1.0.0', source: 'registration_default' }],
   gamma: [{ key: 'hr-core', version: '1.0.0', source: 'registration_default' }],

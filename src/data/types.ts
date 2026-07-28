@@ -12,6 +12,8 @@ export type PackageKey =
   | 'company-announcements'
   | 'asset-register'
   | 'pulse-surveys'
+  // System tools
+  | 'org-chart'
   // Private extensions / standalone
   | 'custom-employee-approval'
   | 'custom-department-code'

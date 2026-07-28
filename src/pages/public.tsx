@@ -249,11 +249,6 @@ const registerSchema = z
     adminName: z.string().min(2, 'Admin name is required'),
     adminEmail: z.string().email('Enter a valid email'),
     password: z.string().min(8, 'At least 8 characters'),
-    confirmPassword: z.string(),
-  })
-  .refine((v) => v.password === v.confirmPassword, {
-    message: 'Passwords do not match',
-    path: ['confirmPassword'],
   });
 type RegisterForm = z.infer<typeof registerSchema>;
 
@@ -458,15 +453,6 @@ export function RegisterPage() {
               </button>
             </div>
             <PasswordStrengthMeter strength={strength} />
-          </Field>
-          <Field label="Confirm password" htmlFor="confirmPassword" error={errors.confirmPassword?.message}>
-            <Input
-              id="confirmPassword"
-              type={showPassword ? 'text' : 'password'}
-              autoComplete="new-password"
-              aria-invalid={!!errors.confirmPassword}
-              {...register('confirmPassword')}
-            />
           </Field>
           <SubmitButton className="w-full" pending={mutation.isPending} pendingLabel="Creating company…">
             Create company

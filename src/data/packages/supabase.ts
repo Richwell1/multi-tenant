@@ -1,5 +1,5 @@
 import { getSupabaseClient } from '@/lib/supabase';
-import { logSupabaseError, mapSupabaseError } from '@/data/errors';
+import { assertLifecycleRpcSucceeded, logSupabaseError, mapSupabaseError } from '@/data/errors';
 import { toPackageCategory } from '@/lib/packages/category';
 import type { PackageType } from '@/data/types';
 
@@ -342,6 +342,7 @@ export class SupabaseInstallationRepository implements InstallationRepository {
       p_installation_id: id,
     });
     if (error) throw mapSupabaseError(error, 'admin.installations.rollback');
+    assertLifecycleRpcSucceeded(data, 'admin.installations.rollback');
     return data as unknown as InstallationRecoveryResult;
   }
 }

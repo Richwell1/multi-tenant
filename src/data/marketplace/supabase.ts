@@ -1,5 +1,5 @@
 import { getSupabaseClient } from '@/lib/supabase';
-import { mapSupabaseError } from '@/data/errors';
+import { assertLifecycleRpcSucceeded, mapSupabaseError } from '@/data/errors';
 import { compareSemver } from '@/lib/semver';
 import type { AdoptionRow, MarketplaceInstallResult, MarketplacePackage, MarketplaceRepository } from './index';
 
@@ -39,6 +39,7 @@ export class SupabaseMarketplaceRepository implements MarketplaceRepository {
       p_package_key: packageKey,
     });
     if (error) throw mapSupabaseError(error, 'company.marketplace.install');
+    assertLifecycleRpcSucceeded(data, 'company.marketplace.install');
     const r = data as unknown as { package_key: string; installed_version: string };
     return { packageKey: r.package_key, version: r.installed_version };
   }

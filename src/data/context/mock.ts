@@ -40,6 +40,8 @@ const ENABLED_PACKAGES: Record<string, EnabledPackage[]> = {
     { code: 'leave-management', version: '1.0.0' },
     // Org Chart Viewer is a platform-pushed System Tool (not marketplace-installed).
     { code: 'org-chart', version: '1.0.0' },
+    // Custom Onboarding Checklist is a private extension assigned to this company.
+    { code: 'custom-onboarding-checklist', version: '1.0.0' },
   ],
   beta: [{ code: 'hr-core', version: '1.0.0' }],
   gamma: [{ code: 'hr-core', version: '1.0.0' }],

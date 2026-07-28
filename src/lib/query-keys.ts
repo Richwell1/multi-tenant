@@ -117,6 +117,9 @@ export const queryKeys = {
   pulseSurveys: {
     list: (companyId: string) => ['pulse-surveys', companyId] as const,
   },
+  onboardingChecklist: {
+    list: (companyId: string) => ['onboarding-checklist', companyId] as const,
+  },
   expenseRequests: {
     list: (companyId: string) => ['expense-requests', companyId] as const,
   },

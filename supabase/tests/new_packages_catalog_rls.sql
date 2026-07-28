@@ -73,9 +73,8 @@ select pg_temp.check(6, 'private customization cannot be self-installed from mar
 --    package with a real feature vertical (Document Notes, and now Company
 --    Announcements) is implemented — diagnostics PASS never implies "built".
 select pg_temp.check(7, 'catalog-only packages report catalog_only; real features are implemented',
-  (select count(*) = 4 from public.packages where feature_status = 'catalog_only'
-     and key in ('audit-exporter','bulk-importer',
-                 'custom-onboarding-checklist','custom-approval-matrix'))
+  (select count(*) = 3 from public.packages where feature_status = 'catalog_only'
+     and key in ('audit-exporter','bulk-importer','custom-approval-matrix'))
   and (select feature_status = 'implemented' from public.packages where key = 'document-notes')
   and (select feature_status = 'implemented' from public.packages where key = 'company-announcements')
   and (select feature_status = 'implemented' from public.packages where key = 'asset-register')

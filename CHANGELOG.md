@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased — Custom Onboarding Checklist vertical (branch `feat/custom-onboarding-checklist`)
+
+First **Private Customization** vertical — promotes Custom Onboarding Checklist
+from catalog_only to **implemented**. As a private HR Core extension it renders
+INSIDE the Employees surface (not a standalone route), gated by entitlement.
+- Migration `20260809010000`: `onboarding_checklist_items` table with
+  entitlement-gated RLS (select/insert/update/delete via
+  `can_use_company_package`), authenticated Data API grants (guardrail-checked),
+  and `feature_status='implemented'` + `feature_table='onboarding_checklist_items'`.
+- Vertical: `src/data/onboarding-checklist` (repo + mock + Supabase, list/create/
+  toggle-done), zod service, hooks, `OnboardingChecklistCard` injected into the
+  Employees page when entitled, manifest entry, PACKAGE_CODES + PackageKey. Demo
+  private assignment wired for Alpha.
+- Tests: mock/service units, card UI, SQL `onboarding_checklist_authz_rls.sql`
+  (8 checks). 413 tests, 25/25 SQL suites.
+
 ## Unreleased — Org Chart Viewer feature vertical (branch `feat/org-chart-viewer`)
 
 First **System Tool** vertical — promotes Org Chart Viewer from catalog_only to

@@ -27,6 +27,8 @@ const CATALOG: Record<string, CatalogEntry> = {
   'custom-visitor-register': { name: 'Custom Visitor Register', category: 'private_standalone', isMandatory: false, hasFeatureData: true, featureStatus: 'implemented' },
   // System tool: read-only over HR Core, owns no data (hasFeatureData false).
   'org-chart': { name: 'Org Chart Viewer', category: 'standard_package', isMandatory: false, hasFeatureData: false, featureStatus: 'implemented' },
+  // Private extension of HR Core: renders inside Employees; owns checklist data.
+  'custom-onboarding-checklist': { name: 'Custom Onboarding Checklist', category: 'private_extension', isMandatory: false, hasFeatureData: true, featureStatus: 'implemented' },
 };
 
 /** Default installed set per demo company (keyed by slug === mock companyId). */
@@ -36,6 +38,7 @@ const SEED: Record<string, Array<{ key: string; version: string; source: string 
     { key: 'leave-management', version: '1.0.0', source: 'platform_push' },
     { key: 'document-notes', version: '1.0.0', source: 'company_marketplace' },
     { key: 'org-chart', version: '1.0.0', source: 'platform_push' },
+    { key: 'custom-onboarding-checklist', version: '1.0.0', source: 'private_assignment' },
   ],
   beta: [{ key: 'hr-core', version: '1.0.0', source: 'registration_default' }],
   gamma: [{ key: 'hr-core', version: '1.0.0', source: 'registration_default' }],

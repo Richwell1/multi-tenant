@@ -17,7 +17,8 @@ export type PackageKey =
   // Private extensions / standalone
   | 'custom-employee-approval'
   | 'custom-department-code'
-  | 'custom-visitor-register';
+  | 'custom-visitor-register'
+  | 'custom-onboarding-checklist';
 
 export type CompanyStatus = 'active' | 'suspended';
 

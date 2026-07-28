@@ -229,11 +229,23 @@ Set the three `VITE_*` build-time variables (`VITE_DATA_SOURCE=supabase`,
 dashboard, or via `wrangler.jsonc`'s `vars` field — they must be present at
 **build** time since Vite inlines them.
 
-For continuous deployment on push to `main`, use either Cloudflare **Workers
-Builds** (git-connected auto-deploy, the direct equivalent of Vercel's git
-integration) or a `wrangler deploy` step in `.github/workflows/ci.yml` using a
-`CLOUDFLARE_API_TOKEN` secret — this repo does not commit to either, pick one
-per your CI preference.
+### Continuous deployment (GitHub Actions)
+
+`.github/workflows/ci.yml` has a `deploy` job that runs after `quality`
+passes, only on pushes to `main` (or a manual `workflow_dispatch` run from the
+Actions tab) — never on pull requests. It uses the official
+`cloudflare/wrangler-action`, which installs dependencies, runs
+`npm run build`, and deploys in one step.
+
+Configure these as **GitHub repository secrets** (Settings → Secrets and
+variables → Actions) before the first deploy:
+
+| Secret | Value |
+| --- | --- |
+| `CLOUDFLARE_API_TOKEN` | A scoped token with **Edit Cloudflare Workers** permission, restricted to this account (create under Cloudflare dashboard → My Profile → API Tokens) |
+| `CLOUDFLARE_ACCOUNT_ID` | Your Cloudflare account ID (dashboard sidebar, or `wrangler whoami`) |
+| `VITE_SUPABASE_URL` | Same value as your hosted `.env` |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | Same value as your hosted `.env` (publishable/anon key only) |
 
 `npm run cf:dev` runs `wrangler dev` for a local Cloudflare-flavored preview
 (distinct from `npm run dev`'s Vite dev server, which remains the primary

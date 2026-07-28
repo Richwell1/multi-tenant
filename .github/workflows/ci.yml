@@ -62,3 +62,30 @@ jobs:
       - name: Stop local Supabase
         if: always()
         run: supabase stop
+
+  deploy:
+    name: Deploy to Cloudflare Workers
+    needs: quality
+    # Only after quality passes on main — never on pull requests. Also allows
+    # a manual redeploy (Actions tab -> Run workflow) without a new push.
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build and deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          preCommands: npm run build
+        env:
+          # Vite inlines these at BUILD time (the preCommands step above), so
+          # they must be set here, not as Worker runtime vars.
+          VITE_DATA_SOURCE: supabase
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_APP_DOMAIN: merbsconnect.com

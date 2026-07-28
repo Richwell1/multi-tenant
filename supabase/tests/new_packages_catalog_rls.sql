@@ -69,13 +69,15 @@ select pg_temp.check(6, 'private customization cannot be self-installed from mar
   pg_temp.errored('a1000000-0000-0000-0000-0000000000a1',
     $$select public.install_marketplace_extension('custom-approval-matrix')$$));
 
--- 7) Readiness is honest: the eight new packages are catalog_only; a real feature
---    (Document Notes) is implemented — diagnostics PASS never implies "built".
-select pg_temp.check(7, 'new packages are catalog_only; real features are implemented',
-  (select count(*) = 8 from public.packages where feature_status = 'catalog_only'
-     and key in ('company-announcements','asset-register','pulse-surveys',
+-- 7) Readiness is honest: catalog-only packages report catalog_only, while a
+--    package with a real feature vertical (Document Notes, and now Company
+--    Announcements) is implemented — diagnostics PASS never implies "built".
+select pg_temp.check(7, 'catalog-only packages report catalog_only; real features are implemented',
+  (select count(*) = 7 from public.packages where feature_status = 'catalog_only'
+     and key in ('asset-register','pulse-surveys',
                  'audit-exporter','bulk-importer','org-chart',
                  'custom-onboarding-checklist','custom-approval-matrix'))
-  and (select feature_status = 'implemented' from public.packages where key = 'document-notes'));
+  and (select feature_status = 'implemented' from public.packages where key = 'document-notes')
+  and (select feature_status = 'implemented' from public.packages where key = 'company-announcements'));
 
 rollback;

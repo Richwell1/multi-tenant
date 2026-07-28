@@ -19,6 +19,7 @@ const CATALOG: Record<string, CatalogEntry> = {
   'hr-core': { name: 'HR Core', category: 'standard_package', isMandatory: true, hasFeatureData: false, featureStatus: 'implemented' },
   'leave-management': { name: 'Leave Management', category: 'standard_package', isMandatory: false, hasFeatureData: false, featureStatus: 'implemented' },
   'attendance-management': { name: 'Attendance Management', category: 'standard_package', isMandatory: false, hasFeatureData: false, featureStatus: 'implemented' },
+  'company-announcements': { name: 'Company Announcements', category: 'marketplace_extension', isMandatory: false, hasFeatureData: true, featureStatus: 'implemented' },
   'document-notes': { name: 'Document Notes', category: 'marketplace_extension', isMandatory: false, hasFeatureData: true, featureStatus: 'implemented' },
   'expense-requests': { name: 'Expense Requests', category: 'marketplace_extension', isMandatory: false, hasFeatureData: true, featureStatus: 'implemented' },
   'custom-visitor-register': { name: 'Custom Visitor Register', category: 'private_standalone', isMandatory: false, hasFeatureData: true, featureStatus: 'implemented' },

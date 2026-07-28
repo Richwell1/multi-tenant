@@ -1,5 +1,38 @@
 # Changelog
 
+## Unreleased — Lifecycle operation logging (branch `fix/lifecycle-operation-logging`)
+
+Closes the gap left by the monitoring fix: `install`, `update`, and `rollback`
+were declared in `lifecycle_operation` but no RPC ever wrote them, so Platform
+Admin's Lifecycle Monitoring omitted a third of its own vocabulary.
+
+- Migration `20260812010000` adds logging to `install_marketplace_extension`,
+  `install_company_update`, `rollback_package_installation`, and
+  `process_package_installation`, plus `lifecycle_op_start/complete/failed` and
+  `lifecycle_failure_category` helpers (all revoked from `anon`/`authenticated`
+  — internal only) and a unique index on `correlation_id` for duplicate
+  suppression.
+- **Transaction semantics.** A failure cannot be logged from inside the
+  transaction it aborts, and Postgres has no autonomous transactions. Each RPC
+  now separates *pre-flight validation* (still RAISES, so every existing caller
+  and UI error path is unchanged, and a rejected operation earns no record) from
+  the *apply phase* (opens a `running` record, marks it `completed` on success;
+  on failure the block rolls back — taking the `running` row with it — then
+  writes a fresh `failed` record with a safe category and returns a failure
+  result). Package changes stay atomic, no `completed` record survives a
+  rolled-back operation, and no orphaned `running` rows remain.
+- `assertLifecycleRpcSucceeded` guards the three repositories that call these
+  RPCs, so a returned `status: 'failed'` raises the normalized `RepositoryError`
+  callers already expect instead of reading as success. Unknown categories fall
+  back to generic copy, so a new backend category can never leak raw text.
+- `install` vs `update` is derived from whether the company already held the
+  entitlement, and the record carries both source and target versions.
+- Tests: `lifecycle_operation_logging_rls.sql` (12 checks incl. the failure
+  path — durable `failed` record, no `completed`, no orphaned `running`,
+  entitlement rolled back, safe reason) and 8 guard unit tests.
+  444 tests, 27/27 SQL suites.
+- **Not yet deployed to hosted.**
+
 ## Unreleased — Lifecycle Monitoring production fix (branch `fix/lifecycle-monitoring-production`)
 
 Platform Admin `/admin/lifecycle` failed in production with **400 `PGRST200`**,

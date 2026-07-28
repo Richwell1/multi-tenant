@@ -19,6 +19,7 @@ export const PACKAGE_CODES = {
   assetRegister: 'asset-register',
   pulseSurveys: 'pulse-surveys',
   orgChart: 'org-chart',
+  onboardingChecklist: 'custom-onboarding-checklist',
   employeeApproval: 'custom-employee-approval',
   departmentCode: 'custom-department-code',
   visitorRegister: 'custom-visitor-register',

@@ -89,6 +89,11 @@ export const PACKAGE_MANIFEST: Partial<Record<PackageKey, PackageManifestEntry>>
     name: 'Custom Employee Approval Card',
     features: [{ label: 'Employee Approval', minVersion: '1.0.0', route: '/employees' }],
   },
+  [PACKAGE_CODES.onboardingChecklist]: {
+    code: PACKAGE_CODES.onboardingChecklist,
+    name: 'Custom Onboarding Checklist',
+    features: [{ label: 'Onboarding Checklist', minVersion: '1.0.0', route: '/employees' }],
+  },
   [PACKAGE_CODES.departmentCode]: {
     code: PACKAGE_CODES.departmentCode,
     name: 'Custom Department Code Field',

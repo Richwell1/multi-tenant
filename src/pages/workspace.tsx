@@ -29,6 +29,7 @@ import { formatDate } from '@/lib/utils';
 import { RepositoryError } from '@/data/errors';
 import { StatCard } from '@/components/stat-card';
 import { InstalledPackagesPanel } from '@/components/installed-packages-panel';
+import { OnboardingChecklistCard } from '@/components/onboarding-checklist-card';
 import { PackageReviewDialog } from '@/components/package-review-dialog';
 import { latestImpactManifest, type PackageImpactManifest } from '@/lib/packages/impact';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -158,6 +159,7 @@ function EmployeesListContent() {
   const { packages } = usePackageEntitlements();
   // Private extension: only the assigned company (with HR Core >= 1.1.0) sees this card.
   const hasApproval = hasFeature(packages, PACKAGE_CODES.employeeApproval, '1.0.0');
+  const hasOnboardingChecklist = hasFeature(packages, PACKAGE_CODES.onboardingChecklist, '1.0.0');
   const filtered = (query.data ?? []).filter((e) =>
     `${e.fullName} ${e.employeeNumber} ${e.department}`.toLowerCase().includes(q.toLowerCase()),
   );
@@ -185,6 +187,7 @@ function EmployeesListContent() {
           </CardContent>
         </Card>
       )}
+      {hasOnboardingChecklist && <OnboardingChecklistCard />}
       <TableBoundary
         query={query}
         filtered={filtered}

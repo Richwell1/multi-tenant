@@ -178,6 +178,7 @@ const wsSettings = createRoute({ getParentRoute: () => workspaceLayout, path: 's
 const wsLeave = createRoute({ getParentRoute: () => workspaceLayout, path: 'leave', component: workspacePage('LeavePage') });
 const wsAttendance = createRoute({ getParentRoute: () => workspaceLayout, path: 'attendance', component: workspacePage('AttendancePage') });
 const wsMarketplace = createRoute({ getParentRoute: () => workspaceLayout, path: 'extensions/marketplace', component: workspacePage('MarketplacePage') });
+const wsAnnouncements = createRoute({ getParentRoute: () => workspaceLayout, path: 'extensions/announcements', component: workspacePage('AnnouncementsPage') });
 const wsDocumentNotes = createRoute({ getParentRoute: () => workspaceLayout, path: 'extensions/document-notes', component: workspacePage('DocumentNotesPage') });
 const wsExpenseRequests = createRoute({ getParentRoute: () => workspaceLayout, path: 'extensions/expense-requests', component: workspacePage('ExpenseRequestsPage') });
 const wsVisitorRegister = createRoute({ getParentRoute: () => workspaceLayout, path: 'extensions/visitor-register', component: workspacePage('VisitorRegisterPage') });
@@ -225,6 +226,7 @@ export const routeTree = rootRoute.addChildren([
     wsLeave,
     wsAttendance,
     wsMarketplace,
+    wsAnnouncements,
     wsDocumentNotes,
     wsExpenseRequests,
     wsVisitorRegister,

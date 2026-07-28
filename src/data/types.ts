@@ -9,6 +9,7 @@ export type PackageKey =
   // Marketplace extensions
   | 'document-notes'
   | 'expense-requests'
+  | 'company-announcements'
   // Private extensions / standalone
   | 'custom-employee-approval'
   | 'custom-department-code'

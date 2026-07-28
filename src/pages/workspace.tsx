@@ -3,7 +3,7 @@ import { Link, useParams, useNavigate } from '@tanstack/react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { CheckCircle2, LayoutDashboard, Users, Building, Briefcase, Package, RefreshCw, Store, Settings as SettingsIcon } from 'lucide-react';
+import { CheckCircle2, LayoutDashboard, Users, Building, Briefcase, Package, RefreshCw, Store, Settings as SettingsIcon, Megaphone } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import { APP_VERSION } from '@/lib/app-version';
 import {
@@ -18,6 +18,7 @@ import {
 import type { PackageKey } from '@/data/types';
 import { useMarketplacePackages, useInstallMarketplaceExtension } from '@/hooks/marketplace';
 import { useDocumentNotes, useCreateDocumentNote } from '@/hooks/document-notes';
+import { useAnnouncements, useCreateAnnouncement } from '@/hooks/announcements';
 import { useExpenseRequests, useCreateExpenseRequest } from '@/hooks/expense-requests';
 import { useVisitorEntries, useCreateVisitor } from '@/hooks/visitor-register';
 import { useAvailableUpdates, useInstallCompanyUpdate, useAvailableUpdateCount } from '@/hooks/company-updates';
@@ -1312,6 +1313,82 @@ function reviewManifest(packageKey: string, version: string): PackageImpactManif
       retention: { policy: 'retain_then_purge', retentionDays: 30 },
       diagnostics: { status: 'PASS' },
     }
+  );
+}
+
+export function AnnouncementsPage() {
+  return (
+    <PackageGuard packageCode={PACKAGE_CODES.companyAnnouncements} packageName="Company Announcements">
+      <AnnouncementsContent />
+    </PackageGuard>
+  );
+}
+
+function AnnouncementsContent() {
+  const query = useAnnouncements();
+  const create = useCreateAnnouncement();
+  const [title, setTitle] = useState('');
+  const [body, setBody] = useState('');
+  const [error, setError] = useState<string>();
+  const items = query.data ?? [];
+
+  const submit = (event: React.FormEvent) => {
+    event.preventDefault();
+    setError(undefined);
+    create.mutate(
+      { title, body: body || undefined },
+      {
+        onSuccess: () => { setTitle(''); setBody(''); },
+        onError: (err) => setError(err instanceof RepositoryError ? err.message : 'Could not post the announcement.'),
+      },
+    );
+  };
+
+  return (
+    <>
+      <PageHeader
+        icon={<Megaphone className="size-5" />}
+        title="Company Announcements"
+        description="Broadcast announcements to your workspace"
+      />
+      <Card className="mb-6 max-w-2xl">
+        <CardContent className="pt-6">
+          {error && <div role="alert" className="mb-4 rounded-md border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">{error}</div>}
+          <form onSubmit={submit} className="space-y-4" noValidate>
+            <Field label="Title" htmlFor="announcement-title">
+              <Input id="announcement-title" required value={title} onChange={(e) => setTitle(e.target.value)} />
+            </Field>
+            <Field label="Message" htmlFor="announcement-body">
+              <textarea id="announcement-body" className="min-h-24 w-full rounded-md border border-border bg-surface px-3 py-2 text-sm" value={body} onChange={(e) => setBody(e.target.value)} />
+            </Field>
+            <SubmitButton pending={create.isPending} pendingLabel="Posting…">Post Announcement</SubmitButton>
+          </form>
+        </CardContent>
+      </Card>
+      {query.isPending ? (
+        <PageLoadingState label="Loading announcements…" />
+      ) : query.isError ? (
+        <ErrorState onRetry={() => query.refetch()} retrying={query.isFetching} />
+      ) : items.length === 0 ? (
+        <EmptyState title="No announcements yet" description="Post your first announcement above." />
+      ) : (
+        <div className="space-y-3">
+          {items.map((a) => (
+            <Card key={a.id}>
+              <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
+                <CardTitle className="text-base">{a.title}</CardTitle>
+                <span className="shrink-0 text-xs text-content-variant">{formatDate(a.createdAt)}</span>
+              </CardHeader>
+              {a.body && (
+                <CardContent>
+                  <p className="whitespace-pre-wrap text-sm text-content-variant">{a.body}</p>
+                </CardContent>
+              )}
+            </Card>
+          ))}
+        </div>
+      )}
+    </>
   );
 }
 

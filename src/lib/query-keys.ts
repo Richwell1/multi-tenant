@@ -108,6 +108,9 @@ export const queryKeys = {
   documentNotes: {
     list: (companyId: string) => ['document-notes', companyId] as const,
   },
+  announcements: {
+    list: (companyId: string) => ['announcements', companyId] as const,
+  },
   expenseRequests: {
     list: (companyId: string) => ['expense-requests', companyId] as const,
   },

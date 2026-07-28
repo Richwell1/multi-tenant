@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased — Company Announcements feature vertical (branch `feat/company-announcements-vertical`)
+
+First full feature vertical for a catalog package — promotes Company Announcements
+from catalog_only to **implemented**.
+- Migration `20260805010000`: `announcements` table with entitlement-gated RLS
+  (select/insert/update/delete via `can_use_company_package`), authenticated Data
+  API grants (guardrail-checked), and `feature_status='implemented'` +
+  `feature_table='announcements'` (retention/purge now operate on its data).
+- Vertical: `src/data/announcements` (repo + mock + Supabase), service (zod),
+  `useAnnouncements`/`useCreateAnnouncement`, `AnnouncementsPage` (PackageGuard),
+  route `/:companySlug/extensions/announcements`, nav item, manifest entry,
+  PACKAGE_CODES + PackageKey.
+- Tests: mock/service units, page UI, and SQL `announcements_authz_rls.sql`
+  (8 checks incl. grant, tenant isolation, retention-hide, and purge). 393 tests,
+  22/22 SQL suites.
+
 ## Unreleased — Feature-readiness honesty (branch `fix/hosted-lifecycle-readiness`)
 
 - New `packages.feature_status` (`implemented` | `catalog_only`, migration

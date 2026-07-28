@@ -120,3 +120,14 @@ export function useSession(): SessionState {
   if (!ctx) throw new Error('useSession must be used within a SessionProvider');
   return ctx;
 }
+
+/**
+ * Non-throwing variant of useSession — null outside a SessionProvider. For
+ * low-level hooks (e.g. useCompanySlug) that only want an optional fallback
+ * and must keep working in tests/stories rendered without the full provider
+ * tree.
+ */
+// eslint-disable-next-line react-refresh/only-export-components
+export function useSessionOptional(): SessionState | null {
+  return useContext(SessionContext);
+}

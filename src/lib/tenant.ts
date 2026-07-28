@@ -5,14 +5,16 @@
 // (sourced from the membership context), not here.
 //
 // Context is derived from the hostname and query string:
-//   admin.<domain>              -> Platform Super Admin portal
-//   /login?portal=admin         -> Platform Super Admin portal
-//   /login?tenant=<company-slug> -> that company's workspace (dynamic)
+//   home.<domain>, www.<domain>, admin.<domain>, or the bare app domain
+//                                -> Platform Super Admin / marketing portal
+//   /login?portal=admin         -> Platform Super Admin portal (dev override)
+//   /login?tenant=<company-slug> -> that company's workspace (dev override)
+//   <company-slug>.<domain>     -> that company's workspace (wildcard subdomain)
 //
-// Company selection is driven by the dynamic `?tenant=<slug>` parameter — the
-// slug of a company created through registration. Wildcard-subdomain tenant
-// resolution is deferred, so no company slug is hardcoded here; unknown hosts
-// default to the admin portal.
+// The base app domain is VITE_APP_DOMAIN (falls back to merbsconnect.com). Any
+// other host (localhost, a preview deployment host, …) never matches a tenant
+// subdomain, so local dev keeps using the `?tenant=<slug>` query override with
+// path-based routing (see workspacePath() and router.tsx).
 // ---------------------------------------------------------------------------
 
 import type { Company, Portal } from '@/data/types';
@@ -24,10 +26,37 @@ export interface ResolvedContext {
   tenantId: string | null;
 }
 
+const DEFAULT_APP_DOMAIN = 'merbsconnect.com';
+/** The subdomain that hosts marketing, login/register, and Platform Admin. */
+export const MARKETING_SUBDOMAIN = 'home';
+/** Subdomains that are never a tenant, even though they sit on the app domain. */
+const NON_TENANT_SUBDOMAINS = new Set([MARKETING_SUBDOMAIN, 'www', 'admin']);
+
+/** The app's base domain, e.g. `merbsconnect.com` — configurable per environment. */
+export function appBaseDomain(): string {
+  const configured = (import.meta.env.VITE_APP_DOMAIN as string | undefined)?.trim().toLowerCase();
+  return configured || DEFAULT_APP_DOMAIN;
+}
+
 /**
- * Resolve portal + tenant from a hostname and optional query string.
- * The tenant is selected dynamically via `?tenant=<slug>`; no company identity
- * is hardcoded.
+ * True when `hostname` is a live tenant workspace subdomain (e.g.
+ * `acme.merbsconnect.com`) — as opposed to the marketing/admin host, the bare
+ * app domain, or an unrelated host (localhost, a preview deployment, …).
+ */
+export function isTenantHost(hostname: string, baseDomain = appBaseDomain()): boolean {
+  const host = hostname.trim().toLowerCase();
+  const suffix = `.${baseDomain}`;
+  if (host === baseDomain || !host.endsWith(suffix)) return false;
+  const sub = host.slice(0, -suffix.length);
+  // A bare, single-label subdomain only — `foo.acme.merbsconnect.com` is not
+  // a recognized tenant host shape.
+  return sub.length > 0 && !sub.includes('.') && !NON_TENANT_SUBDOMAINS.has(sub);
+}
+
+/**
+ * Resolve portal + tenant from a hostname and optional query string. In
+ * production, the tenant subdomain is authoritative; `?tenant=<slug>` remains
+ * a dev-only override since local dev has no real wildcard subdomains.
  */
 export function resolveContext(hostname: string, search = ''): ResolvedContext {
   const params = new URLSearchParams(search);
@@ -37,16 +66,63 @@ export function resolveContext(hostname: string, search = ''): ResolvedContext {
 
   const tenantParam = params.get('tenant')?.trim().toLowerCase();
   if (tenantParam) {
-    // Dynamic tenant resolution — supports any registration-created company slug.
+    // Dev override — supports any registration-created company slug without a
+    // real subdomain.
     return { portal: 'company', tenantId: tenantParam };
   }
 
-  const sub = hostname.split('.')[0]?.toLowerCase() ?? '';
-  if (sub === 'admin') return { portal: 'admin', tenantId: null };
+  if (isTenantHost(hostname)) {
+    const sub = hostname.trim().toLowerCase().split('.')[0];
+    return { portal: 'company', tenantId: sub };
+  }
 
-  // Wildcard-subdomain tenant resolution is deferred; unknown hosts default to
-  // the admin portal. Companies are selected via `?tenant=<slug>`.
   return { portal: 'admin', tenantId: null };
+}
+
+/** True when `hostname` is the app domain itself or any of its subdomains. */
+export function isAppHost(hostname: string, baseDomain = appBaseDomain()): boolean {
+  const host = hostname.trim().toLowerCase();
+  return host === baseDomain || host.endsWith(`.${baseDomain}`);
+}
+
+/**
+ * Build a workspace path for `slug`, for use INSIDE an already-resolved
+ * workspace (e.g. WorkspaceShell nav links) — the caller is always already on
+ * the right host. On a real tenant subdomain the slug is already implied by
+ * the host, so the path has no prefix; in dev (or any non-tenant host) it
+ * falls back to the `/:companySlug/...` path segment. `path` must start with
+ * `/`, e.g. `workspacePath('acme', '/dashboard')`.
+ */
+export function workspacePath(
+  slug: string,
+  path: string,
+  hostname = typeof window !== 'undefined' ? window.location.hostname : '',
+): string {
+  return isTenantHost(hostname) ? path : `/${slug}${path}`;
+}
+
+/**
+ * Resolve where to send the browser for `slug`'s workspace `path`, from
+ * WHATEVER host the browser is currently on — used to cross from the
+ * marketing/admin host (e.g. after signing in on home.<domain>) into a
+ * tenant's own subdomain. Same-origin routing (a router `navigate`) is used
+ * when already on that tenant's host or on a host with no real subdomains
+ * (local dev, a preview deployment); everywhere else on the app domain — e.g.
+ * home.<domain> — client-side routing cannot cross origins, so a full
+ * `https://<slug>.<domain>/...` URL is returned instead. Callers must check
+ * for an absolute URL (`startsWith('http')`) and use `window.location.href`
+ * for that case rather than router navigation.
+ */
+export function resolveWorkspaceDestination(
+  slug: string,
+  path: string,
+  hostname = typeof window !== 'undefined' ? window.location.hostname : '',
+): string {
+  const host = hostname.trim().toLowerCase();
+  if (isTenantHost(host) || !isAppHost(host)) return workspacePath(slug, path, host);
+  // Every real host on the app domain is served over HTTPS (Cloudflare
+  // Universal SSL); never emit an http:// cross-origin redirect.
+  return `https://${slug}.${appBaseDomain()}${path}`;
 }
 
 export function getCompany(tenantId: string | null): Company | undefined {

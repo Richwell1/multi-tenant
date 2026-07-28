@@ -10,6 +10,7 @@ import { AdminShell } from '@/components/admin-shell';
 import { WorkspaceShell } from '@/components/workspace-shell';
 import { PlatformGuard, CompanyGuard } from '@/components/guards';
 import { PageLoadingState, ErrorState } from '@/components/states';
+import { isTenantHost } from '@/lib/tenant';
 // Public/auth pages are eager so sign-in is instant. The admin and company
 // workspace page groups are code-split (lazy) so they load only when entered.
 import {
@@ -29,6 +30,13 @@ const workspacePage = (name: keyof typeof import('@/pages/workspace')) =>
 
 const rootRoute = createRootRoute({ component: () => <Outlet /> });
 
+// Resolved ONCE at module load (stable for the life of the SPA — a full
+// reload happens when crossing hosts anyway, mirroring src/lib/session.tsx).
+// True only on a real tenant subdomain (e.g. acme.merbsconnect.com); false on
+// the marketing/admin host (home.<domain>), local dev, and preview
+// deployments, all of which keep `/:companySlug/...` path-based routing.
+const onTenantSubdomain = typeof window !== 'undefined' && isTenantHost(window.location.hostname);
+
 // --- Public -------------------------------------------------------------------
 
 /** Typed search for the single reusable login route. */
@@ -37,13 +45,16 @@ export interface LoginSearch {
   tenant?: string;
 }
 
-// The bare root always sends unauthenticated visitors to the Platform Super
-// Admin login. A router-level redirect (not duplicated markup) keeps a single
-// reusable <LoginPage>; there is no loop because /login does not redirect back.
+// The bare root sends unauthenticated visitors to the Platform Super Admin
+// login — except on a tenant subdomain, where root means "my dashboard"
+// (CompanyGuard itself sends unauthenticated visitors on to /login). A
+// router-level redirect (not duplicated markup) keeps a single reusable
+// <LoginPage>; there is no loop because /login does not redirect back.
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
   beforeLoad: () => {
+    if (onTenantSubdomain) throw redirect({ to: '/dashboard' });
     throw redirect({ to: '/login', search: { portal: 'admin' } });
   },
 });
@@ -137,30 +148,54 @@ const adminUsage = createRoute({ getParentRoute: () => adminLayout, path: 'usage
 const adminHealth = createRoute({ getParentRoute: () => adminLayout, path: 'health', component: adminPage('HealthPage') });
 const adminAudit = createRoute({ getParentRoute: () => adminLayout, path: 'audit', component: adminPage('AuditPage') });
 
-// --- Company Workspace (path-based tenant prefix, lazy page group) ------------
-// Every company route is nested under `/$companySlug`, e.g. `/rich/dashboard`.
-// The slug is a ROUTING identifier only: CompanyGuard verifies it against the
-// authenticated membership, and the security boundary stays company_id + RLS.
-// Static routes (/admin, /login, …) take priority over this dynamic segment.
-const workspaceLayout = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/$companySlug',
-  component: () => (
-    <CompanyGuard>
-      <WorkspaceShell>
-        <Outlet />
-      </WorkspaceShell>
-    </CompanyGuard>
-  ),
-});
-// Bare `/$companySlug` sends the founder to their dashboard.
-const wsIndex = createRoute({
-  getParentRoute: () => workspaceLayout,
-  path: '/',
-  beforeLoad: ({ params }) => {
-    throw redirect({ to: '/$companySlug/dashboard', params: { companySlug: params.companySlug } });
-  },
-});
+// --- Company Workspace (lazy page group) ---------------------------------------
+// On a real tenant subdomain (acme.merbsconnect.com) the tenant is already
+// implied by the host, so workspaceLayout is a PATHLESS layout route mounted
+// directly on root — children resolve to `/dashboard`, `/employees`, etc.
+// Everywhere else (local dev, the home.<domain> marketing/admin host, preview
+// deployments) it keeps the historical `/$companySlug` path prefix, e.g.
+// `/rich/dashboard`. Either way the slug is a ROUTING identifier only:
+// CompanyGuard verifies it against the authenticated membership — falling
+// back to the hostname-resolved tenant when there is no path param, see
+// CompanyGuard/useCompanySlug — and the security boundary stays
+// company_id + RLS. Static routes (/admin, /login, …) take priority over the
+// path-based `/$companySlug` shape.
+const workspaceLayout = onTenantSubdomain
+  ? createRoute({
+      getParentRoute: () => rootRoute,
+      id: 'workspace',
+      component: () => (
+        <CompanyGuard>
+          <WorkspaceShell>
+            <Outlet />
+          </WorkspaceShell>
+        </CompanyGuard>
+      ),
+    })
+  : createRoute({
+      getParentRoute: () => rootRoute,
+      path: '/$companySlug',
+      component: () => (
+        <CompanyGuard>
+          <WorkspaceShell>
+            <Outlet />
+          </WorkspaceShell>
+        </CompanyGuard>
+      ),
+    });
+// Bare `/$companySlug` (dev/path-based tree only — on a tenant subdomain,
+// workspaceLayout owns no path segment, so bare `/` is indexRoute's redirect
+// instead) sends the founder to their dashboard.
+const wsIndex = onTenantSubdomain
+  ? null
+  : createRoute({
+      getParentRoute: () => workspaceLayout,
+      path: '/',
+      beforeLoad: ({ params }) => {
+        const { companySlug } = params as { companySlug: string };
+        throw redirect({ to: '/$companySlug/dashboard', params: { companySlug } });
+      },
+    });
 const wsDashboard = createRoute({ getParentRoute: () => workspaceLayout, path: 'dashboard', component: workspacePage('WorkspaceDashboard') });
 const wsEmployees = createRoute({ getParentRoute: () => workspaceLayout, path: 'employees', component: workspacePage('EmployeesList') });
 const wsEmployeeNew = createRoute({ getParentRoute: () => workspaceLayout, path: 'employees/new', component: workspacePage('AddEmployee') });
@@ -216,7 +251,7 @@ export const routeTree = rootRoute.addChildren([
     adminAudit,
   ]),
   workspaceLayout.addChildren([
-    wsIndex,
+    ...(wsIndex ? [wsIndex] : []),
     wsDashboard,
     wsEmployees,
     wsEmployeeNew,

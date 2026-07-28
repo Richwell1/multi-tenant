@@ -25,6 +25,7 @@ import { useSession } from '@/lib/session';
 import { usePackageEntitlements } from '@/hooks/entitlements';
 import { useCompanyContext } from '@/hooks/context';
 import { useCompanySlug } from '@/hooks/use-company-slug';
+import { workspacePath } from '@/lib/tenant';
 import { hasPackage, PACKAGE_CODES } from '@/lib/entitlements';
 import { hasFeature } from '@/lib/packages/manifest';
 import { useAvailableUpdateCount } from '@/hooks/company-updates';
@@ -36,9 +37,11 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
   const { codes, packages } = usePackageEntitlements();
   const updateCount = useAvailableUpdateCount();
   const companyName = company?.name ?? companyContext.data?.companyName ?? 'Company Workspace';
-  // Every workspace destination is prefixed with the active tenant slug so links
-  // resolve to `/:companySlug/...`. The slug is routing-only (see useCompanySlug).
-  const p = (path: string) => `/${slug}${path}`;
+  // On a real tenant subdomain, links resolve bare (`/dashboard`); everywhere
+  // else (dev, preview deployments) they're prefixed with the active tenant
+  // slug (`/:companySlug/...`). The slug itself is routing-only (see
+  // useCompanySlug).
+  const p = (path: string) => workspacePath(slug, path);
 
   // Version-gated nav — driven by installed package versions (single source):
   //   Departments/Positions ← HR Core; Employees ← HR Core >= 1.1.0;

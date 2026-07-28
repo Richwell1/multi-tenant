@@ -76,16 +76,31 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Build and deploy
-        uses: cloudflare/wrangler-action@v3
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          preCommands: npm run build
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build production bundle
+        run: npm run build
         env:
-          # Vite inlines these at BUILD time (the preCommands step above), so
-          # they must be set here, not as Worker runtime vars.
           VITE_DATA_SOURCE: supabase
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
           VITE_APP_DOMAIN: merbsconnect.com
+
+      - name: Deploy to Cloudflare Workers
+        # Calling wrangler directly (rather than cloudflare/wrangler-action)
+        # so `npx wrangler` resolves the ^4.114.0 devDependency npm ci just
+        # installed into node_modules — the same command `npm run deploy`
+        # runs locally. The wrangler-action's `wranglerVersion` input did not
+        # override its own bundled (older, wrangler 3.x) default, which
+        # cannot deploy an assets-only (no `main`) Worker.
+        run: npx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

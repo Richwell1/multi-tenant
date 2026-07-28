@@ -38,7 +38,7 @@ const MOCK_CATALOG: MarketplacePackage[] = [
   { code: 'expense-requests', name: 'Expense Requests', description: 'Record and track basic company expense requests.', latestVersion: '1.0.0', featureStatus: 'implemented' },
   { code: 'company-announcements', name: 'Company Announcements', description: 'Broadcast company-wide announcements to your workspace.', latestVersion: '1.0.0', featureStatus: 'implemented' },
   { code: 'asset-register', name: 'Asset Register', description: 'Track company assets and who they are assigned to.', latestVersion: '1.0.0', featureStatus: 'implemented' },
-  { code: 'pulse-surveys', name: 'Pulse Surveys', description: 'Run short, recurring employee pulse surveys.', latestVersion: '1.0.0', featureStatus: 'catalog_only' },
+  { code: 'pulse-surveys', name: 'Pulse Surveys', description: 'Run short, recurring employee pulse surveys.', latestVersion: '1.0.0', featureStatus: 'implemented' },
 ];
 
 class MockMarketplaceRepository implements MarketplaceRepository {

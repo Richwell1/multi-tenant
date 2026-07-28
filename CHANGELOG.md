@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased — Pulse Surveys feature vertical (branch `feat/pulse-surveys-vertical`)
+
+Third full feature vertical — promotes Pulse Surveys from catalog_only to
+**implemented** (all three new marketplace extensions are now real features).
+- Migration `20260807010000`: `pulse_surveys` table (question/description/status)
+  with entitlement-gated RLS (select/insert/update/delete via
+  `can_use_company_package`), authenticated Data API grants (guardrail-checked),
+  and `feature_status='implemented'` + `feature_table='pulse_surveys'`.
+- Vertical: `src/data/pulse-surveys` (repo + mock + Supabase), zod service,
+  `usePulseSurveys`/`useCreatePulseSurvey`, `PulseSurveysPage` (PackageGuard),
+  route `/:companySlug/extensions/pulse-surveys`, nav, manifest, PACKAGE_CODES +
+  PackageKey.
+- Tests: mock/service units, page UI, SQL `pulse_surveys_authz_rls.sql` (8 checks).
+  405 tests, 24/24 SQL suites.
+
 ## Unreleased — Asset Register feature vertical (branch `feat/asset-register-vertical`)
 
 Second full feature vertical — promotes Asset Register from catalog_only to

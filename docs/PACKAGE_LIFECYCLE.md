@@ -127,8 +127,7 @@ readiness — never "the business feature is built". `packages.feature_status`
 
 | Package | Catalog | Lifecycle | Feature build |
 |---|---|---|---|
-| HR Core, Document Notes, Expense Requests, Visitor Register, Leave, Attendance, **Company Announcements, Asset Register** | PASS | PASS | **Implemented** |
-| Pulse Surveys | PASS | PASS | **Pending (catalog_only)** |
+| HR Core, Document Notes, Expense Requests, Visitor Register, Leave, Attendance, **Company Announcements, Asset Register, Pulse Surveys** | PASS | PASS | **Implemented** |
 | Audit Log Exporter, Bulk Data Importer, Org Chart Viewer | PASS | PASS | **Pending (catalog_only)** |
 | Custom Onboarding Checklist, Custom Approval Matrix | PASS | PASS | **Pending (catalog_only)** |
 

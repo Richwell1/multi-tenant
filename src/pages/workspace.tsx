@@ -3,7 +3,7 @@ import { Link, useParams, useNavigate } from '@tanstack/react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { CheckCircle2, LayoutDashboard, Users, Building, Briefcase, Package, RefreshCw, Store, Settings as SettingsIcon, Megaphone, Boxes } from 'lucide-react';
+import { CheckCircle2, LayoutDashboard, Users, Building, Briefcase, Package, RefreshCw, Store, Settings as SettingsIcon, Megaphone, Boxes, Gauge } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import { APP_VERSION } from '@/lib/app-version';
 import {
@@ -20,6 +20,7 @@ import { useMarketplacePackages, useInstallMarketplaceExtension } from '@/hooks/
 import { useDocumentNotes, useCreateDocumentNote } from '@/hooks/document-notes';
 import { useAnnouncements, useCreateAnnouncement } from '@/hooks/announcements';
 import { useAssets, useCreateAsset } from '@/hooks/assets';
+import { usePulseSurveys, useCreatePulseSurvey } from '@/hooks/pulse-surveys';
 import { useExpenseRequests, useCreateExpenseRequest } from '@/hooks/expense-requests';
 import { useVisitorEntries, useCreateVisitor } from '@/hooks/visitor-register';
 import { useAvailableUpdates, useInstallCompanyUpdate, useAvailableUpdateCount } from '@/hooks/company-updates';
@@ -1467,6 +1468,79 @@ function AssetRegisterContent() {
                     {a.status}
                   </Badge>
                 </TD>
+              </TR>
+            ))}
+          </TBody>
+        </DataTable>
+      </TableBoundary>
+    </>
+  );
+}
+
+export function PulseSurveysPage() {
+  return (
+    <PackageGuard packageCode={PACKAGE_CODES.pulseSurveys} packageName="Pulse Surveys">
+      <PulseSurveysContent />
+    </PackageGuard>
+  );
+}
+
+function PulseSurveysContent() {
+  const query = usePulseSurveys();
+  const create = useCreatePulseSurvey();
+  const [question, setQuestion] = useState('');
+  const [description, setDescription] = useState('');
+  const [error, setError] = useState<string>();
+  const surveys = query.data ?? [];
+
+  const submit = (event: React.FormEvent) => {
+    event.preventDefault();
+    setError(undefined);
+    create.mutate(
+      { question, description: description || undefined },
+      {
+        onSuccess: () => { setQuestion(''); setDescription(''); },
+        onError: (err) => setError(err instanceof RepositoryError ? err.message : 'Could not create the survey.'),
+      },
+    );
+  };
+
+  return (
+    <>
+      <PageHeader
+        icon={<Gauge className="size-5" />}
+        title="Pulse Surveys"
+        description="Run short, recurring employee pulse surveys"
+      />
+      <Card className="mb-6 max-w-2xl">
+        <CardContent className="pt-6">
+          {error && <div role="alert" className="mb-4 rounded-md border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">{error}</div>}
+          <form onSubmit={submit} className="space-y-4" noValidate>
+            <Field label="Question" htmlFor="survey-question">
+              <Input id="survey-question" required value={question} onChange={(e) => setQuestion(e.target.value)} />
+            </Field>
+            <Field label="Description" htmlFor="survey-description">
+              <textarea id="survey-description" className="min-h-20 w-full rounded-md border border-border bg-surface px-3 py-2 text-sm" value={description} onChange={(e) => setDescription(e.target.value)} />
+            </Field>
+            <SubmitButton pending={create.isPending} pendingLabel="Creating…">Create Survey</SubmitButton>
+          </form>
+        </CardContent>
+      </Card>
+      <TableBoundary query={query} filtered={surveys} cols={3} emptyTitle="No surveys yet" emptyDescription="Create your first pulse survey above.">
+        <DataTable>
+          <THead>
+            <TH>Question</TH>
+            <TH>Status</TH>
+            <TH>Created</TH>
+          </THead>
+          <TBody>
+            {surveys.map((s) => (
+              <TR key={s.id}>
+                <TD className="font-medium">{s.question}</TD>
+                <TD>
+                  <Badge tone={s.status === 'active' ? 'healthy' : 'neutral'} className="capitalize">{s.status}</Badge>
+                </TD>
+                <TD className="text-content-variant">{formatDate(s.createdAt)}</TD>
               </TR>
             ))}
           </TBody>

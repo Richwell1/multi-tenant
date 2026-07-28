@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased — Asset Register feature vertical (branch `feat/asset-register-vertical`)
+
+Second full feature vertical — promotes Asset Register from catalog_only to
+**implemented**.
+- Migration `20260806010000`: `assets` table (name/tag/assignee/status) with
+  entitlement-gated RLS (select/insert/update/delete via `can_use_company_package`),
+  authenticated Data API grants (guardrail-checked), and
+  `feature_status='implemented'` + `feature_table='assets'` (retention/purge cover it).
+- Vertical: `src/data/assets` (repo + mock + Supabase), zod service,
+  `useAssets`/`useCreateAsset`, `AssetRegisterPage` (PackageGuard, table + status
+  badges), route `/:companySlug/extensions/assets`, nav, manifest, PACKAGE_CODES +
+  PackageKey.
+- Tests: mock/service units, page UI, and SQL `assets_authz_rls.sql` (8 checks).
+  399 tests, 23/23 SQL suites.
+
 ## Unreleased — Company Announcements feature vertical (branch `feat/company-announcements-vertical`)
 
 First full feature vertical for a catalog package — promotes Company Announcements

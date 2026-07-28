@@ -10,6 +10,7 @@ export type PackageKey =
   | 'document-notes'
   | 'expense-requests'
   | 'company-announcements'
+  | 'asset-register'
   // Private extensions / standalone
   | 'custom-employee-approval'
   | 'custom-department-code'

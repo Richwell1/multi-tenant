@@ -76,11 +76,25 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
       - name: Build and deploy
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          # Pin to the wrangler major version this repo's devDependency uses
+          # (^4.114.0) — assets-only (no `main`) deploys need wrangler 4+, and
+          # without an explicit version the action falls back to its own
+          # older bundled default rather than reading package.json.
+          wranglerVersion: '4'
           preCommands: npm run build
         env:
           # Vite inlines these at BUILD time (the preCommands step above), so

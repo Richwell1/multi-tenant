@@ -1,7 +1,13 @@
 // ---------------------------------------------------------------------------
-// Public app configuration (non-secret). The workspace host is used only to
-// preview tenant URLs (e.g. `multi-tenant-hr.vercel.app/rich/dashboard`). It is
-// a deployment host, not a company identity, and can be overridden per env.
+// Public app configuration (non-secret). Used only to preview tenant workspace
+// URLs during registration (e.g. `acme.merbsconnect.com`) — a deployment host,
+// not a company identity. See src/lib/tenant.ts for the authoritative
+// VITE_APP_DOMAIN-backed base domain and hostname resolution.
 // ---------------------------------------------------------------------------
 
-export const WORKSPACE_HOST = import.meta.env.VITE_WORKSPACE_HOST ?? 'multi-tenant-hr.vercel.app';
+import { appBaseDomain } from './tenant';
+
+/** The public hostname for a company's workspace, e.g. `acme.merbsconnect.com`. */
+export function workspaceHost(slug: string): string {
+  return `${slug}.${appBaseDomain()}`;
+}

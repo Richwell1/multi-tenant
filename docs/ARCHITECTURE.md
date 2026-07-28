@@ -23,8 +23,11 @@ advanced incident management.
   that fails if any RLS-policied `public` table is missing the `authenticated`
   Data API grant its policies imply — Postgres checks table privileges before
   RLS, so a missing grant is a 42501 the browser hits before RLS ever runs
-- Vercel for the SPA deployment; `vercel.json` rewrites application routes to
-  `index.html`
+- Cloudflare Workers (Static Assets) for the SPA deployment; `wrangler.jsonc`'s
+  `not_found_handling: "single-page-application"` serves `index.html` for
+  every non-asset path, and a wildcard zone route
+  (`*.merbsconnect.com/*`) fans every tenant subdomain into the same Worker —
+  see README.md "Deploying to Cloudflare Workers"
 
 The application supports two data sources. `VITE_DATA_SOURCE=mock` is the safe
 default for the seeded demonstration and local UI work. `VITE_DATA_SOURCE=supabase`
@@ -89,18 +92,27 @@ company from membership. Tenant-owned operations use the real `companies.id`
 UUID, never a slug or mock identifier. Slugs are for display and resolution;
 UUIDs are the persistence key.
 
-**Path-based tenant routing.** Company workspace URLs are prefixed with the
-tenant slug: `/:companySlug/dashboard`, `/:companySlug/departments`,
-`/:companySlug/extensions/marketplace`, and so on (e.g.
-`https://multi-tenant-hr.vercel.app/rich/dashboard`). Platform Admin routes stay
-at `/admin/...` and are never nested under a company slug. The slug is a routing
-identifier only: `CompanyGuard` verifies the `/:companySlug` segment against the
-authenticated membership (mismatch → access-denied), and `useCompanySlug` reads
-it solely to build links. It never replaces the company UUID, membership,
-entitlement checks, or RLS — the final security boundary remains authenticated
-membership plus `company_id` and RLS. After sign-in the user lands on their own
-slugged dashboard; a bare `/:companySlug` redirects to `/:companySlug/dashboard`.
-The single Vercel SPA rewrite already serves every non-asset path.
+**Tenant routing — subdomain in production, path in dev.** On the deployed app
+domain, each company gets a real wildcard subdomain:
+`https://acme.merbsconnect.com/dashboard`, with no slug in the path — the
+`router.tsx` workspace layout is a pathless route on a tenant subdomain
+(`isTenantHost()` in `src/lib/tenant.ts`), since the host already identifies
+the tenant. Local dev has no real subdomains, so it keeps the historical
+path-based scheme instead: `/:companySlug/dashboard`, `/:companySlug/departments`,
+`/:companySlug/extensions/marketplace`, and so on. Platform Admin routes stay
+at `/admin/...` (served from `home.<domain>` in production) and are never
+nested under a company slug or subdomain. Either way the slug is a routing
+identifier only: `CompanyGuard` verifies the tenant (from the `/:companySlug`
+segment when present, else the hostname-resolved `tenantId`) against the
+authenticated membership (mismatch → access-denied), and `useCompanySlug`
+reads it the same way solely to build links. It never replaces the company
+UUID, membership, entitlement checks, or RLS — the final security boundary
+remains authenticated membership plus `company_id` and RLS. After sign-in the
+user lands on their own dashboard — same-origin if already on the right host,
+or a full cross-origin redirect to their subdomain otherwise
+(`resolveWorkspaceDestination`); a bare `/:companySlug` (dev) or a bare `/` on
+a tenant subdomain (production) redirects to the dashboard. Cloudflare's
+Workers Static Assets SPA fallback serves every non-asset path either way.
 
 **Globally unique slugs.** Company **names may repeat**; company **slugs are
 globally unique**. `companies.slug` is `not null unique` and additionally

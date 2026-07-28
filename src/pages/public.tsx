@@ -16,7 +16,8 @@ import { useLoginPortalContext } from '@/hooks/use-login-portal-context';
 import { useRegisterCompany, useSlugAvailability } from '@/hooks/use-register-company';
 import type { RegisterCompanyResult } from '@/data/registration';
 import { deriveSlug, slugIssue, SLUG_MIN_LENGTH, SLUG_MAX_LENGTH, SLUG_PATTERN } from '@/lib/slug';
-import { WORKSPACE_HOST } from '@/lib/app-config';
+import { workspaceHost } from '@/lib/app-config';
+import { appBaseDomain, resolveWorkspaceDestination } from '@/lib/tenant';
 import { passwordStrength, PASSWORD_STRENGTH_LABEL, type PasswordStrength } from '@/lib/password';
 import { RepositoryError } from '@/data/errors';
 import { companyContextRepository, platformAdminRepository } from '@/data/context';
@@ -141,8 +142,15 @@ export function LoginPage() {
         return;
       }
       notify.signedIn();
-      // Path-based tenant routing: land on the company's own slugged dashboard.
-      navigate({ to: '/$companySlug/dashboard', params: { companySlug: company.companySlug } });
+      // Land on the company's own dashboard: same-origin on a real tenant
+      // subdomain or in dev, cross-origin to the tenant's subdomain otherwise
+      // (e.g. signing in from the home.<domain> marketing/admin host).
+      const destination = resolveWorkspaceDestination(company.companySlug, '/dashboard');
+      if (destination.startsWith('http')) {
+        window.location.href = destination;
+      } else {
+        navigate({ to: destination });
+      }
     } catch (e) {
       setAuthError(e instanceof RepositoryError ? e.message : 'Sign-in failed. Please try again.');
     }
@@ -336,7 +344,7 @@ export function RegisterPage() {
               <dt className="text-content-variant">Workspace URL</dt>
               {/* The backend-persisted slug — never re-derived from the name. */}
               <dd className="break-all font-medium text-content">
-                {WORKSPACE_HOST}/{created.slug}/dashboard
+                {workspaceHost(created.slug)}/dashboard
               </dd>
             </div>
             <div className="flex justify-between gap-3">
@@ -395,15 +403,12 @@ export function RegisterPage() {
                 errors.slug ? 'border-danger' : 'border-border',
               )}
             >
-              <span className="shrink-0 whitespace-nowrap py-2 pl-3 text-content-variant" aria-hidden>
-                {WORKSPACE_HOST}/
-              </span>
               <input
                 id="slug"
                 aria-invalid={!!errors.slug}
                 aria-describedby="slug-availability"
                 placeholder="acme-corp"
-                className="min-w-0 flex-1 bg-transparent py-2 text-content outline-none placeholder:text-content-variant/60"
+                className="min-w-0 flex-1 bg-transparent py-2 pl-3 text-content outline-none placeholder:text-content-variant/60"
                 {...register('slug', {
                   onChange: (e) => {
                     setSlugEdited(true);
@@ -413,7 +418,7 @@ export function RegisterPage() {
                 })}
               />
               <span className="shrink-0 whitespace-nowrap py-2 pr-3 text-content-variant" aria-hidden>
-                /dashboard
+                .{appBaseDomain()}
               </span>
             </div>
             <SlugAvailabilityHint slug={slug ?? ''} query={availability} hasFormatError={!!errors.slug} />

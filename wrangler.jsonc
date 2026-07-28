@@ -1,0 +1,31 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  // Worker name — becomes the *.workers.dev preview subdomain
+  // (multi-tenants-hr.<subdomain>.workers.dev) before routes/DNS are wired up.
+  "name": "multi-tenants-hr",
+  "compatibility_date": "2026-07-28",
+
+  // Static-assets-only deployment: the Vite build output, served with SPA
+  // fallback so client-side routing (TanStack Router) owns every unmatched
+  // path. No `main` worker script — tenant resolution happens entirely in the
+  // browser from window.location.hostname (see src/lib/tenant.ts).
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application"
+  },
+
+  // A single wildcard zone route covers every host on the app domain:
+  //   home.merbsconnect.com   -> marketing / login / register / Platform Admin
+  //   <slug>.merbsconnect.com -> that company's workspace
+  // The bare apex (merbsconnect.com) is intentionally NOT routed here — it is
+  // already in use by an unrelated site. Requires a proxied wildcard DNS
+  // record (`*` -> this zone) to exist; see README.md "Deploying to
+  // Cloudflare Workers".
+  "routes": [
+    { "pattern": "*.merbsconnect.com/*", "zone_name": "merbsconnect.com" }
+  ],
+
+  "observability": {
+    "enabled": true
+  }
+}

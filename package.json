@@ -10,7 +10,9 @@
     "lint": "eslint .",
     "typecheck": "tsc -b",
     "test": "vitest run",
-    "test:rls": "bash scripts/run-sql-suites.sh"
+    "test:rls": "bash scripts/run-sql-suites.sh",
+    "deploy": "npm run build && wrangler deploy",
+    "cf:dev": "wrangler dev"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
@@ -46,6 +48,7 @@
     "typescript": "^5.7.2",
     "typescript-eslint": "^8.18.1",
     "vite": "^6.0.3",
-    "vitest": "^3.2.7"
+    "vitest": "^3.2.7",
+    "wrangler": "^4.114.0"
   }
 }

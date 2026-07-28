@@ -49,7 +49,7 @@ service-role credentials never enter browser code.
 - Sonner notifications
 - Supabase Auth, PostgreSQL, RLS, RPCs, and Edge Functions
 - Vitest and React Testing Library
-- GitHub Actions and Vercel
+- GitHub Actions and Cloudflare Workers
 
 ## Prerequisites
 
@@ -58,7 +58,8 @@ service-role credentials never enter browser code.
 - Docker, for local Supabase and SQL/RLS suites
 - Supabase CLI 2.105.0 or a compatible current CLI
 - Git
-- Vercel CLI is optional
+- Wrangler CLI is optional (bundled as a devDependency; `npx wrangler` works
+  without a separate install)
 
 The repository uses the Node and Supabase versions pinned by CI. Check
 `.github/workflows/ci.yml` and `package.json` when upgrading them.
@@ -105,12 +106,15 @@ Open `http://localhost:5173`. The shared login is available at:
 - `/login?tenant=beta` for the Beta workspace
 - `/register` for company registration
 
-Company workspaces use **path-based tenant routing** — `/:companySlug/dashboard`,
-`/:companySlug/departments`, etc. (Platform Admin stays at `/admin/...`). Company
+In local dev, company workspaces use **path-based tenant routing** —
+`/:companySlug/dashboard`, `/:companySlug/departments`, etc. — since localhost
+has no real subdomains (Platform Admin stays at `/admin/...`). In production,
+each company gets a real **wildcard subdomain** instead — `acme.merbsconnect.com/dashboard`
+— with no slug in the path; see "Deploying to Cloudflare Workers" below. Company
 **names may repeat**, but **slugs are globally unique**: the backend derives a
 slug from the company name and, on collision, appends a short random suffix
-(e.g. `acme-ltd-k7p2`). The slug is only a public routing identifier — the company
-UUID plus membership and RLS remain the tenant boundary. See
+(e.g. `acme-ltd-k7p2`). The slug is only a public routing/subdomain identifier —
+the company UUID plus membership and RLS remain the tenant boundary. See
 `docs/ARCHITECTURE.md` (“Globally unique slugs”).
 
 Mock data includes Alpha Trading, Beta Manufacturing, and a suspended company.
@@ -158,23 +162,82 @@ npx supabase db push
 npx supabase functions deploy register-company
 ```
 
-Never run `db reset --linked`. Configure Auth URL settings for the deployed
-Vercel URL under Supabase Authentication → URL Configuration. Keep the local
-redirect during development, for example:
+Never run `db reset --linked`. Configure Auth URL settings under Supabase
+Authentication → URL Configuration for every host the app is served from —
+since every company gets its own subdomain, this must include a wildcard
+entry, not just the marketing host:
 
 ```text
-https://<your-vercel-domain>/**
+https://home.merbsconnect.com/**
+https://*.merbsconnect.com/**
 http://localhost:5173/**
 ```
 
-Set
-`VITE_DATA_SOURCE=supabase`, `VITE_SUPABASE_URL`, and
-`VITE_SUPABASE_PUBLISHABLE_KEY` in Vercel. Do not put function secrets in
-frontend variables; use `npx supabase secrets set NAME=value`.
+Set `VITE_DATA_SOURCE=supabase`, `VITE_SUPABASE_URL`, and
+`VITE_SUPABASE_PUBLISHABLE_KEY` as Cloudflare Worker environment variables (see
+below). Do not put function secrets in frontend variables; use
+`npx supabase secrets set NAME=value`.
 
 After hosted Auth users are created, their IDs must match
 `platform_admins.user_id` or `company_memberships.user_id`. Hosted browser
 testing must verify both successful access and Alpha/Beta isolation.
+
+## Deploying to Cloudflare Workers
+
+The app is a static Vite build served by a Cloudflare Worker (Workers Static
+Assets), with SPA fallback replacing what `vercel.json`'s rewrite used to do.
+Tenant resolution happens entirely client-side from `window.location.hostname`
+(`src/lib/tenant.ts`) — there is no server-side routing logic, and **no
+per-tenant provisioning step**: once a company's slug exists in the database,
+its subdomain works the instant a request hits it, via wildcard DNS.
+
+### Domain layout
+
+- `merbsconnect.com` (bare apex) — **not owned by this deployment**; it
+  already serves an unrelated site and is never routed to this Worker.
+- `home.merbsconnect.com` — marketing, `/login`, `/register`, and Platform
+  Admin (`/admin/...`).
+- `<company-slug>.merbsconnect.com` — that company's workspace, e.g.
+  `acme.merbsconnect.com/dashboard`. `home`, `www`, and `admin` are reserved
+  slugs (`src/lib/slug.ts`, `public.is_reserved_slug()`) so a company can never
+  claim them.
+
+### One-time Cloudflare setup
+
+1. In the Cloudflare dashboard for the `merbsconnect.com` zone, add a
+   **proxied** (orange-cloud) DNS record for the wildcard: type `CNAME`, name
+   `*`, target `merbsconnect.com`. This is required for `home.merbsconnect.com`
+   and every `<slug>.merbsconnect.com` to reach the Worker — Cloudflare
+   Workers Routes (as opposed to Custom Domains) do not create DNS records for
+   you.
+2. Universal SSL then covers `*.merbsconnect.com` automatically — no
+   certificate management needed.
+3. `wrangler.jsonc` in this repo already declares the matching route
+   (`*.merbsconnect.com/*`) and the static-assets/SPA config. Nothing else to
+   configure per-tenant.
+
+### Deploy
+
+```bash
+npx wrangler login       # once, authenticates the CLI to your Cloudflare account
+npm run deploy            # builds (tsc -b && vite build) and runs `wrangler deploy`
+```
+
+Set the three `VITE_*` build-time variables (`VITE_DATA_SOURCE=supabase`,
+`VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`) and `VITE_APP_DOMAIN`
+(`merbsconnect.com`) as Cloudflare Worker environment variables in the
+dashboard, or via `wrangler.jsonc`'s `vars` field — they must be present at
+**build** time since Vite inlines them.
+
+For continuous deployment on push to `main`, use either Cloudflare **Workers
+Builds** (git-connected auto-deploy, the direct equivalent of Vercel's git
+integration) or a `wrangler deploy` step in `.github/workflows/ci.yml` using a
+`CLOUDFLARE_API_TOKEN` secret — this repo does not commit to either, pick one
+per your CI preference.
+
+`npm run cf:dev` runs `wrangler dev` for a local Cloudflare-flavored preview
+(distinct from `npm run dev`'s Vite dev server, which remains the primary
+local dev loop with path-based tenant routing).
 
 ## Quality commands
 
@@ -220,7 +283,8 @@ The global version changes only for an intentional shared application release:
 3. run all quality checks;
 4. commit and open a pull request;
 5. merge after CI passes; and
-6. let Vercel deploy the shared application.
+6. deploy the shared application to Cloudflare Workers (see "Deploying to
+   Cloudflare Workers" above).
 
 Package versions are independent. A private, selected-company, or all-company
 package release changes that package's installation/entitlement version. It
@@ -394,11 +458,12 @@ The full mandatory rules are documented in `AGENTS.md` and
 
 ## Troubleshooting
 
-### Blank Vercel page or SPA 404
+### Blank page or SPA 404 on Cloudflare
 
-Confirm the deployment contains `dist`, the Vercel rewrite in `vercel.json` is
-present, and the deployed environment variables are configured. Redeploy after
-changing variables.
+Confirm `wrangler.jsonc`'s `assets.directory` points at a built `dist`
+(`npm run build` ran first), `not_found_handling` is
+`"single-page-application"`, and the deployed environment variables are
+configured. Redeploy after changing build-time variables.
 
 ### Missing environment variables
 
@@ -440,12 +505,20 @@ exposure configuration before changing policies.
 Mock mode still runs without Docker. SQL/RLS verification requires Docker and
 the local Supabase stack.
 
-### Stale Vercel deployment or cache
+### Stale Cloudflare deployment or cache
 
-Verify the deployment commit, production environment scope, and all three
-`VITE_*` variables. Redeploy after changing build-time variables, then use a
-hard refresh or a fresh browser session. Do not debug a stale bundle by adding
-secrets to source code.
+Verify the deployed Worker version (`wrangler versions list`), the deployed
+environment scope, and all `VITE_*` build-time variables. Redeploy after
+changing build-time variables, then use a hard refresh or a fresh browser
+session. Do not debug a stale bundle by adding secrets to source code.
+
+### Tenant subdomain resolves to the wrong host, or not at all
+
+Confirm the wildcard DNS record (`*` → `merbsconnect.com`, proxied) exists and
+is orange-clouded, and that `wrangler.jsonc`'s route
+(`*.merbsconnect.com/*`) is deployed. A slug that collides with a reserved
+word (`home`, `www`, `admin`, …) is rejected at registration — see
+`src/lib/slug.ts` — so this is a DNS/route issue, not a slug-allocation bug.
 
 ### RLS versus Data API access
 
@@ -464,5 +537,7 @@ mutation cannot lose its `this` context. Prefer closures in hooks for clarity.
 This demo intentionally does not include MFA, OTP, password reset, invitation
 onboarding, social login, in-app chat, company request submission, payroll,
 recruitment, performance management, billing, microservices, Kubernetes, or
-advanced incident management. Custom domains and wildcard subdomains remain
+advanced incident management. Wildcard-subdomain tenant routing on Cloudflare
+Workers is implemented (see "Deploying to Cloudflare Workers"); a fully custom
+per-tenant domain (bring-your-own-domain, beyond the shared wildcard) remains
 deferred deployment work.

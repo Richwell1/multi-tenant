@@ -33,6 +33,7 @@ export const RESERVED_SLUGS = [
   'system',
   'platform',
   'www',
+  'home',
   'health',
   'packages',
   'updates',

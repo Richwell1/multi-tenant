@@ -59,7 +59,7 @@ const SLUG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 // Reserved slugs — mirrors public.is_reserved_slug() and src/lib/slug.ts.
 const RESERVED_SLUGS = new Set([
   'admin', 'api', 'auth', 'login', 'logout', 'register', 'dashboard', 'settings',
-  'support', 'system', 'platform', 'www', 'health', 'packages', 'updates',
+  'support', 'system', 'platform', 'www', 'home', 'health', 'packages', 'updates',
   'extensions', 'marketplace',
 ]);
 

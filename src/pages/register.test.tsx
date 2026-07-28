@@ -71,11 +71,10 @@ describe('RegisterPage UX', () => {
     expect(screen.getByText('This workspace URL is reserved.')).toBeInTheDocument();
   });
 
-  it('previews the full path-based workspace URL and wires slug accessibility', () => {
+  it('previews the workspace subdomain URL and wires slug accessibility', () => {
     render(<RegisterPage />);
-    // Prefix + suffix framing the slug are present (path-based, not subdomain).
-    expect(screen.getByText(/multi-tenant-hr\.vercel\.app\//)).toBeInTheDocument();
-    expect(screen.getByText('/dashboard')).toBeInTheDocument();
+    // The domain suffix frames the slug (subdomain-style: [slug].merbsconnect.com).
+    expect(screen.getByText('.merbsconnect.com')).toBeInTheDocument();
     const slug = screen.getByLabelText('Workspace URL');
     expect(slug).toHaveAttribute('aria-describedby', 'slug-availability');
   });

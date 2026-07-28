@@ -12,8 +12,10 @@ It does not claim that hosted browser smoke testing has been completed.
   `supabase migration list --linked` (Local = Remote):
   `20260802010000_package_lifecycle_and_retention`,
   `20260803010000_new_packages_catalog`,
-  `20260804010000_package_feature_status`. Pre-deploy remote head was
-  `20260801010000`. All additive; the hosted database was not reset.
+  `20260804010000_package_feature_status`, and (2026-08-05)
+  `20260805010000_company_announcements_feature` (first real feature vertical:
+  `announcements` table + entitlement-gated RLS + authenticated grants). All
+  additive; the hosted database was not reset.
 - **Edge Function `purge-retention` deployed** and hardened: it requires the
   service-role key (or `PURGE_SECRET`) as a Bearer token (constant-time compare).
   Live checks: no-bearer → **HTTP 401**, wrong-bearer → **HTTP 401**. The

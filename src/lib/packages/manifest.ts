@@ -68,6 +68,11 @@ export const PACKAGE_MANIFEST: Partial<Record<PackageKey, PackageManifestEntry>>
     name: 'Company Announcements',
     features: [{ label: 'Announcements', minVersion: '1.0.0', route: '/extensions/announcements' }],
   },
+  [PACKAGE_CODES.assetRegister]: {
+    code: PACKAGE_CODES.assetRegister,
+    name: 'Asset Register',
+    features: [{ label: 'Assets', minVersion: '1.0.0', route: '/extensions/assets' }],
+  },
   // Private extensions render inside existing HR Core surfaces for the assigned company.
   [PACKAGE_CODES.employeeApproval]: {
     code: PACKAGE_CODES.employeeApproval,

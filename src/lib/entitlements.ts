@@ -16,6 +16,7 @@ export const PACKAGE_CODES = {
   documentNotes: 'document-notes',
   expenseRequests: 'expense-requests',
   companyAnnouncements: 'company-announcements',
+  assetRegister: 'asset-register',
   employeeApproval: 'custom-employee-approval',
   departmentCode: 'custom-department-code',
   visitorRegister: 'custom-visitor-register',

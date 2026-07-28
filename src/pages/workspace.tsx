@@ -3,7 +3,7 @@ import { Link, useParams, useNavigate } from '@tanstack/react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { CheckCircle2, LayoutDashboard, Users, Building, Briefcase, Package, RefreshCw, Store, Settings as SettingsIcon, Megaphone } from 'lucide-react';
+import { CheckCircle2, LayoutDashboard, Users, Building, Briefcase, Package, RefreshCw, Store, Settings as SettingsIcon, Megaphone, Boxes } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import { APP_VERSION } from '@/lib/app-version';
 import {
@@ -19,6 +19,7 @@ import type { PackageKey } from '@/data/types';
 import { useMarketplacePackages, useInstallMarketplaceExtension } from '@/hooks/marketplace';
 import { useDocumentNotes, useCreateDocumentNote } from '@/hooks/document-notes';
 import { useAnnouncements, useCreateAnnouncement } from '@/hooks/announcements';
+import { useAssets, useCreateAsset } from '@/hooks/assets';
 import { useExpenseRequests, useCreateExpenseRequest } from '@/hooks/expense-requests';
 import { useVisitorEntries, useCreateVisitor } from '@/hooks/visitor-register';
 import { useAvailableUpdates, useInstallCompanyUpdate, useAvailableUpdateCount } from '@/hooks/company-updates';
@@ -1388,6 +1389,89 @@ function AnnouncementsContent() {
           ))}
         </div>
       )}
+    </>
+  );
+}
+
+export function AssetRegisterPage() {
+  return (
+    <PackageGuard packageCode={PACKAGE_CODES.assetRegister} packageName="Asset Register">
+      <AssetRegisterContent />
+    </PackageGuard>
+  );
+}
+
+function AssetRegisterContent() {
+  const query = useAssets();
+  const create = useCreateAsset();
+  const [name, setName] = useState('');
+  const [assetTag, setAssetTag] = useState('');
+  const [assignedTo, setAssignedTo] = useState('');
+  const [error, setError] = useState<string>();
+  const assets = query.data ?? [];
+
+  const submit = (event: React.FormEvent) => {
+    event.preventDefault();
+    setError(undefined);
+    create.mutate(
+      { name, assetTag: assetTag || undefined, assignedTo: assignedTo || undefined },
+      {
+        onSuccess: () => { setName(''); setAssetTag(''); setAssignedTo(''); },
+        onError: (err) => setError(err instanceof RepositoryError ? err.message : 'Could not add the asset.'),
+      },
+    );
+  };
+
+  return (
+    <>
+      <PageHeader
+        icon={<Boxes className="size-5" />}
+        title="Asset Register"
+        description="Track company assets and their assignments"
+      />
+      <Card className="mb-6 max-w-2xl">
+        <CardContent className="pt-6">
+          {error && <div role="alert" className="mb-4 rounded-md border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">{error}</div>}
+          <form onSubmit={submit} className="grid gap-4 sm:grid-cols-3" noValidate>
+            <Field label="Name" htmlFor="asset-name">
+              <Input id="asset-name" required value={name} onChange={(e) => setName(e.target.value)} />
+            </Field>
+            <Field label="Asset Tag" htmlFor="asset-tag">
+              <Input id="asset-tag" value={assetTag} onChange={(e) => setAssetTag(e.target.value)} />
+            </Field>
+            <Field label="Assigned To" htmlFor="asset-assignee">
+              <Input id="asset-assignee" value={assignedTo} onChange={(e) => setAssignedTo(e.target.value)} />
+            </Field>
+            <div className="col-span-full">
+              <SubmitButton pending={create.isPending} pendingLabel="Adding…">Add Asset</SubmitButton>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+      <TableBoundary query={query} filtered={assets} cols={4} emptyTitle="No assets yet" emptyDescription="Add your first asset above.">
+        <DataTable>
+          <THead>
+            <TH>Name</TH>
+            <TH>Tag</TH>
+            <TH>Assigned To</TH>
+            <TH>Status</TH>
+          </THead>
+          <TBody>
+            {assets.map((a) => (
+              <TR key={a.id}>
+                <TD className="font-medium">{a.name}</TD>
+                <TD className="text-content-variant">{a.assetTag || '—'}</TD>
+                <TD>{a.assignedTo || '—'}</TD>
+                <TD>
+                  <Badge tone={a.status === 'available' ? 'healthy' : a.status === 'assigned' ? 'company' : 'neutral'} className="capitalize">
+                    {a.status}
+                  </Badge>
+                </TD>
+              </TR>
+            ))}
+          </TBody>
+        </DataTable>
+      </TableBoundary>
     </>
   );
 }

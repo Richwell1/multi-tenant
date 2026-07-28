@@ -33,7 +33,6 @@ function fillForm() {
   fireEvent.change(screen.getByLabelText('Admin full name'), { target: { value: 'Rich Owner' } });
   fireEvent.change(screen.getByLabelText('Admin email'), { target: { value: 'owner@rich.co' } });
   fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'Str0ngPass1' } });
-  fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: 'Str0ngPass1' } });
 }
 
 describe('RegisterPage UX', () => {

@@ -1,4 +1,5 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -17,7 +18,8 @@ import { useRegisterCompany, useSlugAvailability } from '@/hooks/use-register-co
 import type { RegisterCompanyResult } from '@/data/registration';
 import { deriveSlug, slugIssue, SLUG_MIN_LENGTH, SLUG_MAX_LENGTH, SLUG_PATTERN } from '@/lib/slug';
 import { workspaceHost } from '@/lib/app-config';
-import { appBaseDomain, resolveWorkspaceDestination } from '@/lib/tenant';
+import { appBaseDomain, registrationHandoffUrl, resolveWorkspaceDestination } from '@/lib/tenant';
+import { resolveLoginDestination } from '@/lib/login-destination';
 import { passwordStrength, PASSWORD_STRENGTH_LABEL, type PasswordStrength } from '@/lib/password';
 import { RepositoryError } from '@/data/errors';
 import { companyContextRepository, platformAdminRepository } from '@/data/context';
@@ -83,9 +85,10 @@ function AuthLayout({ children, portalClass }: { children: React.ReactNode; port
 }
 
 export function LoginPage() {
-  const { signIn, logout } = useSession();
+  const { signIn, logout, authenticated, authLoading, user } = useSession();
   const ctx = useLoginPortalContext();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const search = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
   const isAdmin = search.get('portal') === 'admin';
   const requestedTenant = search.get('tenant')?.trim().toLowerCase() || null;
@@ -104,6 +107,68 @@ export function LoginPage() {
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<LoginForm>({ resolver: zodResolver(loginSchema) });
+
+  /**
+   * Send the browser to `slug`'s dashboard. Cached data is dropped first: a
+   * cross-host move must never carry the previous tenant's context, and the
+   * same-origin (dev) path keeps the in-memory cache alive across the
+   * navigation, so clearing is the only thing that makes both paths equivalent.
+   */
+  const goToWorkspace = useCallback(
+    (slug: string) => {
+      queryClient.clear();
+      const destination = resolveWorkspaceDestination(slug, '/dashboard');
+      if (destination.startsWith('http')) {
+        window.location.href = destination;
+      } else {
+        navigate({ to: destination });
+      }
+    },
+    [navigate, queryClient],
+  );
+
+  // An authenticated visitor should never be shown a login form. Restoring a
+  // session lands them wherever signing in would have — resolved by the same
+  // pure function, so the two paths cannot disagree. Runs only once auth has
+  // settled; the redirect targets are all off /login, so there is no loop.
+  const [restoring, setRestoring] = useState(false);
+  useEffect(() => {
+    if (authLoading || !authenticated || !user) return;
+    let active = true;
+    setRestoring(true);
+    (async () => {
+      try {
+        const isPlatformAdmin = await platformAdminRepository.isPlatformAdmin(user);
+        const company = isPlatformAdmin ? null : await companyContextRepository.getCompanyContext(user);
+        if (!active) return;
+        const destination = resolveLoginDestination({
+          isPlatformAdmin,
+          isAdminPortal: isAdmin,
+          membershipSlug: company?.companySlug ?? null,
+          requestedTenant,
+        });
+        // A platform admin restored on the company login goes to the console,
+        // never into a workspace they hold no membership for.
+        if (destination.kind === 'admin' || destination.kind === 'admin-on-company-login') {
+          navigate({ to: '/admin' });
+          return;
+        }
+        if (destination.kind === 'workspace') {
+          if (destination.hintIgnored) notify.openedOwnWorkspace();
+          goToWorkspace(destination.slug);
+          return;
+        }
+        // Authenticated but with nowhere to go — fall through to the form.
+        setRestoring(false);
+      } catch {
+        if (active) setRestoring(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, authenticated, user, isAdmin, requestedTenant]);
 
   // Sign in through the auth boundary. Invalid credentials surface an inline
   // error (not toast-only); the mock adapter treats password "wrong" as invalid.
@@ -131,30 +196,43 @@ export function LoginPage() {
       }
 
       const company = await companyContextRepository.getCompanyContext(session.user);
-      if (!company) {
+      const destination = resolveLoginDestination({
+        isPlatformAdmin,
+        isAdminPortal: false,
+        membershipSlug: company?.companySlug ?? null,
+        requestedTenant,
+      });
+
+      if (destination.kind !== 'workspace') {
         await logout({ silent: true });
         setAuthError('No active company workspace is linked to this account.');
         return;
       }
-      if (requestedTenant && company.companySlug !== requestedTenant) {
-        await logout({ silent: true });
-        setAuthError(`This account belongs to ${company.companyName}, not the ${requestedTenant} workspace.`);
-        return;
-      }
+      // The ?tenant= hint never decides anything — the authenticated membership
+      // does. A hint naming another company is discarded (not an error), and we
+      // say only that we opened the account's own workspace, disclosing nothing
+      // about the company that was named.
+      if (destination.hintIgnored) notify.openedOwnWorkspace();
       notify.signedIn();
-      // Land on the company's own dashboard: same-origin on a real tenant
-      // subdomain or in dev, cross-origin to the tenant's subdomain otherwise
-      // (e.g. signing in from the home.<domain> marketing/admin host).
-      const destination = resolveWorkspaceDestination(company.companySlug, '/dashboard');
-      if (destination.startsWith('http')) {
-        window.location.href = destination;
-      } else {
-        navigate({ to: destination });
-      }
+      goToWorkspace(destination.slug);
     } catch (e) {
       setAuthError(e instanceof RepositoryError ? e.message : 'Sign-in failed. Please try again.');
     }
   };
+
+  // Session restoration is in flight (or has decided to redirect): showing the
+  // form here would flash a sign-in prompt at someone already signed in.
+  if (authLoading || restoring) {
+    return (
+      <AuthLayout portalClass={isAdmin ? 'portal-admin' : 'portal-company'}>
+        <Card className="p-5 sm:p-8">
+          <p className="text-center text-sm text-content-variant" role="status">
+            Opening your workspace…
+          </p>
+        </Card>
+      </AuthLayout>
+    );
+  }
 
   return (
     <AuthLayout portalClass={isAdmin ? 'portal-admin' : 'portal-company'}>
@@ -349,7 +427,14 @@ export function RegisterPage() {
           </dl>
           <Button
             className="mt-6 w-full"
-            onClick={() => navigate({ to: '/login', search: { tenant: created.slug } })}
+            onClick={() => {
+              // Preferred: the new company's own login host. In dev (no real
+              // subdomains) fall back to the public hand-off, which the login
+              // page validates against the authenticated membership anyway.
+              const direct = registrationHandoffUrl(created.slug);
+              if (direct) window.location.href = direct;
+              else navigate({ to: '/login', search: { tenant: created.slug } });
+            }}
           >
             Continue to sign in
           </Button>

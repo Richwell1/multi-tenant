@@ -125,6 +125,82 @@ export function resolveWorkspaceDestination(
   return `https://${slug}.${appBaseDomain()}${path}`;
 }
 
+/** The public host for marketing, registration, and the generic login. */
+export function marketingHost(baseDomain = appBaseDomain()): string {
+  return `${MARKETING_SUBDOMAIN}.${baseDomain}`;
+}
+
+/**
+ * Canonical host for a PUBLIC route (`/login`, `/register`), or null when the
+ * current host is already canonical and the browser should stay put.
+ *
+ * The generic login on the marketing host is a first-class entry point: a user
+ * must never need to know their subdomain to sign in, so `home.<domain>/login`
+ * is always canonical, with or without a `?tenant=` hint. Only two situations
+ * need a move:
+ *
+ *   <tenant>.<domain>/register         -> home.<domain>/register
+ *     Registration creates a NEW company; performing it under some existing
+ *     tenant's host is meaningless and would imply a relationship to it.
+ *
+ *   <tenant>.<domain>/login?tenant=b   -> b.<domain>/login
+ *     A hint that disagrees with the host is contradictory. The hint names the
+ *     workspace the user is trying to reach, so honour it and drop the stale
+ *     host rather than showing company A's branding for a company B sign-in.
+ *
+ * The hint remains a routing hint only — never an authorization source. It is
+ * still verified against the authenticated membership after sign-in.
+ *
+ * Returns an absolute `https://` URL because these are cross-origin moves that
+ * client-side routing cannot perform. Hosts that are not real app subdomains
+ * (localhost, preview deployments) never redirect, so local dev keeps working
+ * with `?tenant=<slug>` and path-based routing.
+ */
+export function canonicalPublicUrl(
+  hostname: string,
+  pathname: string,
+  search = '',
+  baseDomain = appBaseDomain(),
+): string | null {
+  const host = hostname.trim().toLowerCase();
+  if (!isTenantHost(host, baseDomain)) return null;
+
+  const currentSlug = host.slice(0, -`.${baseDomain}`.length);
+  const path = pathname.toLowerCase();
+
+  if (path === '/register') return `https://${marketingHost(baseDomain)}/register`;
+
+  if (path === '/login') {
+    const hint = new URLSearchParams(search).get('tenant')?.trim().toLowerCase();
+    // A hint naming a DIFFERENT company wins over the host it was opened on.
+    if (hint && hint !== currentSlug) return `https://${hint}.${baseDomain}/login`;
+  }
+
+  return null;
+}
+
+/**
+ * Where "Continue to sign in" should send a founder after registration.
+ *
+ * Prefers the new company's OWN login host (`https://<slug>.<domain>/login`),
+ * so the very first sign-in already happens under the tenant that was just
+ * created. Returns null on hosts with no real subdomains (local dev, previews),
+ * where the caller falls back to the public hand-off
+ * `/login?tenant=<slug>` — equally valid, since the hint is verified against
+ * the authenticated membership either way.
+ *
+ * What this must never produce is a third company's host carrying someone
+ * else's slug (`other.<domain>/login?tenant=<slug>`): the host is always either
+ * the marketing host or the matching company's own.
+ */
+export function registrationHandoffUrl(
+  slug: string,
+  hostname = typeof window !== 'undefined' ? window.location.hostname : '',
+  baseDomain = appBaseDomain(),
+): string | null {
+  return isAppHost(hostname, baseDomain) ? `https://${slug}.${baseDomain}/login` : null;
+}
+
 export function getCompany(tenantId: string | null): Company | undefined {
   if (!tenantId) return undefined;
   return companies.find((c) => c.id === tenantId);

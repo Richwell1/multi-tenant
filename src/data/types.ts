@@ -14,6 +14,7 @@ export type PackageKey =
   | 'pulse-surveys'
   // System tools
   | 'org-chart'
+  | 'bulk-importer'
   // Private extensions / standalone
   | 'custom-employee-approval'
   | 'custom-department-code'

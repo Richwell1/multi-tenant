@@ -182,6 +182,7 @@ const wsAnnouncements = createRoute({ getParentRoute: () => workspaceLayout, pat
 const wsAssets = createRoute({ getParentRoute: () => workspaceLayout, path: 'extensions/assets', component: workspacePage('AssetRegisterPage') });
 const wsPulseSurveys = createRoute({ getParentRoute: () => workspaceLayout, path: 'extensions/pulse-surveys', component: workspacePage('PulseSurveysPage') });
 const wsOrgChart = createRoute({ getParentRoute: () => workspaceLayout, path: 'extensions/org-chart', component: workspacePage('OrgChartPage') });
+const wsBulkImport = createRoute({ getParentRoute: () => workspaceLayout, path: 'extensions/bulk-import', component: workspacePage('BulkImportPage') });
 const wsDocumentNotes = createRoute({ getParentRoute: () => workspaceLayout, path: 'extensions/document-notes', component: workspacePage('DocumentNotesPage') });
 const wsExpenseRequests = createRoute({ getParentRoute: () => workspaceLayout, path: 'extensions/expense-requests', component: workspacePage('ExpenseRequestsPage') });
 const wsVisitorRegister = createRoute({ getParentRoute: () => workspaceLayout, path: 'extensions/visitor-register', component: workspacePage('VisitorRegisterPage') });
@@ -233,6 +234,7 @@ export const routeTree = rootRoute.addChildren([
     wsAssets,
     wsPulseSurveys,
     wsOrgChart,
+    wsBulkImport,
     wsDocumentNotes,
     wsExpenseRequests,
     wsVisitorRegister,

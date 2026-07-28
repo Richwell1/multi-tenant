@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased — Bulk Data Importer vertical (branch `feat/bulk-data-importer`)
+
+Second System Tool vertical — promotes Bulk Data Importer from catalog_only to
+**implemented**. It WRITES into existing HR Core (departments) through the normal
+service path, so HR Core's own RLS + validation govern every insert; it owns no
+table of its own.
+- Migration `20260810010000`: flips `feature_status='implemented'` only — no new
+  table, no feature_table, no new grants; stays optional + platform-managed.
+- `bulk-import-service` (parse + per-row isolated import with a summary) +
+  `useBulkImportDepartments` (one summary toast, not per-row), `BulkImportPage`
+  (PackageGuard), route `/:companySlug/extensions/bulk-import`, nav, manifest,
+  PACKAGE_CODES + PackageKey. Demo entitlement for Alpha (platform-pushed).
+- Tests: parse/import-summary units, page UI, catalog SQL checks. 419 tests,
+  25/25 SQL suites.
+
 ## Unreleased — Custom Onboarding Checklist vertical (branch `feat/custom-onboarding-checklist`)
 
 First **Private Customization** vertical — promotes Custom Onboarding Checklist

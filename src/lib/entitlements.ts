@@ -20,6 +20,7 @@ export const PACKAGE_CODES = {
   pulseSurveys: 'pulse-surveys',
   orgChart: 'org-chart',
   onboardingChecklist: 'custom-onboarding-checklist',
+  bulkImporter: 'bulk-importer',
   employeeApproval: 'custom-employee-approval',
   departmentCode: 'custom-department-code',
   visitorRegister: 'custom-visitor-register',

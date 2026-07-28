@@ -3,7 +3,7 @@ import { Link, useParams, useNavigate } from '@tanstack/react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { CheckCircle2, LayoutDashboard, Users, Building, Briefcase, Package, RefreshCw, Store, Settings as SettingsIcon, Megaphone, Boxes, Gauge, Network } from 'lucide-react';
+import { CheckCircle2, LayoutDashboard, Users, Building, Briefcase, Package, RefreshCw, Store, Settings as SettingsIcon, Megaphone, Boxes, Gauge, Network, Upload } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import { APP_VERSION } from '@/lib/app-version';
 import {
@@ -21,6 +21,8 @@ import { useDocumentNotes, useCreateDocumentNote } from '@/hooks/document-notes'
 import { useAnnouncements, useCreateAnnouncement } from '@/hooks/announcements';
 import { useAssets, useCreateAsset } from '@/hooks/assets';
 import { usePulseSurveys, useCreatePulseSurvey } from '@/hooks/pulse-surveys';
+import { useBulkImportDepartments } from '@/hooks/bulk-import';
+import { parseImportLines, type BulkImportResult } from '@/services/bulk-import-service';
 import { useExpenseRequests, useCreateExpenseRequest } from '@/hooks/expense-requests';
 import { useVisitorEntries, useCreateVisitor } from '@/hooks/visitor-register';
 import { useAvailableUpdates, useInstallCompanyUpdate, useAvailableUpdateCount } from '@/hooks/company-updates';
@@ -1627,6 +1629,74 @@ function OrgChartContent() {
           })}
         </div>
       )}
+    </>
+  );
+}
+
+export function BulkImportPage() {
+  return (
+    <PackageGuard packageCode={PACKAGE_CODES.bulkImporter} packageName="Bulk Data Importer">
+      <BulkImportContent />
+    </PackageGuard>
+  );
+}
+
+function BulkImportContent() {
+  const departments = useDepartments();
+  const importer = useBulkImportDepartments();
+  const [text, setText] = useState('');
+  const [result, setResult] = useState<BulkImportResult | null>(null);
+  const parsed = parseImportLines(text);
+
+  const run = (event: React.FormEvent) => {
+    event.preventDefault();
+    setResult(null);
+    importer.mutate(parsed, {
+      onSuccess: (r) => { setResult(r); if (r.failed === 0) setText(''); },
+    });
+  };
+
+  return (
+    <>
+      <PageHeader
+        icon={<Upload className="size-5" />}
+        title="Bulk Data Importer"
+        description="Import HR Core records in bulk — one department per line"
+      />
+      <div className="mb-6 grid gap-4 sm:grid-cols-2">
+        <StatCard label="Existing departments" value={departments.data?.length ?? '—'} icon={<Building className="size-5" />} accent="portal" />
+        <StatCard label="Rows to import" value={parsed.length} hint="Unique, non-empty lines" icon={<Upload className="size-5" />} />
+      </div>
+      <Card className="max-w-2xl">
+        <CardContent className="pt-6">
+          <form onSubmit={run} className="space-y-4" noValidate>
+            <Field label="Departments (one per line)" htmlFor="bulk-text">
+              <textarea
+                id="bulk-text"
+                className="min-h-40 w-full rounded-md border border-border bg-surface px-3 py-2 text-sm"
+                placeholder={'Engineering\nSales\nCustomer Success'}
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+              />
+            </Field>
+            <SubmitButton pending={importer.isPending} pendingLabel="Importing…" disabled={parsed.length === 0}>
+              Import {parsed.length > 0 ? `${parsed.length} department${parsed.length === 1 ? '' : 's'}` : 'departments'}
+            </SubmitButton>
+          </form>
+          {result && (
+            <div role="status" className="mt-4 rounded-md border border-border bg-surface-subtle px-3 py-3 text-sm">
+              <p className="font-medium text-content">
+                Imported {result.created} of {result.total}{result.failed > 0 ? `, ${result.failed} failed` : ''}.
+              </p>
+              {result.errors.length > 0 && (
+                <ul className="mt-2 space-y-1 text-xs text-danger">
+                  {result.errors.map((e) => (<li key={e}>{e}</li>))}
+                </ul>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </>
   );
 }

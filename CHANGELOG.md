@@ -1,5 +1,41 @@
 # Changelog
 
+## Unreleased — Public login works independently (branch `feat/public-login-host-canonicalization`)
+
+`home.merbsconnect.com/login` is the primary entry point for every company
+user: nobody needs to know their subdomain to sign in.
+
+- **`?tenant=` is a routing hint, never an authorization source.** A hint that
+  disagrees with the authenticated membership is now **discarded** rather than
+  failing the sign-in — the user lands in their own workspace with a neutral
+  "We opened the workspace linked to your account." Previously this logged the
+  user out AND named their company in the error. Nothing is ever disclosed
+  about the company the hint named.
+- `resolveLoginDestination()` (`src/lib/login-destination.ts`) is the single
+  pure decision shared by the sign-in and session-restore paths, so the two
+  cannot disagree. Membership is the only thing that selects a workspace.
+- **Already-authenticated visitors are redirected, not shown a form.** A
+  restored Platform Admin goes to the console, never into a workspace they hold
+  no membership for.
+- **Canonical public hosts** (`canonicalPublicUrl()`): `<tenant>/register` →
+  `home/register`, and `<tenant>/login?tenant=other` → `other/login`. The
+  marketing host is always canonical (with or without a hint), and hosts with
+  no real subdomains (dev, previews) never redirect — which is also what makes
+  looping impossible; every emitted target is already canonical.
+- **Registration hand-off** now prefers the new company's own host
+  (`https://<slug>.<domain>/login`), falling back to `/login?tenant=<slug>` in
+  dev. It can never emit a third company's host carrying another slug.
+- Cached tenant data is cleared before every cross-host redirect.
+- **MEMBERSHIP RULE — audited and documented:** a user has **exactly one**
+  active company membership. `register_company` raises `user_already_member`,
+  and no invite or admin path creates a second; both read paths use
+  `.maybeSingle()`. The schema's `unique (company_id, user_id)` permits
+  multiple rows in principle but nothing produces them, so there is
+  deliberately **no** `/workspaces` picker, per spec.
+- Tests: 19 unit (hint powerlessness, canonical hosts, loop-freedom, hand-off)
+  + 11 page (generic login, restore-redirect, cache clearing, admin routing).
+  494 tests, 27/27 SQL suites.
+
 ## Unreleased — Lifecycle operation logging (branch `fix/lifecycle-operation-logging`)
 
 Closes the gap left by the monitoring fix: `install`, `update`, and `rollback`

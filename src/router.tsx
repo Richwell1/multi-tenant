@@ -10,7 +10,7 @@ import { AdminShell } from '@/components/admin-shell';
 import { WorkspaceShell } from '@/components/workspace-shell';
 import { PlatformGuard, CompanyGuard } from '@/components/guards';
 import { PageLoadingState, ErrorState } from '@/components/states';
-import { isTenantHost } from '@/lib/tenant';
+import { canonicalPublicUrl, isTenantHost } from '@/lib/tenant';
 // Public/auth pages are eager so sign-in is instant. The admin and company
 // workspace page groups are code-split (lazy) so they load only when entered.
 import {
@@ -58,6 +58,20 @@ const indexRoute = createRoute({
     throw redirect({ to: '/login', search: { portal: 'admin' } });
   },
 });
+/**
+ * Move the browser to the canonical host for a public route when the current
+ * one contradicts it (see canonicalPublicUrl): registration always belongs on
+ * the marketing host, and a `?tenant=` hint naming another company wins over
+ * the tenant host it was opened on. Cross-origin, so a full assignment rather
+ * than a router redirect. A no-op on the marketing host, local dev, and
+ * previews, which is what keeps this from looping.
+ */
+function enforceCanonicalPublicHost(pathname: string): void {
+  if (typeof window === 'undefined') return;
+  const target = canonicalPublicUrl(window.location.hostname, pathname, window.location.search);
+  if (target) window.location.replace(target);
+}
+
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/login',
@@ -65,9 +79,15 @@ const loginRoute = createRoute({
     portal: search.portal === 'admin' ? 'admin' : undefined,
     tenant: typeof search.tenant === 'string' ? search.tenant : undefined,
   }),
+  beforeLoad: () => enforceCanonicalPublicHost('/login'),
   component: LoginPage,
 });
-const registerRoute = createRoute({ getParentRoute: () => rootRoute, path: '/register', component: RegisterPage });
+const registerRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/register',
+  beforeLoad: () => enforceCanonicalPublicHost('/register'),
+  component: RegisterPage,
+});
 const accessDeniedRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/access-denied',

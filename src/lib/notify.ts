@@ -27,4 +27,10 @@ export const notify = {
   validationFailure: (message = 'Please fix the highlighted fields') => toast.error(message),
   networkFailure: (message = 'Network error. Please retry.') => toast.error(message),
   retryFailure: (what = 'Request') => toast.error(`${what} could not be retried. Please try again.`),
+  /**
+   * A `?tenant=` hint disagreed with the authenticated membership. Deliberately
+   * says nothing about the company that was named — only that we opened the
+   * one this account belongs to.
+   */
+  openedOwnWorkspace: () => toast('We opened the workspace linked to your account.'),
 };

@@ -147,5 +147,7 @@ demonstrates the lifecycle, not a working business module.
   follow-on work.
 - `verify:package-security` is referenced by the spec but not yet a script in
   this repo.
-- Slug rename and scheduled purge cron remain deferred (purge is manually
+- Hosted: migrations applied + purge-retention deployed (auth-gated). Scheduled
+  purge cron remains deferred (function is schedule-ready, invoked manually).
+- Slug rename remains deferred (purge is manually
   invokable and scheduler-ready).

@@ -6,6 +6,31 @@ Branch: `feat/admin-package-management`
 This audit records implementation coverage and known verification boundaries.
 It does not claim that hosted browser smoke testing has been completed.
 
+## Hosted lifecycle deployment (2026-08-04)
+
+- **Migrations applied to hosted** (project `uezvaqoqqqgblpcbkujq`), confirmed by
+  `supabase migration list --linked` (Local = Remote):
+  `20260802010000_package_lifecycle_and_retention`,
+  `20260803010000_new_packages_catalog`,
+  `20260804010000_package_feature_status`. Pre-deploy remote head was
+  `20260801010000`. All additive; the hosted database was not reset.
+- **Edge Function `purge-retention` deployed** and hardened: it requires the
+  service-role key (or `PURGE_SECRET`) as a Bearer token (constant-time compare).
+  Live checks: no-bearer → **HTTP 401**, wrong-bearer → **HTTP 401**. The
+  authorized (service-role) path returns a `{purged_packages, rows_deleted}`
+  summary; it must be exercised with the service-role key by a trusted operator.
+- **Scheduled purge: schedule-ready, NOT scheduled.** No cron is configured; the
+  function is invoked manually/by an external scheduler for now.
+- **Hosted live SQL smoke tests (RLS/RPC/isolation/retention) were NOT run from
+  this environment** — they need a hosted DB session/credentials that are not
+  available here and must not be extracted. The hosted schema is byte-for-byte
+  produced by the same migrations under which the local suite passes **21/21**
+  (including `package_lifecycle_rls.sql`'s 16 checks: mandatory-protection,
+  retention, restore-without-duplication, permanent-removal scope, cross-tenant
+  isolation, idempotent purge, PASS-only install). Recommend running the hosted
+  smoke tests (Document Notes install→…→permanent-remove; second-company
+  isolation; authorized purge) against a disposable company before relying on it.
+
 ## Package lifecycle readiness honesty (2026-08-04)
 
 - Added `packages.feature_status` (`implemented` | `catalog_only`) so a version's

@@ -39,7 +39,17 @@ jobs:
           version: 2.105.0
 
       - name: Start local Supabase
-        run: supabase start
+        # Only the `db` container is actually exercised here: the SQL/RLS suites
+        # talk to Postgres directly and the vitest suites are fully mocked.
+        # `analytics` (Logflare) and its `vector` log shipper are the heaviest
+        # services and the ones that intermittently fail their health check on a
+        # CI runner, which surfaces later as a Kong 502 ("invalid response from
+        # upstream") when `db reset` restarts containers -- AFTER every
+        # migration has already applied cleanly. Excluding them, plus the
+        # unused studio/imgproxy/inbucket, removes that failure mode and cuts
+        # startup time. Local development is unaffected: this flag is CI-only,
+        # supabase/config.toml still enables everything.
+        run: supabase start -x analytics,vector,studio,imgproxy,inbucket
 
       - name: Reset local database
         run: supabase db reset

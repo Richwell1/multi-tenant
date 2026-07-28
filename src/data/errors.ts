@@ -67,6 +67,47 @@ function isSupabaseLike(e: unknown): e is SupabaseLikeError {
 }
 
 /**
+ * Safe failure categories returned by the lifecycle RPCs, mapped to user-facing
+ * copy. Mirrors public.lifecycle_failure_category(); anything unrecognized falls
+ * back to the generic message, so a new backend category can never leak raw text.
+ */
+const LIFECYCLE_FAILURE_MESSAGE: Record<string, { message: string; kind: RepositoryErrorKind }> = {
+  not_authorized: { message: 'You are not authorized to perform this action.', kind: 'forbidden' },
+  already_installed: { message: 'That package is already installed.', kind: 'validation' },
+  not_installed: { message: 'That package is not installed.', kind: 'validation' },
+  company_not_active: { message: 'This company is not active.', kind: 'validation' },
+  package_inactive: { message: 'That package is no longer active.', kind: 'validation' },
+  not_marketplace_package: { message: 'That package cannot be installed from the marketplace.', kind: 'validation' },
+  no_installable_version: { message: 'No installable version is available yet.', kind: 'validation' },
+  dependency_not_met: { message: 'A required base package is not enabled.', kind: 'validation' },
+  base_package_not_enabled: { message: 'A required base package is not enabled.', kind: 'validation' },
+  base_version_too_low: { message: 'The base package must be updated first.', kind: 'validation' },
+};
+
+/**
+ * Lifecycle RPCs (install / update / rollback) report an apply-phase failure by
+ * RETURNING `status: 'failed'` with a safe category rather than raising — a
+ * failure cannot be logged from inside the transaction it aborts, so the RPC
+ * commits the monitoring record and reports the outcome in its payload.
+ *
+ * Without this guard a failed operation would read as success. Throws the
+ * normalized RepositoryError callers already expect; otherwise a no-op.
+ */
+export function assertLifecycleRpcSucceeded(data: unknown, operation: string): void {
+  if (typeof data !== 'object' || data === null) return;
+  const payload = data as { status?: unknown; error?: unknown };
+  if (payload.status !== 'failed') return;
+
+  const category = typeof payload.error === 'string' ? payload.error : 'operation_failed';
+  const mapped = LIFECYCLE_FAILURE_MESSAGE[category];
+  logSupabaseError(operation, { code: category, status: 200, message: 'lifecycle operation failed' });
+  throw new RepositoryError(
+    mapped?.message ?? 'That action could not be completed. Please try again.',
+    mapped?.kind ?? 'unknown',
+  );
+}
+
+/**
  * Map a Supabase (PostgREST or Auth) error to a normalized RepositoryError.
  * Pure and provider-agnostic so it can be unit-tested and reused by every
  * Supabase adapter.

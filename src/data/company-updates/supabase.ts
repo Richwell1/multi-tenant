@@ -1,5 +1,5 @@
 import { getSupabaseClient } from '@/lib/supabase';
-import { mapSupabaseError } from '@/data/errors';
+import { assertLifecycleRpcSucceeded, mapSupabaseError } from '@/data/errors';
 import { toPackageCategory } from '@/lib/packages/category';
 import type { PackageType } from '@/data/types';
 import type { AvailableUpdate, CompanyUpdatesRepository, InstallUpdateResult } from './index';
@@ -49,6 +49,7 @@ export class SupabaseCompanyUpdatesRepository implements CompanyUpdatesRepositor
       p_installation_id: installationId,
     });
     if (error) throw mapSupabaseError(error, 'company.updates.install');
+    assertLifecycleRpcSucceeded(data, 'company.updates.install');
     const r = data as unknown as { installation_id: string; package_key: string; version: string };
     return { installationId: r.installation_id, packageKey: r.package_key, version: r.version };
   }

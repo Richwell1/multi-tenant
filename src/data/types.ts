@@ -11,6 +11,7 @@ export type PackageKey =
   | 'expense-requests'
   | 'company-announcements'
   | 'asset-register'
+  | 'pulse-surveys'
   // Private extensions / standalone
   | 'custom-employee-approval'
   | 'custom-department-code'

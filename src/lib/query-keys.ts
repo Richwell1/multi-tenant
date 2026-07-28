@@ -114,6 +114,9 @@ export const queryKeys = {
   assets: {
     list: (companyId: string) => ['assets', companyId] as const,
   },
+  pulseSurveys: {
+    list: (companyId: string) => ['pulse-surveys', companyId] as const,
+  },
   expenseRequests: {
     list: (companyId: string) => ['expense-requests', companyId] as const,
   },

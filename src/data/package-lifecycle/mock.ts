@@ -21,6 +21,7 @@ const CATALOG: Record<string, CatalogEntry> = {
   'attendance-management': { name: 'Attendance Management', category: 'standard_package', isMandatory: false, hasFeatureData: false, featureStatus: 'implemented' },
   'company-announcements': { name: 'Company Announcements', category: 'marketplace_extension', isMandatory: false, hasFeatureData: true, featureStatus: 'implemented' },
   'asset-register': { name: 'Asset Register', category: 'marketplace_extension', isMandatory: false, hasFeatureData: true, featureStatus: 'implemented' },
+  'pulse-surveys': { name: 'Pulse Surveys', category: 'marketplace_extension', isMandatory: false, hasFeatureData: true, featureStatus: 'implemented' },
   'document-notes': { name: 'Document Notes', category: 'marketplace_extension', isMandatory: false, hasFeatureData: true, featureStatus: 'implemented' },
   'expense-requests': { name: 'Expense Requests', category: 'marketplace_extension', isMandatory: false, hasFeatureData: true, featureStatus: 'implemented' },
   'custom-visitor-register': { name: 'Custom Visitor Register', category: 'private_standalone', isMandatory: false, hasFeatureData: true, featureStatus: 'implemented' },

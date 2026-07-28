@@ -73,6 +73,11 @@ export const PACKAGE_MANIFEST: Partial<Record<PackageKey, PackageManifestEntry>>
     name: 'Asset Register',
     features: [{ label: 'Assets', minVersion: '1.0.0', route: '/extensions/assets' }],
   },
+  [PACKAGE_CODES.pulseSurveys]: {
+    code: PACKAGE_CODES.pulseSurveys,
+    name: 'Pulse Surveys',
+    features: [{ label: 'Pulse Surveys', minVersion: '1.0.0', route: '/extensions/pulse-surveys' }],
+  },
   // Private extensions render inside existing HR Core surfaces for the assigned company.
   [PACKAGE_CODES.employeeApproval]: {
     code: PACKAGE_CODES.employeeApproval,

@@ -42,6 +42,8 @@ const ENABLED_PACKAGES: Record<string, EnabledPackage[]> = {
     { code: 'org-chart', version: '1.0.0' },
     // Custom Onboarding Checklist is a private extension assigned to this company.
     { code: 'custom-onboarding-checklist', version: '1.0.0' },
+    // Bulk Data Importer is a platform-pushed System Tool.
+    { code: 'bulk-importer', version: '1.0.0' },
   ],
   beta: [{ code: 'hr-core', version: '1.0.0' }],
   gamma: [{ code: 'hr-core', version: '1.0.0' }],

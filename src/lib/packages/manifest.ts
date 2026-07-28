@@ -83,6 +83,11 @@ export const PACKAGE_MANIFEST: Partial<Record<PackageKey, PackageManifestEntry>>
     name: 'Org Chart Viewer',
     features: [{ label: 'Org Chart', minVersion: '1.0.0', route: '/extensions/org-chart' }],
   },
+  [PACKAGE_CODES.bulkImporter]: {
+    code: PACKAGE_CODES.bulkImporter,
+    name: 'Bulk Data Importer',
+    features: [{ label: 'Bulk Import', minVersion: '1.0.0', route: '/extensions/bulk-import' }],
+  },
   // Private extensions render inside existing HR Core surfaces for the assigned company.
   [PACKAGE_CODES.employeeApproval]: {
     code: PACKAGE_CODES.employeeApproval,

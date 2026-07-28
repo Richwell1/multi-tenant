@@ -128,7 +128,7 @@ readiness — never "the business feature is built". `packages.feature_status`
 | Package | Catalog | Lifecycle | Feature build |
 |---|---|---|---|
 | HR Core, Document Notes, Expense Requests, Visitor Register, Leave, Attendance, **Company Announcements, Asset Register, Pulse Surveys, **Org Chart Viewer** | PASS | PASS | **Implemented** |
-| Audit Log Exporter, Bulk Data Importer | PASS | PASS | **Pending (catalog_only)** |
+| Audit Log Exporter | PASS | PASS | **Pending (catalog_only)** |
 | Custom Approval Matrix | PASS | PASS | **Pending (catalog_only)** |
 
 Catalog-only packages render a **"Feature implementation pending"** badge in the

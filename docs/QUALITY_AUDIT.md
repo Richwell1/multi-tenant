@@ -221,7 +221,7 @@ browser verification at 320, 375, 768, 1024, and 1440 pixels remains
 | Browser smoke | Deferred: no browser runner available |
 | Hosted Auth/demo data | Pending final confirmation |
 | Custom domain | Deferred |
-| Remaining demo risk | Hosted cross-session tenant-isolation smoke and final Vercel environment verification |
+| Remaining demo risk | Hosted cross-session tenant-isolation smoke and final Cloudflare/CI environment verification (`VITE_APP_DOMAIN`) |
 
 ## Code-quality audit
 

@@ -114,7 +114,7 @@ the hardening follow-up is on `chore/engineering-quality-hardening` in commits
   covering 94 scenarios. No RLS, grant, or migration change was required by
   this audit.
 - Hosted schema and CI remain verified. Hosted Auth/demo-user setup, final
-  Vercel environment confirmation, and hosted tenant-isolation smoke are still
+  Cloudflare/CI environment confirmation, and hosted tenant-isolation smoke are still
   deployment checks.
 - Manual visual and keyboard verification at 320, 375, 768, 1024, and 1440
   pixels is deferred because a browser runner was unavailable.

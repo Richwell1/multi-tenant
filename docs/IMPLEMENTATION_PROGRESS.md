@@ -105,9 +105,9 @@
 ### Hosted deployment
 - [x] Push all 16 migrations to hosted Supabase (incl. admin package management `20260726020000`, pushed 2026-07-26); remote history matches local
 - [x] Deploy `register-company` Edge Function (active, version 1)
-- [x] Vercel frontend deploy is available
+- [x] Frontend deploy is available (Cloudflare Workers; the earlier Vercel setup is retired)
 - [x] `feat/admin-package-management` merged to `main` (`c161f6d`) and deployed to production (build green 2026-07-26)
-- [x] Production Vercel Supabase variables set (`VITE_DATA_SOURCE=supabase`, URL, publishable key)
+- [x] Production build variables set in `.github/workflows/ci.yml` (`VITE_DATA_SOURCE=supabase`, URL, publishable key, and the required `VITE_APP_DOMAIN=merbsconnect.com`)
 - [ ] Full hosted browser tenant-isolation smoke under `VITE_DATA_SOURCE=supabase` (per-plane checklists below)
 
 ### Wildcard subdomains
@@ -137,7 +137,7 @@
 - Local verification: Supabase reset ✅ · 8 SQL/RLS suites / 94 scenarios ✅ ·
   typecheck ✅ · lint ✅ · 227 application tests ✅ · build ✅.
 - Hosted schema remains deployed and the hosted CI quality gate passed; hosted
-  Auth/demo-user, Vercel environment, and hosted browser tenant-isolation
+  Auth/demo-user, Cloudflare/CI environment, and hosted browser tenant-isolation
   verification remain deployment checks.
 - Browser visual and keyboard smoke at 320/375/768/1024/1440 remains deferred
   because no browser runner was available.
@@ -307,7 +307,7 @@
 - `feat/hr-core-persistence` is based on `feat/live-route-guards` (unmerged) — rebases when the guard PR lands.
 - Mock create/update/disable/terminate are simulated (no persistence) — expected pattern.
 - Hosted Supabase schema is deployed and migration history is aligned; the API-grants migration fixed authenticated REST access to RLS-protected tables. Hosted companies, memberships, and platform admins still require final demo-data verification.
-- Hosted Auth URL configuration, demo users/seed data, and final Vercel environment verification remain deployment checks. Confirm the production URL and environment scope before changing hosted settings.
+- Hosted Auth URL configuration, demo users/seed data, and final Cloudflare/CI environment verification remain deployment checks. Confirm the production URL and environment scope before changing hosted settings. See the production deployment checklist in README.md.
 - The deployment checklist names `usage_events` and `system_health_checks`, but this repository intentionally derives usage from `audit_logs` (`usage_metrics()`) and health from `system_health()`; those tables should not be added without a product/schema decision.
 - **Fixed (4.1):** package gating previously read mock `company.packages`, which is `undefined` for real Supabase tenants (would have hidden Leave for everyone on the Supabase path). Gating now uses `enabledPackageCodes` from the membership context — one source for mock and Supabase, guard + nav aligned.
 - Request Records are now persisted (platform-plane). Remaining mock-backed platform surfaces: diagnostics, installations monitor, usage, health — Phase 5.2–5.5.
@@ -329,7 +329,7 @@
 - **Status machine** intentionally minimal: `approved`/`rejected`/`cancelled` are terminal (no `approved → cancelled`). Central rule in `src/data/leave/transitions.ts` mirrors the DB trigger; widen both together if needed.
 
 ## Next actions
-1. Configure the correct Vercel project with `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, and `VITE_DATA_SOURCE=supabase`; configure hosted Auth redirect URLs.
+1. Configure the production build variables in `.github/workflows/ci.yml` — `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_DATA_SOURCE=supabase`, and the required `VITE_APP_DOMAIN=merbsconnect.com`; configure hosted Auth redirect URLs.
 2. Create the approved Platform Admin, Alpha, and Beta Auth users and matching database records, then prepare the production seed data.
 3. Run hosted browser and tenant-isolation smoke under `VITE_DATA_SOURCE=supabase`, then complete monitoring hardening and custom-domain/wildcard-subdomain work.
 

@@ -120,6 +120,14 @@ Domain=.<baseDomain>   Path=/   SameSite=Lax   Secure (HTTPS only)
   read; the legacy entry is removed only after the copy succeeds, and malformed
   data is left untouched rather than destroyed.
 
+The base domain comes from **`VITE_APP_DOMAIN`**, which is inlined at build time
+and whose authoritative production value lives in `.github/workflows/ci.yml`
+(the `deploy` job's `env`). It is **required**: a missing or mismatched value
+silently degrades the cookie to host-only scope and reintroduces the
+double-login between `home.<domain>` and a tenant host. Production hosting is
+Cloudflare, not Vercel. See "Production hosting" and the deployment checklist in
+`README.md`.
+
 **Shared authentication is not shared authorization.** The cookie proves only
 *who* the user is. Active membership, the company UUID matching the host slug,
 company status, entitlements, and RLS are all still enforced — a member of

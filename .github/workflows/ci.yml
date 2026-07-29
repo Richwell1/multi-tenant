@@ -77,7 +77,8 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Node.js
-        # wrangler 4.x requires Node >= 22.
+        # wrangler 4.x requires Node >= 22 (the quality job stays on 20, this
+        # repo's documented minimum — only the wrangler CLI itself needs 22).
         uses: actions/setup-node@v4
         with:
           node-version: 22

@@ -70,7 +70,7 @@ branch is `chore/engineering-quality-hardening` with commits `688f949`,
 | Application version | Complete | `APP_VERSION` reads `package.json`; `AppVersion` appears in auth and both shells |
 | Responsive/keyboard behavior | Implemented | Manual 320/375/768/1024/1440 verification deferred without a browser runner |
 | Local verification | Complete | Supabase reset, 8 SQL suites / 94 scenarios, typecheck, lint, 227 tests, and build pass |
-| Hosted verification | Deferred | Hosted schema/CI verified; Auth/demo users, Vercel environment, and tenant-isolation smoke remain |
+| Hosted verification | Deferred | Hosted schema/CI verified; Auth/demo users, Cloudflare/CI environment, and tenant-isolation smoke remain |
 
 The UI polish bundle reference remains +4.28 kB main JavaScript and +1.13 kB
 gzip. The current hardening build artifact is 484.88 kB main JavaScript and

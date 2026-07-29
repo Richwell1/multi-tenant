@@ -1,5 +1,39 @@
 # Changelog
 
+## Unreleased — Deployment docs corrected (branch `docs/cloudflare-auth-domain-deployment-checklist`)
+
+Documentation only — no application, auth, Supabase, RLS, or infrastructure
+change.
+
+- **Production hosting is Cloudflare, not Vercel.** Added an explicit
+  "Production hosting" block to `README.md` naming the root domain, the public /
+  admin / tenant host formats, and that all hosts serve one deployment while
+  authorization stays per-host. `vercel.json` is called out as a retired
+  artifact that nothing deploys from.
+- Corrected the stale "Vercel environment" references in
+  `docs/IMPLEMENTATION_PROGRESS.md`, `docs/QUALITY_AUDIT.md`,
+  `docs/UI_UX_PROGRESS.md`, and `docs/UI_UX_AUDIT.md`. Historical notes that
+  are still accurate (the retired `vercel.json` rewrite) were left in place.
+- **`VITE_APP_DOMAIN` documented as required**, with its authoritative source
+  named as `.github/workflows/ci.yml` — CI performs the production build, so the
+  workflow, not the Cloudflare dashboard, determines the deployed value. Records
+  what it controls (parent-domain auth cookie, shared session, one-login
+  navigation, shared logout) and warns that a missing or mismatched value
+  degrades the cookie to host-only scope and brings the double-login back.
+- Documented the security posture around it: the cookie is browser-readable and
+  not `HttpOnly` (XSS exposure comparable to the previous `localStorage`),
+  authentication is shared but authorization is not, and the cookie reaches every
+  `*.merbsconnect.com` host — so a differently trusted subdomain must not be
+  added without reviewing that boundary.
+- Added a production deployment checklist, flagging which items need a real
+  browser, plus a `curl` recipe for the one item that can be checked without one.
+- Documented the CI-only `supabase start -x analytics,vector,studio,imgproxy,inbucket`
+  optimization, why it exists (a Kong 502 while restarting optional containers,
+  after all migrations had applied), and that it is not a production setting.
+- Fixed two further stale claims found in the same section: CI calls
+  `npx wrangler deploy` directly rather than `cloudflare/wrangler-action`, and
+  the SQL suite count is no longer "nine suites (112 scenarios)".
+
 ## Unreleased — Cross-subdomain session (branch `fix/cross-subdomain-auth-handoff`)
 
 Fixes the confirmed production double-login: signing in on

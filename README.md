@@ -184,6 +184,32 @@ testing must verify both successful access and Alpha/Beta isolation.
 
 ## Deploying to Cloudflare Workers
 
+### Production hosting
+
+```text
+Production host:     Cloudflare (Workers Static Assets)
+Root domain:         merbsconnect.com
+Public host:         home.merbsconnect.com
+Platform Admin host: admin.merbsconnect.com
+Tenant host format:  <companySlug>.merbsconnect.com
+Backend:             Supabase (Postgres, Auth, Edge Functions)
+```
+
+Production is served by **Cloudflare, not Vercel**. `vercel.json` survives only
+as a historical artifact of the earlier setup; nothing deploys from it and no CI
+job targets Vercel.
+
+Every host above serves the **same** deployment — there is no per-host build.
+Sharing a deployment (and, since the parent-domain auth cookie, a session) does
+**not** share authorization. Each tenant host independently enforces:
+
+- an authenticated Supabase user;
+- an active `company_memberships` row;
+- the company UUID behind the hostname slug;
+- active company status;
+- package entitlements;
+- Row Level Security on every query.
+
 The app is a static Vite build served by a Cloudflare Worker (Workers Static
 Assets), with SPA fallback replacing what `vercel.json`'s rewrite used to do.
 Tenant resolution happens entirely client-side from `window.location.hostname`
@@ -223,19 +249,61 @@ npx wrangler login       # once, authenticates the CLI to your Cloudflare accoun
 npm run deploy            # builds (tsc -b && vite build) and runs `wrangler deploy`
 ```
 
-Set the three `VITE_*` build-time variables (`VITE_DATA_SOURCE=supabase`,
-`VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`) and `VITE_APP_DOMAIN`
-(`merbsconnect.com`) as Cloudflare Worker environment variables in the
-dashboard, or via `wrangler.jsonc`'s `vars` field — they must be present at
-**build** time since Vite inlines them.
+All four `VITE_*` variables must be present at **build** time — Vite inlines
+them into the bundle, so setting them on the Worker afterwards has no effect.
+
+For a manual `npm run deploy`, export them in your shell (or put the non-secret
+ones in `wrangler.jsonc`'s `vars`). For the real production deploy they come
+from the CI job — see below.
+
+### `VITE_APP_DOMAIN` — required
+
+```text
+VITE_APP_DOMAIN=merbsconnect.com
+```
+
+**Authoritative source: `.github/workflows/ci.yml`** (the `deploy` job's `env`).
+CI performs the production build, so that file — not the Cloudflare dashboard —
+is what actually determines the deployed value. It is a plain literal, not a
+secret, so it is reviewable in version control and cannot drift silently.
+
+This variable is **required, not optional**. It:
+
+- configures the parent-domain authentication cookie
+  (`Domain=.merbsconnect.com`, see `src/lib/auth-storage.ts`);
+- lets one Supabase browser session be shared across the trusted subdomains;
+- makes one-login navigation from `home.merbsconnect.com` to a company
+  workspace work without a second sign-in;
+- ensures signing out clears the shared session on every subdomain.
+
+> **Warning:** `VITE_APP_DOMAIN` is required for cross-subdomain authentication.
+> If the value is missing, malformed, or does not match the production root
+> domain, the auth cookie falls back to **host-only** scope. The double-login
+> problem then returns: users signing in on `home.merbsconnect.com` are asked
+> for their credentials again on `<companySlug>.merbsconnect.com`. The
+> application code can be entirely correct and the bug will still reappear.
+
+Security properties worth knowing before changing the domain layout:
+
+- The cookie is **browser-readable and not `HttpOnly`** — the Supabase client
+  must read and rewrite the tokens. XSS exposure is comparable to the
+  `localStorage` it replaced; this buys correct cross-subdomain behaviour, not
+  stronger token secrecy.
+- **Authentication is shared; authorization is not.** Every tenant host still
+  verifies membership and the company UUID behind the hostname.
+- The cookie is sent to **all** `*.merbsconnect.com` hosts. That is safe today
+  because every host is the same application. **Do not add a differently
+  trusted subdomain without reviewing this trust boundary first.**
 
 ### Continuous deployment (GitHub Actions)
 
 `.github/workflows/ci.yml` has a `deploy` job that runs after `quality`
 passes, only on pushes to `main` (or a manual `workflow_dispatch` run from the
-Actions tab) — never on pull requests. It uses the official
-`cloudflare/wrangler-action`, which installs dependencies, runs
-`npm run build`, and deploys in one step.
+Actions tab) — never on pull requests. It runs `npm ci`, builds with the `VITE_*`
+values below, and then calls `npx wrangler deploy` **directly** rather than using
+`cloudflare/wrangler-action` — the action's bundled Wrangler 3.x cannot deploy an
+assets-only (no `main`) Worker, and its `wranglerVersion` input did not override
+that default.
 
 Configure these as **GitHub repository secrets** (Settings → Secrets and
 variables → Actions) before the first deploy:
@@ -247,9 +315,40 @@ variables → Actions) before the first deploy:
 | `VITE_SUPABASE_URL` | Same value as your hosted `.env` |
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | Same value as your hosted `.env` (publishable/anon key only) |
 
+`VITE_APP_DOMAIN` is set as a literal in the workflow rather than a secret — it
+is a public hostname, and keeping it in version control makes the value
+reviewable.
+
 `npm run cf:dev` runs `wrangler dev` for a local Cloudflare-flavored preview
 (distinct from `npm run dev`'s Vite dev server, which remains the primary
 local dev loop with path-based tenant routing).
+
+### Production deployment checklist
+
+The last four items need a **real browser** — they exercise client-side
+redirects and cookie scoping that no HTTP client can observe.
+
+```text
+[ ] Confirm `VITE_APP_DOMAIN` is set to `merbsconnect.com` in `.github/workflows/ci.yml`.
+[ ] Confirm the production build received the expected value.
+[ ] Confirm login at `https://home.merbsconnect.com/login` redirects to `https://<companySlug>.merbsconnect.com/dashboard` without a second login.
+[ ] Confirm logout clears the session on both the public and tenant hosts.
+[ ] Confirm Company Admin users cannot access Platform Admin routes.
+[ ] Confirm changing the tenant hostname does not bypass membership or RLS.
+```
+
+To check the second item without a browser, confirm the deployed bundle contains
+the expected domain — the value is inlined at build time:
+
+```bash
+BUNDLE=$(curl -s https://home.merbsconnect.com/ | grep -oE 'assets/index-[A-Za-z0-9_-]+\.js' | head -1)
+curl -s "https://home.merbsconnect.com/$BUNDLE" | grep -c 'merbsconnect\.com'
+```
+
+For the cookie itself, use **DevTools → Application → Cookies** and confirm the
+Supabase auth cookie is scoped to `.merbsconnect.com` with `Path=/`, `Secure`,
+and `SameSite=Lax`. It is written by JavaScript via `document.cookie`, never in
+an HTTP response header, so it is invisible to `curl`.
 
 ## Quality commands
 
@@ -261,9 +360,29 @@ npm run test:rls
 npm run build
 ```
 
-GitHub Actions runs local Supabase startup/reset, all nine SQL/RLS suites (112
-security scenarios), typecheck, lint, application tests, and the production
-build on pull requests and pushes to `main`.
+GitHub Actions runs local Supabase startup/reset, every committed SQL/RLS suite,
+typecheck, lint, application tests, and the production build on pull requests and
+pushes to `main`.
+
+The CI job starts Supabase with optional containers excluded:
+
+```bash
+supabase start -x analytics,vector,studio,imgproxy,inbucket
+```
+
+- **CI only.** `supabase/config.toml` is untouched, so `supabase start` locally
+  still brings up Studio and everything else.
+- Nothing in the quality job uses those services: the SQL/RLS suites connect to
+  Postgres directly and the application tests are fully mocked, so only the `db`
+  container is genuinely exercised.
+- It was introduced after `supabase db reset` failed on CI with
+  `Error status 502: An invalid response was received from the upstream server`
+  during `Restarting containers…` — Kong reporting an unhealthy upstream when
+  the analytics (Logflare) container and its `vector` log shipper missed their
+  health check on the runner. Every migration had already applied cleanly; the
+  failure was infrastructure, not schema.
+- **This is not a production runtime setting.** It affects only how the CI
+  runner starts a throwaway local Supabase stack.
 
 ## Routes
 
